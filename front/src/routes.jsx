@@ -56,6 +56,17 @@ export default function AppRoutes() {
         <Route path="intelligence/ai" element={<AiStudio />} />
         <Route path="intelligence/roi" element={<RoiTools />} />
         <Route path="permits" element={<PermitGuide />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/pricing" element={<Pricing />} />
+        <Route path="/faq" element={<FAQ />} />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/uploads" element={<Uploads />} />
+        <Route path="/intelligence" element={<Intelligence />} />
+        <Route path="profile" element={<Profile />} />
+        <Route path="settings" element={<Settings />} />
+        <Route path="support" element={<Support />} />  
       </Route>
     </Routes>
   );

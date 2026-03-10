@@ -96,7 +96,7 @@ const S = {
     position: "absolute",
     inset: 0,
     background:
-      "linear-gradient(to right, rgba(7,11,20,0.94) 0%, rgba(7,11,20,0.58) 55%, rgba(7,11,20,0.18) 100%), linear-gradient(to top, rgba(7,11,20,0.55) 0%, transparent 40%)",
+      "linear-gradient(to right, rgba(7,11,20,0.96) 0%, rgba(7,11,20,0.72) 55%, rgba(7,11,20,0.45) 100%), linear-gradient(to top, rgba(7,11,20,0.65) 0%, transparent 40%)",
   },
   contentArea: {
     position: "relative",
@@ -284,8 +284,8 @@ function ctaStyle(variant, hovered) {
         ? "linear-gradient(135deg,#3d78ff,#2a66ff)"
         : "linear-gradient(135deg,#2a66ff,#1d4ed8)",
       boxShadow: hovered
-        ? "0 16px 40px rgba(29,78,216,.50)"
-        : "0 10px 28px rgba(29,78,216,.35)",
+        ? "0 12px 28px rgba(29,78,216,.25)"
+        : "0 8px 20px rgba(29,78,216,.15)",
       transform: hovered ? "translateY(-2px)" : "translateY(0)",
     };
   }

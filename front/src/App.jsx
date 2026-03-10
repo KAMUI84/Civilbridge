@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 
 // Components & Layouts
 import Navbar from "./components/common/Navbar";
+import PageTransition from "./components/common/PageTransition";
 // import AuthModalHost from "./components/auth/AuthModalHost";
 import PublicLayout from "./app/layout/PublicLayout";
 import DashboardLayout from "./app/layout/DashboardLayout";
@@ -50,7 +51,7 @@ import Projects from "./pages/dashboard/Projects";
 import Estimates from "./pages/dashboard/Estimator";
 import BudgetAnalysis from "./pages/dashboard/BudgetAnalysis";
 import Documents from "./pages/dashboard/Documents";
-import Team from "./pages/dashboard/Team"; 
+import Team from "./pages/dashboard/Team";
 import Permits from "./pages/dashboard/PermitGuide";
 import AiStudio from "./pages/dashboard/AiStudio";
 import RoiTools from "./pages/dashboard/RoiTools";
@@ -70,31 +71,31 @@ export default function App() {
       <Routes>
         {/* 1. PUBLIC ROUTES (Wrapped in PublicLayout) */}
         <Route element={<PublicLayout />}>
-          <Route path="/" element={<Home />} />
-          <Route path="/marketplace" element={<Marketplace />} />
-          <Route path="/marketplace/:id" element={<ListingDetails />} />
-          <Route path="/plans" element={<PlansLibrary />} />
-          <Route path="/plans/:id" element={<PlanDetails />} />
-          <Route path="/experts" element={<Experts />} />
-          <Route path="/estimator" element={<Estimator />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/pricing" element={<Pricing />} />
-          <Route path="/faq" element={<FAQ />} />
-          <Route path="/terms" element={<Terms />} />
-          <Route path="/privacy" element={<Privacy />} />
-          <Route path="/uploads" element={<Uploads />} />
-          <Route path="/intelligence" element={<Intelligence />} /> 
+          <Route path="/" element={<PageTransition><Home /></PageTransition>} />
+          <Route path="/marketplace" element={<PageTransition><Marketplace /></PageTransition>} />
+          <Route path="/marketplace/:id" element={<PageTransition><ListingDetails /></PageTransition>} />
+          <Route path="/plans" element={<PageTransition><PlansLibrary /></PageTransition>} />
+          <Route path="/plans/:id" element={<PageTransition><PlanDetails /></PageTransition>} />
+          <Route path="/experts" element={<PageTransition><Experts /></PageTransition>} />
+          <Route path="/estimator" element={<PageTransition><Estimator /></PageTransition>} />
+          <Route path="/about" element={<PageTransition><About /></PageTransition>} />
+          <Route path="/contact" element={<PageTransition><Contact /></PageTransition>} />
+          <Route path="/pricing" element={<PageTransition><Pricing /></PageTransition>} />
+          <Route path="/faq" element={<PageTransition><FAQ /></PageTransition>} />
+          <Route path="/terms" element={<PageTransition><Terms /></PageTransition>} />
+          <Route path="/privacy" element={<PageTransition><Privacy /></PageTransition>} />
+          <Route path="/uploads" element={<PageTransition><Uploads /></PageTransition>} />
+          <Route path="/intelligence" element={<PageTransition><Intelligence /></PageTransition>} />
         </Route>
 
-        {/* 2. AUTH ROUTES (Supporting both Page and Modal logic) */}
+        {/* 2. AUTH ROUTES */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
         <Route element={<AuthLayout />}>
-             <Route path="/login" element={<Login />} />
-             <Route path="/register" element={<Register />} />
-             <Route path="/forgot-password" element={<ForgotPassword />} />
-             <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
         </Route>
-        
+
         <Route path="/login/admin" element={<LoginAdmin />} />
         <Route path="/login/engineer" element={<LoginEngineer />} />
         <Route path="/login/contractor" element={<LoginContractor />} />

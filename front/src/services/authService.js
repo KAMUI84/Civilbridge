@@ -1,6 +1,6 @@
 import { api } from './apiClientService.js';
 
-export const authService = {
+const authService = {
   // Register new user
   async register(userData) {
     const response = await api.post('/api/auth/register', userData);
@@ -9,7 +9,7 @@ export const authService = {
 
   // Request OTP for registration
   async requestRegisterOtp(contactInfo) {
-    const response = await api.post('/api/auth/request-otp', contactInfo);
+    const response = await api.post('/api/auth/register/request-otp', contactInfo);
     return response;
   },
 
@@ -37,3 +37,5 @@ export const authService = {
     return response;
   }
 };
+
+export default authService;

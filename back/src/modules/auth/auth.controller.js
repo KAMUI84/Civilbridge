@@ -25,11 +25,22 @@ export const requestRegisterOtp = async (req, res) => {
 
     const { otp } = await sendRegistrationOtp(target);
 
+    // Send OTP by email if target is an email address
+    if (target.includes("@")) {
+      try {
+        await emailService.sendVerificationEmail(target, otp);
+      } catch (emailErr) {
+        console.error("Failed to send OTP email:", emailErr.message);
+      }
+    }
+
+    console.log(`[DEV] OTP for ${target}: ${otp}`); // Only in dev
     res.json({
       success: true,
-      message: "OTP sent",
-      otp,
-      expires_in_sec: 300
+      message: target.includes("@")
+        ? "OTP sent to your email address"
+        : "OTP sent to your phone number",
+      expires_in_sec: 300,
     });
   } catch (err) {
     console.error(err);
@@ -55,10 +66,10 @@ export const register = async (req, res) => {
     await emailService.sendWelcomeEmail(newUser.email, newUser.full_name);
 
     // Send response AFTER everything is successful
-    res.status(201).json({ 
-        success: true, 
-        message: "User registered and email sent!",
-        user: newUser 
+    res.status(201).json({
+      success: true,
+      message: "User registered and email sent!",
+      user: newUser
     });
 
   } catch (err) {

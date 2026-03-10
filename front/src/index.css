@@ -1,9 +1,9 @@
-/* ── Tailwind CSS Directives ─────────────────────────────────────────── */
+/* ── Tailwind CSS Directives ─────────────────────────────────── */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ── Global reset & base ─────────────────────────────────────────── */
+/* ── Global reset & base ─────────────────────────────────── */
 *,
 *::before,
 *::after {
@@ -13,11 +13,11 @@
 }
 
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Inter', 'DM Sans', system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color: #0c1220;
-  background-color: #f8fafc;
+  color: #e8eaed;
+  background-color: #050505;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -27,6 +27,7 @@
 body {
   min-width: 320px;
   min-height: 100vh;
+  background-color: #050505;
 }
 
 a {
@@ -39,7 +40,7 @@ button {
   cursor: pointer;
 }
 
-/* ── Auth spinner (used in RequireAuth while rehydrating) ───────── */
+/* ── Auth spinner ───── */
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -49,8 +50,49 @@ button {
 .auth-spinner {
   width: 36px;
   height: 36px;
-  border: 3px solid #e5e7eb;
-  border-top-color: #2563eb;
+  border: 3px solid #1e293b;
+  border-top-color: #00f2ff;
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
+}
+
+/* ── Dark-mode form defaults ────────────────────────── */
+input,
+textarea,
+select {
+  color: #f0f0f0;
+  background: #1a1a1a;
+  border: 1px solid #262626;
+  font-family: inherit;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #525252;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: #00f2ff;
+  box-shadow: 0 0 0 3px rgba(0, 242, 255, .12);
+}
+
+/* ── Scrollbar ────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #262626;
+  border-radius: 99px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #404040;
 }

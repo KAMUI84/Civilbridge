@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { authService } from "../services/authService.js";
+import authService from "../services/authService";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Context definition

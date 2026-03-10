@@ -1,6 +1,6 @@
 import { writeLS } from "../../utils/storage";
 
-export function generateOtp(target) {
+export default function generateOtp(target) {
   const code = String(Math.floor(100000 + Math.random() * 900000));
   writeLS("cb_otp", { target, code, createdAt: Date.now() });
 

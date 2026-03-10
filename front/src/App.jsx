@@ -3,7 +3,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 
 // Components & Layouts
 import Navbar from "./components/common/Navbar";
-import AuthModalHost from "./components/auth/AuthModalHost";
+// import AuthModalHost from "./components/auth/AuthModalHost";
 import PublicLayout from "./app/layout/PublicLayout";
 import DashboardLayout from "./app/layout/DashboardLayout";
 import AdminLayout from "./app/layout/AdminLayout";
@@ -15,6 +15,7 @@ import Terms from "./pages/public/Terms";
 import Privacy from "./pages/public/Privacy";
 import Uploads from "./pages/public/Uploads";
 import Intelligence from "./pages/public/Intelligence";
+import AuthLayout from "./Layout/AuthLayout";
 
 // Guards
 import RequireAuth from "./app/guards/RequireAuth";
@@ -32,8 +33,10 @@ import Experts from "./pages/public/Experts";
 import Estimator from "./pages/public/Estimator";
 
 // Auth (Pages + Role-specific Logins)
-import Login from "./pages/public/Login";
-import Register from "./pages/public/Register";
+import Login from "./pages/auth/ModernLogin";
+import Register from "./pages/auth/ModernRegister";
+import ForgotPassword from "./pages/auth/ForgotPassword";
+import ResetPassword from "./pages/auth/ResetPassword";
 import LoginAdmin from "./pages/auth/LoginAdmin";
 import LoginEngineer from "./pages/auth/LoginEngineer";
 import LoginContractor from "./pages/auth/LoginContractor";
@@ -45,8 +48,9 @@ import LoginHomeBuilder from "./pages/auth/LoginHomeBuilder";
 import DashboardHome from "./pages/dashboard/DashboardHome";
 import Projects from "./pages/dashboard/Projects";
 import Estimates from "./pages/dashboard/Estimator";
+import BudgetAnalysis from "./pages/dashboard/BudgetAnalysis";
 import Documents from "./pages/dashboard/Documents";
-import Team from "./pages/dashboard/Team"; // From snippet 1
+import Team from "./pages/dashboard/Team"; 
 import Permits from "./pages/dashboard/PermitGuide";
 import AiStudio from "./pages/dashboard/AiStudio";
 import RoiTools from "./pages/dashboard/RoiTools";
@@ -84,8 +88,13 @@ export default function App() {
         </Route>
 
         {/* 2. AUTH ROUTES (Supporting both Page and Modal logic) */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+        <Route element={<AuthLayout />}>
+             <Route path="/login" element={<Login />} />
+             <Route path="/register" element={<Register />} />
+             <Route path="/forgot-password" element={<ForgotPassword />} />
+             <Route path="/reset-password" element={<ResetPassword />} />
+        </Route>
+        
         <Route path="/login/admin" element={<LoginAdmin />} />
         <Route path="/login/engineer" element={<LoginEngineer />} />
         <Route path="/login/contractor" element={<LoginContractor />} />
@@ -105,6 +114,7 @@ export default function App() {
           <Route index element={<DashboardHome />} />
           <Route path="projects" element={<Projects />} />
           <Route path="estimates" element={<Estimates />} />
+          <Route path="budget-analysis" element={<BudgetAnalysis />} />
           <Route path="documents" element={<Documents />} />
           <Route path="team" element={<Team />} />
           <Route path="permits" element={<Permits />} />
@@ -133,7 +143,7 @@ export default function App() {
       </Routes>
 
       {/* Global Modal Host: Listens to URL for /login or /register to trigger modals */}
-      <AuthModalHost />
+      {/* <AuthModalHost /> */}
     </>
   );
 }

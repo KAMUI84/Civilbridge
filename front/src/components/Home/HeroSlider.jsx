@@ -1,81 +1,72 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 
-// ─────────────────────────────────────────────────────────────
-// UNIQUE images for every slide (no repeats), rich content
-// ─────────────────────────────────────────────────────────────
+// Use local uploaded images from /public or src/assets
 const SLIDES = [
   {
     badge: "Welcome to CivilBridge",
     badgeIcon: "🏗️",
     title: ["Your Construction Journey,", "Digitally Mastered."],
-    highlight: "Digitally Mastered.",
     desc: "Bridging the gap between architectural dreams and structural reality with smart, reliable workflows.",
     ctas: [
       { label: "Explore Marketplace", to: "/marketplace", variant: "primary" },
-      { label: "How it Works",        to: "/#how-it-works", variant: "ghost"  },
+      { label: "How it Works", to: "/#how-it-works", variant: "ghost" },
     ],
-    image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=85&w=2400&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=85&w=2400&auto=format&fit=cropimport",
     stat: { value: "18K+", label: "Projects estimated" },
   },
   {
     badge: "AI Studio (Beta)",
     badgeIcon: "🤖",
     title: ["Smarter Guidance.", "Real Decisions."],
-    highlight: "Real Decisions.",
     desc: "Optional intelligence to support planning, budgeting, and next-step recommendations — without replacing your judgment.",
     ctas: [
       { label: "Open AI Studio", to: "/dashboard/ai-studio", variant: "primary" },
-      { label: "Learn more",     to: "/intelligence",        variant: "ghost"  },
+      { label: "Learn more", to: "/intelligence", variant: "ghost" },
     ],
-    image: "https://images.unsplash.com/photo-1677442136019-21780ecad995?q=85&w=2400&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1633356305829-0c70a1d5a8e0?q=85&w=2400&auto=format&fit=cropimport",
     stat: { value: "Beta", label: "Early access open" },
   },
   {
     badge: "Verified Experts",
     badgeIcon: "👷",
     title: ["Hire Trusted", "Engineering Talent."],
-    highlight: "Engineering Talent.",
     desc: "Connect with vetted engineers, architects, and contractors — built for trust, compliance, and long-term projects.",
     ctas: [
-      { label: "Browse Experts", to: "/experts",  variant: "primary" },
+      { label: "Browse Experts", to: "/experts", variant: "primary" },
       { label: "Become an Expert", to: "/register", variant: "ghost" },
     ],
-    image: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=85&w=2400&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=85&w=2400&auto=format&fit=cropimport",
     stat: { value: "2,400+", label: "Active professionals" },
   },
   {
     badge: "Plans Library",
     badgeIcon: "📐",
     title: ["Ready-to-build Plans", "You Can Trust."],
-    highlight: "You Can Trust.",
     desc: "Browse curated residential and commercial plans with estimated build ranges, compliance notes, and architect contacts.",
     ctas: [
-      { label: "Explore Plans", to: "/plans",    variant: "primary" },
-      { label: "Upload yours",  to: "/uploads",  variant: "ghost"   },
+      { label: "Explore Plans", to: "/plans", variant: "primary" },
+      { label: "Upload yours", to: "/uploads", variant: "ghost" },
     ],
-    image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=85&w=2400&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=85&w=2400&auto=format&fit=cropimport",
     stat: { value: "140+", label: "Plan templates" },
   },
   {
     badge: "Cost Control",
     badgeIcon: "📊",
     title: ["Real-time Estimation", "From Day One."],
-    highlight: "From Day One.",
-    desc: "Estimate project cost, materials, and timeline — transparently, accurately, and instantly. No spreadsheets needed.",
+    desc: "Estimate project cost, materials, and timeline — transparently, accurately, and instantly.",
     ctas: [
       { label: "Get an Estimate", to: "/estimator", variant: "primary" },
-      { label: "See sample",      to: "/estimator/sample", variant: "ghost" },
+      { label: "See sample", to: "/estimator", variant: "ghost" },
     ],
-    // Unique image — construction cost/materials themed
-    image: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?q=85&w=2400&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=85&w=2400&auto=format&fit=cropimport",
     stat: { value: "97%", label: "Client satisfaction" },
   },
 ];
 
-// ─────────────────────────────────────────────────────────────
-// STYLES (all outside component — no recreation on render)
-// ─────────────────────────────────────────────────────────────
+const DURATION = 5000;
+
 const S = {
   section: {
     position: "relative",
@@ -89,8 +80,7 @@ const S = {
     position: "absolute",
     inset: 0,
     opacity: active ? 1 : 0,
-    transition: "opacity 1800ms cubic-bezier(0.4, 0, 0.2, 1)",
-    zIndex: active ? 2 : 1,
+    transition: "opacity 900ms ease",
     pointerEvents: active ? "auto" : "none",
   }),
   bgImg: (src, active) => ({
@@ -99,16 +89,14 @@ const S = {
     backgroundImage: `url("${src}")`,
     backgroundSize: "cover",
     backgroundPosition: "center",
-    transform: active ? "scale(1.12)" : "scale(1.04)",
-    transition: active ? "transform 10000ms linear" : "none",
+    transform: active ? "scale(1.08)" : "scale(1.02)",
+    transition: "transform 7000ms linear",
   }),
   overlay: {
     position: "absolute",
     inset: 0,
-    background: [
-      "linear-gradient(to right, rgba(7,11,20,0.97) 0%, rgba(7,11,20,0.55) 55%, rgba(7,11,20,0.15) 100%)",
-      "linear-gradient(to top, rgba(7,11,20,0.7) 0%, transparent 40%)",
-    ].join(", "),
+    background:
+      "linear-gradient(to right, rgba(7,11,20,0.94) 0%, rgba(7,11,20,0.58) 55%, rgba(7,11,20,0.18) 100%), linear-gradient(to top, rgba(7,11,20,0.55) 0%, transparent 40%)",
   },
   contentArea: {
     position: "relative",
@@ -122,9 +110,9 @@ const S = {
   },
   textBlock: (active) => ({
     maxWidth: 660,
-    transform: active ? "translateY(0px)" : "translateY(48px)",
+    transform: active ? "translateY(0px)" : "translateY(40px)",
     opacity: active ? 1 : 0,
-    transition: "all 1100ms cubic-bezier(0.16, 1, 0.3, 1) 300ms",
+    transition: "all 1000ms cubic-bezier(0.16, 1, 0.3, 1) 200ms",
   }),
   badge: {
     display: "inline-flex",
@@ -143,28 +131,24 @@ const S = {
     fontFamily: "'DM Sans', sans-serif",
     backdropFilter: "blur(6px)",
   },
-  badgeIcon: {
-    fontSize: 14,
-  },
   h1: {
-    margin: "0 0 6px",
-    fontSize: "clamp(34px, 6.5vw, 62px)",
-    lineHeight: 1.06,
+    margin: "0 0 8px",
+    fontSize: "clamp(34px, 6.5vw, 64px)",
+    lineHeight: 1.03,
     fontWeight: 900,
     color: "#fff",
-    letterSpacing: "-0.03em",
+    letterSpacing: "-0.04em",
   },
   h1Highlight: {
     color: "#2a66ff",
     display: "block",
-    marginBottom: 28,
   },
   desc: {
     margin: "0 0 36px",
-    color: "rgba(255,255,255,0.62)",
+    color: "rgba(255,255,255,0.68)",
     fontSize: 17,
     lineHeight: 1.7,
-    maxWidth: 480,
+    maxWidth: 500,
     fontFamily: "'DM Sans', sans-serif",
     fontWeight: 400,
   },
@@ -175,7 +159,7 @@ const S = {
     alignItems: "center",
   },
   statPill: {
-    marginTop: 48,
+    marginTop: 44,
     display: "inline-flex",
     alignItems: "center",
     gap: 10,
@@ -186,7 +170,6 @@ const S = {
     backdropFilter: "blur(8px)",
   },
   statValue: {
-    fontFamily: "'Sora', sans-serif",
     fontWeight: 900,
     fontSize: 20,
     color: "#fff",
@@ -195,7 +178,7 @@ const S = {
   statLabel: {
     fontFamily: "'DM Sans', sans-serif",
     fontSize: 13,
-    color: "rgba(255,255,255,0.5)",
+    color: "rgba(255,255,255,0.55)",
     fontWeight: 500,
   },
   statDivider: {
@@ -203,11 +186,9 @@ const S = {
     height: 24,
     background: "rgba(255,255,255,0.12)",
   },
-
-  // Progress bar dots
   dotsBar: {
     position: "absolute",
-    bottom: 36,
+    bottom: 28,
     left: "50%",
     transform: "translateX(-50%)",
     display: "flex",
@@ -215,22 +196,19 @@ const S = {
     zIndex: 10,
     alignItems: "center",
   },
-  dotWrap: (active) => ({
+  dotWrap: {
     display: "flex",
     alignItems: "center",
-    gap: 8,
     cursor: "pointer",
-    padding: "4px 0",
-  }),
+  },
   dot: (active) => ({
     position: "relative",
     height: 4,
-    width: active ? 40 : 8,
-    borderRadius: 2,
-    background: active ? "transparent" : "rgba(255,255,255,0.18)",
+    width: active ? 42 : 10,
+    borderRadius: 999,
+    background: active ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.18)",
     overflow: "hidden",
-    transition: "width 500ms cubic-bezier(0.4,0,0.2,1), background 300ms",
-    flexShrink: 0,
+    transition: "width 350ms ease, background 300ms ease",
   }),
   dotFill: {
     position: "absolute",
@@ -238,8 +216,6 @@ const S = {
     background: "#2a66ff",
     transformOrigin: "left",
   },
-
-  // Slide counter top-right
   counter: {
     position: "absolute",
     top: 28,
@@ -247,8 +223,7 @@ const S = {
     zIndex: 10,
     display: "flex",
     alignItems: "baseline",
-    gap: 3,
-    fontFamily: "'Sora', sans-serif",
+    gap: 4,
   },
   counterCurrent: {
     fontSize: 28,
@@ -258,38 +233,34 @@ const S = {
   },
   counterSep: {
     fontSize: 14,
-    color: "rgba(255,255,255,0.25)",
-    fontWeight: 400,
+    color: "rgba(255,255,255,0.28)",
   },
   counterTotal: {
     fontSize: 14,
-    color: "rgba(255,255,255,0.30)",
-    fontWeight: 600,
+    color: "rgba(255,255,255,0.35)",
+    fontWeight: 700,
   },
-
-  // Arrow buttons
-  arrowBtn: (side) => ({
+  arrowBtn: (side, hovered) => ({
     position: "absolute",
     top: "50%",
     [side]: 20,
     transform: "translateY(-50%)",
     zIndex: 10,
-    width: 44,
-    height: 44,
+    width: 46,
+    height: 46,
     borderRadius: 999,
-    background: "rgba(255,255,255,0.08)",
+    background: hovered ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.08)",
     border: "1px solid rgba(255,255,255,0.12)",
     color: "#fff",
-    fontSize: 18,
+    fontSize: 22,
     cursor: "pointer",
     display: "grid",
     placeItems: "center",
     backdropFilter: "blur(6px)",
-    transition: "background .2s, transform .2s",
+    transition: "background .2s ease",
   }),
 };
 
-// CTA button styles
 function ctaStyle(variant, hovered) {
   const base = {
     textDecoration: "none",
@@ -304,6 +275,7 @@ function ctaStyle(variant, hovered) {
     gap: 6,
     letterSpacing: "0.01em",
   };
+
   if (variant === "primary") {
     return {
       ...base,
@@ -317,9 +289,10 @@ function ctaStyle(variant, hovered) {
       transform: hovered ? "translateY(-2px)" : "translateY(0)",
     };
   }
+
   return {
     ...base,
-    color: hovered ? "#fff" : "rgba(255,255,255,0.80)",
+    color: hovered ? "#fff" : "rgba(255,255,255,0.82)",
     background: hovered ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.07)",
     border: "1px solid rgba(255,255,255,0.18)",
     backdropFilter: "blur(6px)",
@@ -327,19 +300,15 @@ function ctaStyle(variant, hovered) {
   };
 }
 
-// ─────────────────────────────────────────────────────────────
-// COMPONENT
-// ─────────────────────────────────────────────────────────────
 export default function HeroSlider() {
-  const [index, setIndex]         = useState(0);
-  const [progress, setProgress]   = useState(0);
-  const [hoveredCta, setHoveredCta] = useState(null); // "primary-N" | "ghost-N"
+  const [index, setIndex] = useState(0);
+  const [progress, setProgress] = useState(0);
+  const [hoveredCta, setHoveredCta] = useState(null);
   const [hoveredArrow, setHoveredArrow] = useState(null);
-  const timerRef    = useRef(null);
-  const progressRef = useRef(null);
-  const DURATION    = 5000;
 
-  // Preload all images
+  const timerRef = useRef(null);
+  const progressRef = useRef(null);
+
   useEffect(() => {
     SLIDES.forEach((s) => {
       const img = new Image();
@@ -362,61 +331,45 @@ export default function HeroSlider() {
     setProgress(0);
   }, []);
 
-  // Auto-advance timer
   useEffect(() => {
     clearInterval(timerRef.current);
     timerRef.current = setInterval(next, DURATION);
     return () => clearInterval(timerRef.current);
   }, [next]);
 
-  // Progress ticker (60fps approx)
   useEffect(() => {
     clearInterval(progressRef.current);
     setProgress(0);
+
     const tick = 50;
     progressRef.current = setInterval(() => {
       setProgress((p) => Math.min(p + (tick / DURATION) * 100, 100));
     }, tick);
+
     return () => clearInterval(progressRef.current);
   }, [index]);
 
   return (
     <section style={S.section}>
-
-      {/* Slide counter */}
       <div style={S.counter}>
-        <span style={S.counterCurrent}>
-          {String(index + 1).padStart(2, "0")}
-        </span>
+        <span style={S.counterCurrent}>{String(index + 1).padStart(2, "0")}</span>
         <span style={S.counterSep}>/</span>
-        <span style={S.counterTotal}>
-          {String(SLIDES.length).padStart(2, "0")}
-        </span>
+        <span style={S.counterTotal}>{String(SLIDES.length).padStart(2, "0")}</span>
       </div>
 
-      {/* Arrow navigation */}
       <button
         onClick={prev}
-        style={{
-          ...S.arrowBtn("left"),
-          background: hoveredArrow === "prev"
-            ? "rgba(255,255,255,0.15)"
-            : "rgba(255,255,255,0.08)",
-        }}
+        style={S.arrowBtn("left", hoveredArrow === "prev")}
         onMouseEnter={() => setHoveredArrow("prev")}
         onMouseLeave={() => setHoveredArrow(null)}
         aria-label="Previous slide"
       >
         ‹
       </button>
+
       <button
         onClick={next}
-        style={{
-          ...S.arrowBtn("right"),
-          background: hoveredArrow === "next"
-            ? "rgba(255,255,255,0.15)"
-            : "rgba(255,255,255,0.08)",
-        }}
+        style={S.arrowBtn("right", hoveredArrow === "next")}
         onMouseEnter={() => setHoveredArrow("next")}
         onMouseLeave={() => setHoveredArrow(null)}
         aria-label="Next slide"
@@ -424,33 +377,24 @@ export default function HeroSlider() {
         ›
       </button>
 
-      {/* Slides */}
       {SLIDES.map((s, i) => {
         const active = i === index;
-        const titleLines = s.title;
-        const lastLine = titleLines[titleLines.length - 1];
+        const lastLine = s.title[s.title.length - 1];
 
         return (
           <div key={i} style={S.slideWrap(active)}>
-            {/* Background image */}
             <div style={S.bgImg(s.image, active)} />
-
-            {/* Gradient overlay */}
             <div style={S.overlay} />
 
-            {/* Content */}
             <div style={S.contentArea}>
               <div style={S.textBlock(active)}>
-
-                {/* Badge */}
                 <div style={S.badge}>
-                  <span style={S.badgeIcon}>{s.badgeIcon}</span>
+                  <span>{s.badgeIcon}</span>
                   {s.badge}
                 </div>
 
-                {/* Heading — last line gets accent color */}
                 <h1 style={S.h1}>
-                  {titleLines.map((line, li) =>
+                  {s.title.map((line, li) =>
                     line === lastLine ? (
                       <span key={li} style={S.h1Highlight}>{line}</span>
                     ) : (
@@ -459,44 +403,37 @@ export default function HeroSlider() {
                   )}
                 </h1>
 
-                {/* Description */}
                 <p style={S.desc}>{s.desc}</p>
 
-                {/* CTA buttons */}
                 <div style={S.ctaRow}>
                   {s.ctas.map((cta, ci) => {
-                    const hk = `${cta.variant}-${i}-${ci}`;
+                    const key = `${cta.variant}-${i}-${ci}`;
                     return (
                       <Link
                         key={ci}
                         to={cta.to}
-                        style={ctaStyle(cta.variant, hoveredCta === hk)}
-                        onMouseEnter={() => setHoveredCta(hk)}
+                        style={ctaStyle(cta.variant, hoveredCta === key)}
+                        onMouseEnter={() => setHoveredCta(key)}
                         onMouseLeave={() => setHoveredCta(null)}
                       >
                         {cta.label}
-                        {cta.variant === "primary" && (
-                          <span style={{ fontSize: 16, lineHeight: 1 }}>→</span>
-                        )}
+                        {cta.variant === "primary" && <span>→</span>}
                       </Link>
                     );
                   })}
                 </div>
 
-                {/* Stat pill */}
                 <div style={S.statPill}>
                   <span style={S.statValue}>{s.stat.value}</span>
                   <span style={S.statDivider} />
                   <span style={S.statLabel}>{s.stat.label}</span>
                 </div>
-
               </div>
             </div>
           </div>
         );
       })}
 
-      {/* Progress dots */}
       <div style={S.dotsBar}>
         {SLIDES.map((_, i) => {
           const active = i === index;
@@ -504,7 +441,7 @@ export default function HeroSlider() {
             <div
               key={i}
               onClick={() => goTo(i)}
-              style={S.dotWrap(active)}
+              style={S.dotWrap}
               role="button"
               aria-label={`Go to slide ${i + 1}`}
             >
@@ -523,7 +460,6 @@ export default function HeroSlider() {
           );
         })}
       </div>
-
     </section>
   );
 }

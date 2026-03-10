@@ -1,7 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import {  logout, getUser } from "../store/authstore";
-import { apiFetch } from "../services/apiClientService";
+import { authService } from "../services/authService.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Context definition
@@ -14,17 +13,17 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [token, setToken] = useState(null);
-    const [auth, setAuth] = useState(null);
     const [loading, setLoading] = useState(true); // true until rehydration done
     const navigate = useNavigate();
 
     // ── Rehydrate from localStorage on first mount ──────────────────────────
     useEffect(() => {
         const storedToken = localStorage.getItem("token");
-        const storedUser = getUser();
+        const storedUser = localStorage.getItem("user");
+        
         if (storedToken && storedUser) {
             setToken(storedToken);
-            setUser(storedUser);
+            setUser(JSON.parse(storedUser));
         }
         setLoading(false);
     }, []);
@@ -35,30 +34,73 @@ export function AuthProvider({ children }) {
 
     // ── Login ────────────────────────────────────────────────────────────────
     const login = useCallback(async (credentials) => {
-        // credentials = { email?, phone?, password }
-        const data = await apiFetch("/api/auth/login", {
-            method: "POST",
-            body: JSON.stringify(credentials),
-        });
-        const { token: newToken, user: newUser } = data;
+        try {
+            const data = await authService.login(credentials);
+            const { token: newToken, user: newUser } = data;
 
-        setAuth({ token: newToken, user: newUser });
-        setToken(newToken);
-        setUser(newUser);
+            // Save to localStorage
+            localStorage.setItem("token", newToken);
+            localStorage.setItem("user", JSON.stringify(newUser));
+            
+            setToken(newToken);
+            setUser(newUser);
 
-        // Redirect based on role
-        if (newUser.role === "ADMIN") {
-            navigate("/admin", { replace: true });
-        } else {
-            navigate("/dashboard", { replace: true });
+            // Redirect based on role
+            if (newUser.role === "ADMIN") {
+                navigate("/admin", { replace: true });
+            } else {
+                navigate("/dashboard", { replace: true });
+            }
+
+            return newUser;
+        } catch (error) {
+            console.error('Login failed:', error);
+            throw error;
         }
-
-        return newUser;
     }, [navigate]);
+
+    // ── Google Login ───────────────────────────────────────────────────────
+    const googleLogin = useCallback(async (credential) => {
+        try {
+            const data = await authService.googleLogin(credential);
+            const { token: newToken, user: newUser } = data;
+
+            // Save to localStorage
+            localStorage.setItem("token", newToken);
+            localStorage.setItem("user", JSON.stringify(newUser));
+            
+            setToken(newToken);
+            setUser(newUser);
+
+            // Redirect based on role
+            if (newUser.role === "ADMIN") {
+                navigate("/admin", { replace: true });
+            } else {
+                navigate("/dashboard", { replace: true });
+            }
+
+            return newUser;
+        } catch (error) {
+            console.error('Google login failed:', error);
+            throw error;
+        }
+    }, [navigate]);
+
+    // ── Register ─────────────────────────────────────────────────────────────
+    const register = useCallback(async (userData) => {
+        try {
+            const data = await authService.register(userData);
+            return data;
+        } catch (error) {
+            console.error('Registration failed:', error);
+            throw error;
+        }
+    }, []);
 
     // ── Logout ───────────────────────────────────────────────────────────────
     const logout = useCallback(() => {
-        clearAuth();
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
         setToken(null);
         setUser(null);
         navigate("/login", { replace: true });
@@ -70,10 +112,10 @@ export function AuthProvider({ children }) {
         token,
         role,
         isAuthed,
-        setAuth,
-        auth,
         loading,
         login,
+        googleLogin,
+        register,
         logout,
     };
 

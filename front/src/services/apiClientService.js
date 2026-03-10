@@ -1,4 +1,4 @@
-const BASE_URL = ""; // proxy handles it
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
 
 export async function apiFetch(path, options = {}) {
   const token = localStorage.getItem("token");
@@ -11,7 +11,6 @@ export async function apiFetch(path, options = {}) {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
   });
-  console.log("API BASE URL:", import.meta.env.VITE_API_BASE_URL);
 
   const data = await res.json().catch(() => ({}));
 
@@ -22,3 +21,11 @@ export async function apiFetch(path, options = {}) {
 
   return data;
 }
+
+// Create a structured API client
+export const api = {
+  get: (path) => apiFetch(path),
+  post: (path, body) => apiFetch(path, { method: 'POST', body: JSON.stringify(body) }),
+  put: (path, body) => apiFetch(path, { method: 'PUT', body: JSON.stringify(body) }),
+  delete: (path) => apiFetch(path, { method: 'DELETE' })
+};

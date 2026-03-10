@@ -1,47 +1,43 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 export default function AuthShell({
   title,
   subtitle,
+  linkText,
+  linkTo,
   leftTitle = "Success starts here",
-  leftBullets = [
+  bullets = [
     "Verified experts & suppliers",
     "Plans + estimation + BOQ tools",
     "Compliance & permits guidance",
     "Dashboard for project progress",
   ],
-  leftImage = "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1600&q=80",
   children,
 }) {
+  const nav = useNavigate();
+
   return (
-    <div style={styles.backdrop}>
-      <div style={styles.modal}>
-        {/* LEFT */}
-        <div style={{ ...styles.left, backgroundImage: `url("${leftImage}")` }}>
-          <div style={styles.leftOverlay} />
-          <div style={styles.leftContent}>
-            <div style={styles.brandPill}>CivilBridge</div>
-            <h2 style={styles.leftTitle}>{leftTitle}</h2>
-            <ul style={styles.bullets}>
-              {leftBullets.map((b, i) => (
-                <li key={i} style={styles.bulletItem}>
-                  <span style={styles.check}>✓</span>
-                  <span>{b}</span>
-                </li>
+    <div style={wrap}>
+      <div style={modal}>
+        <div style={left}>
+          <div style={leftOverlay} />
+          <div style={leftContent}>
+            <div style={pill}>CivilBridge</div>
+            <h2 style={leftH2}>{leftTitle}</h2>
+            <ul style={ul}>
+              {bullets.map((b) => (
+                <li key={b} style={li}>{b}</li>
               ))}
             </ul>
           </div>
         </div>
 
-        {/* RIGHT */}
-        <div style={styles.right}>
-          <Link to="/" aria-label="Close" style={styles.closeBtn}>
-            ✕
-          </Link>
+        <div style={right}>
+          <button onClick={() => nav("/")} style={closeBtn} aria-label="Close">×</button>
 
-          <div style={{ display: "grid", gap: 6 }}>
-            <h1 style={styles.h1}>{title}</h1>
-            {subtitle ? <div style={styles.sub}>{subtitle}</div> : null}
+          <h1 style={h1}>{title}</h1>
+          <div style={sub}>
+            {subtitle} <Link to={linkTo}>{linkText}</Link>
           </div>
 
           <div style={{ height: 14 }} />
@@ -53,110 +49,84 @@ export default function AuthShell({
   );
 }
 
-const styles = {
-  backdrop: {
-    minHeight: "calc(100vh - 72px)", // if navbar is sticky; adjust if needed
-    display: "grid",
-    placeItems: "center",
-    padding: "26px 18px",
-    background: "rgba(12,18,32,0.55)",
-  },
-  modal: {
-    width: "min(1040px, 100%)",
-    height: "min(640px, calc(100vh - 120px))",
-    background: "#fff",
-    borderRadius: 20,
-    overflow: "hidden",
-    display: "grid",
-    gridTemplateColumns: "1.05fr 0.95fr",
-    boxShadow: "0 28px 90px rgba(0,0,0,.30)",
-    border: "1px solid rgba(255,255,255,0.16)",
-  },
-  left: {
-    position: "relative",
-    backgroundSize: "cover",
-    backgroundPosition: "center",
-  },
-  leftOverlay: {
-    position: "absolute",
-    inset: 0,
-    background:
-      "linear-gradient(135deg, rgba(29,78,216,0.70), rgba(12,18,32,0.55))",
-  },
-  leftContent: {
-    position: "relative",
-    zIndex: 2,
-    padding: 26,
-    color: "#fff",
-    height: "100%",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "flex-start",
-    gap: 14,
-  },
-  brandPill: {
-    width: "fit-content",
-    padding: "8px 12px",
-    borderRadius: 999,
-    background: "rgba(255,255,255,0.16)",
-    border: "1px solid rgba(255,255,255,0.22)",
-    fontWeight: 900,
-    fontSize: 12,
-  },
-  leftTitle: {
-    margin: 0,
-    fontSize: 44,
-    lineHeight: 1.05,
-    letterSpacing: "-0.02em",
-    fontWeight: 950,
-  },
-  bullets: {
-    margin: 0,
-    paddingLeft: 0,
-    listStyle: "none",
-    display: "grid",
-    gap: 10,
-    maxWidth: 420,
-  },
-  bulletItem: {
-    display: "flex",
-    gap: 10,
-    alignItems: "flex-start",
-    fontWeight: 700,
-    color: "rgba(255,255,255,0.92)",
-  },
-  check: {
-    display: "inline-grid",
-    placeItems: "center",
-    width: 20,
-    height: 20,
-    borderRadius: 999,
-    background: "rgba(255,255,255,0.16)",
-    border: "1px solid rgba(255,255,255,0.22)",
-    fontWeight: 900,
-    flex: "0 0 auto",
-    marginTop: 1,
-  },
-  right: {
-    position: "relative",
-    padding: 26,
-    overflow: "auto",
-  },
-  closeBtn: {
-    position: "absolute",
-    top: 16,
-    right: 16,
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    border: "1px solid #eef0f4",
-    background: "#fff",
-    display: "grid",
-    placeItems: "center",
-    textDecoration: "none",
-    color: "#0c1220",
-    fontWeight: 900,
-  },
-  h1: { margin: 0, color: "#0c1220", fontWeight: 950, fontSize: 30 },
-  sub: { color: "#64708a", fontWeight: 650 },
+const wrap = {
+  minHeight: "100vh",
+  display: "grid",
+  placeItems: "center",
+  padding: 18,
+  background: "radial-gradient(1200px 500px at 50% 10%, rgba(29,78,216,.18), transparent 60%), #0b1220",
 };
+
+const modal = {
+  width: "min(1040px, 100%)",
+  height: "min(620px, calc(100vh - 56px))",
+  borderRadius: 18,
+  overflow: "hidden",
+  display: "grid",
+  gridTemplateColumns: "1.1fr 1fr",
+  background: "#fff",
+  boxShadow: "0 30px 120px rgba(0,0,0,.45)",
+  border: "1px solid rgba(255,255,255,.10)",
+};
+
+const left = {
+  position: "relative",
+  backgroundImage: `url("/img/auth-left.jpg")`,
+  backgroundSize: "cover",
+  backgroundPosition: "center",
+};
+
+const leftOverlay = {
+  position: "absolute",
+  inset: 0,
+  background: "linear-gradient(135deg, rgba(29,78,216,.65), rgba(2,6,23,.55))",
+};
+
+const leftContent = {
+  position: "relative",
+  padding: 26,
+  color: "#fff",
+};
+
+const pill = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 8,
+  padding: "8px 12px",
+  borderRadius: 999,
+  background: "rgba(255,255,255,.18)",
+  border: "1px solid rgba(255,255,255,.20)",
+  fontWeight: 900,
+  fontSize: 12,
+};
+
+const leftH2 = { margin: "16px 0 10px", fontSize: 44, lineHeight: 1.05, letterSpacing: "-0.03em" };
+
+const ul = { margin: 0, paddingLeft: 18, display: "grid", gap: 10, fontWeight: 650, opacity: 0.95 };
+const li = { lineHeight: 1.35 };
+
+const right = {
+  position: "relative",
+  padding: 26,
+  display: "grid",
+  alignContent: "start",
+  overflow: "auto",
+};
+
+const closeBtn = {
+  position: "absolute",
+  top: 14,
+  right: 14,
+  width: 40,
+  height: 40,
+  borderRadius: 12,
+  border: "1px solid #eef0f4",
+  background: "#fff",
+  cursor: "pointer",
+  fontSize: 22,
+  lineHeight: "40px",
+};
+
+const h1 = { margin: 0, color: "#0c1220", fontSize: 34, letterSpacing: "-0.02em" };
+
+const sub = { color: "#64708a", fontWeight: 650 };

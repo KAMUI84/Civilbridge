@@ -1,4 +1,8 @@
 /* ── Tailwind CSS Directives ─────────────────────────────────────────── */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* ── Global reset & base ─────────────────────────────────────────── */
 *,
 *::before,

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { useAuthStore } from '../../store/authStore';
 
 /* ──────────────────────────────────────────────
    CivilBridge – Premium Dark Login
@@ -9,7 +9,7 @@ import { useAuth } from '../../context/AuthContext';
 
 export default function ModernLogin() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const login = useAuthStore(s => s.login);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [err, setErr] = useState('');
@@ -22,7 +22,9 @@ export default function ModernLogin() {
     setLoading(true);
     try {
       if (!email || !password) throw new Error('Please enter email and password.');
-      await login({ email, password });
+      const user = await login({ email, password });
+      if (user?.role === "ADMIN") navigate('/admin', { replace: true });
+      else navigate('/dashboard', { replace: true });
     } catch (error) {
       setErr(error?.message || 'Login failed');
     } finally {
@@ -125,16 +127,14 @@ export default function ModernLogin() {
       <div style={S.right}>
         <div style={S.brandOverlay} />
         <div style={S.brandContent}>
-          <h2 style={S.brandStat}>
-            Where Construction<br />Meets Intelligence.
-          </h2>
-          <p style={S.brandDesc}>
-            AI-powered planning, verified experts, and real-time cost estimation for Rwanda's construction industry.
-          </p>
-          <div style={S.brandChips}>
-            <span style={S.chip}>🏗️ Smart Estimation</span>
-            <span style={S.chip}>📐 Plan Generation</span>
-            <span style={S.chip}>👷 Expert Directory</span>
+          <img
+            src="https://images.unsplash.com/photo-1541888946145-81ae9f5b528a?w=800&h=1000&fit=crop&auto=format"
+            alt="Construction Architecture"
+            style={S.brandImage}
+          />
+          <div style={S.brandTextOverlay}>
+            <h2 style={S.brandTitle}>Build Smarter with CivilBridge</h2>
+            <p style={S.brandDesc}>Your trusted partner for construction estimates, plans, permits, and expert guidance in Rwanda.</p>
           </div>
         </div>
       </div>
@@ -351,36 +351,40 @@ const S = {
   brandContent: {
     position: 'relative',
     zIndex: 1,
-    padding: '48px 40px',
-    maxWidth: 460,
+    width: '100%',
+    height: '100%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  brandStat: {
-    margin: '0 0 16px',
-    fontSize: 36,
+  brandImage: {
+    position: 'absolute',
+    inset: 0,
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+  },
+  brandTextOverlay: {
+    position: 'absolute',
+    bottom: 48,
+    left: 40,
+    right: 40,
+    textAlign: 'center',
+    color: '#fff',
+    textShadow: '0 2px 12px rgba(0,0,0,0.65)',
+  },
+  brandTitle: {
+    margin: '0 0 12px',
+    fontSize: 32,
     fontWeight: 800,
-    color: '#f0f0f0',
-    lineHeight: 1.15,
+    lineHeight: 1.2,
     letterSpacing: '-0.03em',
   },
   brandDesc: {
-    margin: '0 0 32px',
+    margin: 0,
     fontSize: 15,
-    color: '#94a3b8',
-    lineHeight: 1.65,
-  },
-  brandChips: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  chip: {
-    padding: '8px 14px',
-    borderRadius: 8,
-    fontSize: 12,
-    fontWeight: 600,
-    background: 'rgba(255,255,255,.04)',
-    border: '1px solid rgba(255,255,255,.06)',
-    color: '#94a3b8',
-    letterSpacing: '.01em',
+    fontWeight: 400,
+    lineHeight: 1.6,
+    opacity: 0.92,
   },
 };

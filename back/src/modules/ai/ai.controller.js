@@ -1,5 +1,15 @@
-import { pool } from "../../config/db.js";
+import prisma from "../../config/prisma.js";
 import { ai, MODEL } from "../../ai/genaiclient.js";
+import { rateLimit } from "express-rate-limit";
+
+// Rate limiting for AI chat
+export const aiRateLimit = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 10, // 10 messages per minute
+  message: { error: "Too many AI requests. Please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 const GUEST_MSG_LIMIT = 3;
 
@@ -18,14 +28,22 @@ Format responses clearly with bullet points or numbered lists where appropriate.
 // ─── GET /api/ai/threads ──────────────────────────────────────────────────────
 export const getThreads = async (req, res) => {
     try {
-        const [threads] = await pool.query(
-            `SELECT id, title, context_type, created_at, updated_at
-       FROM ai_threads WHERE user_id = ?
-       ORDER BY updated_at DESC LIMIT 20`,
-            [req.user.id]
-        );
+        const threads = await prisma.chatThread.findMany({
+            where: { userId: BigInt(req.user.id) },
+            orderBy: { updatedAt: "desc" },
+            take: 20,
+            select: {
+                id: true,
+                title: true,
+                contextType: true,
+                createdAt: true,
+                updatedAt: true,
+                _count: { select: { messages: true } },
+            },
+        });
         res.json({ success: true, threads });
     } catch (err) {
+        console.error("Get threads error:", err);
         res.status(500).json({ message: "Failed to fetch threads" });
     }
 };
@@ -33,13 +51,17 @@ export const getThreads = async (req, res) => {
 // ─── POST /api/ai/threads ─────────────────────────────────────────────────────
 export const createThread = async (req, res) => {
     try {
-        const { title, context_type = "general" } = req.body;
-        const [result] = await pool.query(
-            "INSERT INTO ai_threads (user_id, title, context_type) VALUES (?,?,?)",
-            [req.user.id, title || "New Conversation", context_type]
-        );
-        res.status(201).json({ success: true, thread_id: result.insertId });
+        const { title, contextType = "general" } = req.body;
+        const thread = await prisma.chatThread.create({
+            data: {
+                userId: BigInt(req.user.id),
+                title: title || "New Conversation",
+                contextType,
+            },
+        });
+        res.status(201).json({ success: true, thread_id: thread.id.toString() });
     } catch (err) {
+        console.error("Create thread error:", err);
         res.status(500).json({ message: "Failed to create thread" });
     }
 };
@@ -47,18 +69,34 @@ export const createThread = async (req, res) => {
 // ─── GET /api/ai/threads/:id/messages ────────────────────────────────────────
 export const getMessages = async (req, res) => {
     try {
-        const [thread] = await pool.query(
-            "SELECT * FROM ai_threads WHERE id = ? AND (user_id = ? OR user_id IS NULL)",
-            [req.params.id, req.user.id]
-        );
-        if (!thread.length) return res.status(404).json({ message: "Thread not found" });
+        const threadId = BigInt(req.params.id);
+        
+        // Verify thread ownership
+        const thread = await prisma.chatThread.findFirst({
+            where: { 
+                id: threadId, 
+                userId: BigInt(req.user.id),
+            },
+        });
+        
+        if (!thread) {
+            return res.status(404).json({ message: "Thread not found" });
+        }
 
-        const [messages] = await pool.query(
-            "SELECT id, role, content, created_at FROM ai_messages WHERE thread_id = ? ORDER BY created_at ASC",
-            [req.params.id]
-        );
+        const messages = await prisma.chatMessage.findMany({
+            where: { threadId },
+            orderBy: { createdAt: "asc" },
+            select: {
+                id: true,
+                role: true,
+                content: true,
+                createdAt: true,
+            },
+        });
+        
         res.json({ success: true, messages });
     } catch (err) {
+        console.error("Get messages error:", err);
         res.status(500).json({ message: "Failed to fetch messages" });
     }
 };
@@ -66,32 +104,41 @@ export const getMessages = async (req, res) => {
 // ─── POST /api/ai/threads/:id/chat ────────────────────────────────────────────
 export const sendMessage = async (req, res) => {
     try {
-        const { message, guest_id } = req.body;
-        const thread_id = req.params.id;
+        const { message } = req.body;
+        const threadId = BigInt(req.params.id);
 
         if (!message?.trim()) {
             return res.status(400).json({ message: "Message cannot be empty" });
         }
 
         // Verify thread ownership
-        const userId = req.user?.id || null;
-        const [thread] = await pool.query(
-            "SELECT * FROM ai_threads WHERE id = ? AND (user_id = ? OR guest_id = ?)",
-            [thread_id, userId, guest_id || null]
-        );
-        if (!thread.length) return res.status(403).json({ message: "Access denied" });
+        const thread = await prisma.chatThread.findFirst({
+            where: { 
+                id: threadId, 
+                userId: BigInt(req.user.id),
+            },
+        });
+        
+        if (!thread) {
+            return res.status(403).json({ message: "Access denied" });
+        }
 
         // Get conversation history for context
-        const [history] = await pool.query(
-            "SELECT role, content FROM ai_messages WHERE thread_id = ? ORDER BY created_at ASC LIMIT 20",
-            [thread_id]
-        );
+        const history = await prisma.chatMessage.findMany({
+            where: { threadId },
+            orderBy: { createdAt: "asc" },
+            take: 20,
+            select: { role: true, content: true },
+        });
 
         // Save user message
-        await pool.query(
-            "INSERT INTO ai_messages (thread_id, role, content) VALUES (?,?,?)",
-            [thread_id, "user", message]
-        );
+        await prisma.chatMessage.create({
+            data: {
+                threadId,
+                role: "user",
+                content: message,
+            },
+        });
 
         // Build Gemini conversation
         const contents = [
@@ -119,22 +166,32 @@ export const sendMessage = async (req, res) => {
         }
 
         // Save assistant response
-        await pool.query(
-            "INSERT INTO ai_messages (thread_id, role, content) VALUES (?,?,?)",
-            [thread_id, "assistant", aiResponse]
-        );
+        await prisma.chatMessage.create({
+            data: {
+                threadId,
+                role: "assistant",
+                content: aiResponse,
+            },
+        });
 
         // Update thread title from first message if untitled
-        if (thread[0].title === "New Conversation" && history.length === 0) {
+        if (thread.title === "New Conversation" && history.length === 0) {
             const autoTitle = message.slice(0, 60) + (message.length > 60 ? "..." : "");
-            await pool.query("UPDATE ai_threads SET title = ?, updated_at = NOW() WHERE id = ?", [autoTitle, thread_id]);
-        } else {
-            await pool.query("UPDATE ai_threads SET updated_at = NOW() WHERE id = ?", [thread_id]);
+            await prisma.chatThread.update({
+                where: { id: threadId },
+                data: { title: autoTitle },
+            });
         }
+
+        // Update thread timestamp
+        await prisma.chatThread.update({
+            where: { id: threadId },
+            data: { updatedAt: new Date() },
+        });
 
         res.json({ success: true, response: aiResponse });
     } catch (err) {
-        console.error(err);
+        console.error("Send message error:", err);
         res.status(500).json({ message: "Failed to send message" });
     }
 };
@@ -149,12 +206,12 @@ export const guestChat = async (req, res) => {
         }
 
         // Check/enforce guest limit
-        const [[limit]] = await pool.query(
-            "SELECT message_count FROM guest_chat_limits WHERE guest_id = ?",
-            [guest_id]
-        );
+        const limit = await prisma.guestChatLimit.findUnique({
+            where: { guestId: guest_id },
+            select: { messageCount: true },
+        });
 
-        if (limit && limit.message_count >= GUEST_MSG_LIMIT) {
+        if (limit && limit.messageCount >= GUEST_MSG_LIMIT) {
             return res.status(403).json({
                 message: `You've used your ${GUEST_MSG_LIMIT} free messages. Please sign up to continue.`,
                 limit_reached: true,
@@ -162,13 +219,20 @@ export const guestChat = async (req, res) => {
         }
 
         // Update limit counter
-        await pool.query(
-            `INSERT INTO guest_chat_limits (guest_id, message_count) VALUES (?, 1)
-       ON DUPLICATE KEY UPDATE message_count = message_count + 1, last_seen_at = NOW()`,
-            [guest_id]
-        );
+        await prisma.guestChatLimit.upsert({
+            where: { guestId: guest_id },
+            update: {
+                messageCount: { increment: 1 },
+                lastSeenAt: new Date(),
+            },
+            create: {
+                guestId: guest_id,
+                messageCount: 1,
+                lastSeenAt: new Date(),
+            },
+        });
 
-        const remaining = GUEST_MSG_LIMIT - ((limit?.message_count || 0) + 1);
+        const remaining = GUEST_MSG_LIMIT - ((limit?.messageCount || 0) + 1);
 
         let aiResponse = "";
         try {
@@ -202,9 +266,28 @@ export const guestChat = async (req, res) => {
 // ─── DELETE /api/ai/threads/:id ───────────────────────────────────────────────
 export const deleteThread = async (req, res) => {
     try {
-        await pool.query("DELETE FROM ai_threads WHERE id = ? AND user_id = ?", [req.params.id, req.user.id]);
+        const threadId = BigInt(req.params.id);
+        
+        // Verify thread ownership
+        const thread = await prisma.chatThread.findFirst({
+            where: { 
+                id: threadId, 
+                userId: BigInt(req.user.id),
+            },
+        });
+        
+        if (!thread) {
+            return res.status(404).json({ message: "Thread not found" });
+        }
+
+        // Delete thread and messages (cascade)
+        await prisma.chatThread.delete({
+            where: { id: threadId },
+        });
+        
         res.json({ success: true, message: "Thread deleted" });
     } catch (err) {
+        console.error("Delete thread error:", err);
         res.status(500).json({ message: "Failed to delete thread" });
     }
 };

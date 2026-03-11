@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import GoogleButton from "../../components/auth/GoogleButton";
+import civilbridge from "/civilbridge.png";
 
 export default function Login() {
   const nav = useNavigate();
@@ -43,50 +44,65 @@ export default function Login() {
   }
 
   return (
-    <div>
-      {err ? <div style={errBox}>{err}</div> : null}
+    <div style={{ display: "flex", gap: 60, alignItems: "center", maxWidth: 900, margin: "0 auto" }}>
+      <div style={{ flex: 1 }}>
+        {err ? <div style={errBox}>{err}</div> : null}
 
-      <GoogleButton onCredential={handleGoogleLogin} />
+        <GoogleButton onCredential={handleGoogleLogin} />
 
-      <div style={orRow}>
-        <div style={orLine} />
-        <div style={orText}>or</div>
-        <div style={orLine} />
+        <div style={orRow}>
+          <div style={orLine} />
+          <div style={orText}>or</div>
+          <div style={orLine} />
+        </div>
+
+        <form onSubmit={onSubmit} style={{ display: "grid", gap: 30 }}>
+          <label style={labelStyle}>
+            Email
+            <input
+              style={inputStyle}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              type="email"
+              autoComplete="email"
+              placeholder="name@example.com"
+            />
+          </label>
+
+          <label style={labelStyle}>
+            Password
+            <input
+              style={inputStyle}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              type="password"
+              autoComplete="current-password"
+              placeholder="••••••••"
+            />
+          </label>
+
+          <button type="submit" style={{ ...btnPrimary, opacity: loading ? 0.8 : 1 }} disabled={loading}>
+            {loading ? "Signing in..." : "Sign in"}
+          </button>
+
+          <div style={{ color: "#64708a", fontWeight: 650, fontSize: 12, marginLeft: 20 }}>
+            Forgot password?
+          </div>
+        </form>
       </div>
 
-      <form onSubmit={onSubmit} style={{ display: "grid", gap: 30 }}>
-        <label style={labelStyle}>
-          Email
-          <input
-            style={inputStyle}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            type="email"
-            autoComplete="email"
-            placeholder="name@example.com"
-          />
-        </label>
-
-        <label style={labelStyle}>
-          Password
-          <input
-            style={inputStyle}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            type="password"
-            autoComplete="current-password"
-            placeholder="••••••••"
-          />
-        </label>
-
-        <button type="submit" style={{ ...btnPrimary, opacity: loading ? 0.8 : 1 }} disabled={loading}>
-          {loading ? "Signing in..." : "Sign in"}
-        </button>
-
-        <div style={{ color: "#64708a", fontWeight: 650, fontSize: 12, marginLeft: 20 }}>
-          Forgot password?
-        </div>
-      </form>
+      <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center" }}>
+        <img 
+          src={civilbridge} 
+          alt="CivilBridge" 
+          style={{ 
+            maxWidth: "100%", 
+            height: "auto",
+            maxHeight: 400,
+            objectFit: "contain"
+          }} 
+        />
+      </div>
     </div>
   );
 }

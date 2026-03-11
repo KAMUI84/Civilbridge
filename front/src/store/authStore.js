@@ -1,38 +1,61 @@
+import { create } from 'zustand';
+import authService from '../services/authService';
 
-export function setSession({ token, user }) {
-  if (token) localStorage.setItem("cb_token", token);
-  if (user) localStorage.setItem("cb_user_profile", JSON.stringify(user));
-  window.dispatchEvent(new Event("cb_ls_changed"));
-}
+export const useAuthStore = create((set) => ({
+  user: null,
+  token: localStorage.getItem("cb_token") || null,
+  isAuthenticated: !!localStorage.getItem("cb_token"),
 
-export function logout() {
-  localStorage.removeItem("cb_token");
-  localStorage.removeItem("cb_user_profile");
-  window.dispatchEvent(new Event("cb_ls_changed"));
-}
+  login: async (credentials) => {
+    const data = await authService.login(credentials);
+    const { token, user } = data;
+    localStorage.setItem("cb_token", token);
+    localStorage.setItem("cb_user", JSON.stringify(user));
+    set({ user, token, isAuthenticated: true });
+    return user;
+  },
 
-export function getUser() {
-  try {
-    const raw = localStorage.getItem("cb_user_profile");
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
+  googleLogin: async (credential) => {
+    const data = await authService.googleLogin(credential);
+    const { token, user } = data;
+    localStorage.setItem("cb_token", token);
+    localStorage.setItem("cb_user", JSON.stringify(user));
+    set({ user, token, isAuthenticated: true });
+    return user;
+  },
+
+  register: async (userData) => {
+    return await authService.register(userData);
+  },
+
+  logout: () => {
+    localStorage.removeItem("cb_token");
+    localStorage.removeItem("cb_user");
+    set({ user: null, token: null, isAuthenticated: false });
+  },
+
+  setUser: (userData) => {
+    if (userData) {
+      localStorage.setItem("cb_user", JSON.stringify(userData));
+      set({ user: userData, isAuthenticated: true });
+    } else {
+      set({ user: null, isAuthenticated: false });
+    }
+  },
+
+  initializeAuth: () => {
+    const token = localStorage.getItem("cb_token");
+    const userStr = localStorage.getItem("cb_user");
+    if (token && userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        set({ user, token, isAuthenticated: true });
+      } catch (err) {
+        console.error("Failed to parse user from localStorage", err);
+        set({ user: null, token: null, isAuthenticated: false });
+      }
+    } else {
+      set({ user: null, token: null, isAuthenticated: false });
+    }
   }
-}
-
-export function getToken() {
-  return localStorage.getItem("cb_token");
-}
-
-export function isAuthed() {
-  return Boolean(localStorage.getItem("cb_token"));
-}
-
-// Alias so login/register can import { setAuth } from this file
-export const setAuth = setSession;
-
-// Matches writeLS used in login/register
-export function writeLS(key, value) {
-  localStorage.setItem(key, typeof value === "string" ? value : JSON.stringify(value));
-  window.dispatchEvent(new Event("cb_ls_changed"));
-}
+}));

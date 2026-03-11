@@ -1,5 +1,5 @@
 import { Navigate } from "react-router-dom";
-import { isAuthed } from "../../store/authStore";
+import { isAuthed } from "../../store/userStore";
 
 export default function RequireAuth({ children }) {
   if (!isAuthed()) return <Navigate to="/login" replace />;

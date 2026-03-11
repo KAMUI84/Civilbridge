@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import "./catalog.css";
 import { createListing, getListings, updateListing } from "../../data/store";
-import { getUser, isAuthed } from "../../store/authStore";
+import { getUser, isAuthed } from "../../store/userStore";
 
 function fmtMoney(n, currency = "RWF") {
   if (typeof n !== "number") return "";

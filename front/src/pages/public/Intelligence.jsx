@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { aiChat } from "../../api/ai";
-import { isAuthed } from "../../store/authStore";
+import { useAuthStore } from "../../store/authStore";
 import AuthGateModal from "../../components/auth/authGateModal";
 
 const GUEST_LIMIT = 3;
@@ -20,7 +20,8 @@ function lsSet(key, value) {
 
 export default function Intelligence() {
   const nav = useNavigate();
-  const authed = isAuthed();
+  const { isAuthenticated } = useAuthStore();
+  const authed = isAuthenticated;
 
   const [messages, setMessages] = useState(() =>
     lsGet("cb_ai_messages", [

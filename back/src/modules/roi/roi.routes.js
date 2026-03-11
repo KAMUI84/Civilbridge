@@ -1,9 +1,15 @@
 import { Router } from "express";
-import { calculateROI, getMyROICalculations } from "./roi.controller.js";
+import { protect } from "../../middlewares/auth.js";
+import { calculateROI, calculateCarbon, getMyROICalculations, getMyCarbonAnalyses } from "./roi.controller.js";
 
 const router = Router();
 
-router.post("/calculate", calculateROI);
-router.get("/", getMyROICalculations);
+// ROI routes
+router.post("/calculate", protect, calculateROI);
+router.get("/", protect, getMyROICalculations);
+
+// Carbon analysis routes
+router.post("/carbon", protect, calculateCarbon);
+router.get("/carbon", protect, getMyCarbonAnalyses);
 
 export default router;

@@ -1,133 +1,343 @@
-import { pool } from "../../config/db.js";
+import prisma from "../../config/prisma.js";
+import { protectOwnership } from "../../utils/ownership.js";
 
-// ─── GET /api/projects/user ───────────────────────────────────────────────────
-export const getUserProjects = async (req, res) => {
-    try {
-        const [projects] = await pool.query(
-            `SELECT p.id, p.title, p.description, p.status, p.region, p.land_size_sqm,
-              p.building_type, p.budget_amount, p.spent_amount, p.progress_percent,
-              p.start_date, p.target_end_date, p.created_at,
-              (SELECT COUNT(*) FROM project_members WHERE project_id = p.id) as team_size,
-              (SELECT COUNT(*) FROM project_milestones WHERE project_id = p.id) as milestone_count
-       FROM projects p
-       WHERE p.owner_id = ?
-       ORDER BY p.created_at DESC`,
-            [req.user.id]
-        );
-        res.json({ success: true, projects });
-    } catch (err) {
-        res.status(500).json({ message: "Failed to fetch projects" });
-    }
-};
+// Protected: get user's projects
+export async function getUserProjects(req, res) {
+  try {
+    const projects = await prisma.project.findMany({
+      where: { ownerId: BigInt(req.user.id) },
+      include: {
+        members: { select: { id: true } },
+        milestones: { select: { id: true } },
+        documents: { select: { id: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
 
-// ─── POST /api/projects ───────────────────────────────────────────────────────
-export const createProject = async (req, res) => {
-    try {
-        const {
-            title, description, region, land_size_sqm, building_type,
-            budget_amount, start_date, target_end_date,
-        } = req.body;
+    res.json(projects);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch projects" });
+  }
+}
 
-        if (!title) return res.status(400).json({ message: "Project title is required" });
+// Protected: create project
+export async function createProject(req, res) {
+  try {
+    const { title, description, region, landSizeSqm, buildingType, budgetAmount, startDate, targetEndDate } = req.body;
+    const ownerId = BigInt(req.user.id);
 
-        const [result] = await pool.query(
-            `INSERT INTO projects (owner_id, title, description, region, land_size_sqm, building_type,
-         budget_amount, start_date, target_end_date)
-       VALUES (?,?,?,?,?,?,?,?,?)`,
-            [req.user.id, title, description, region, land_size_sqm, building_type,
-                budget_amount, start_date || null, target_end_date || null]
-        );
+    if (!title) return res.status(400).json({ message: "Project title is required" });
 
-        // Add owner as member
-        await pool.query(
-            "INSERT INTO project_members (project_id, user_id, member_role) VALUES (?,?,?)",
-            [result.insertId, req.user.id, "OWNER"]
-        );
+    const project = await prisma.project.create({
+      data: {
+        ownerId,
+        title,
+        description,
+        region,
+        landSizeSqm: landSizeSqm ? Number(landSizeSqm) : null,
+        buildingType,
+        budgetAmount: budgetAmount ? Number(budgetAmount) : null,
+        startDate: startDate ? new Date(startDate) : null,
+        targetEndDate: targetEndDate ? new Date(targetEndDate) : null,
+      },
+    });
 
-        res.status(201).json({ success: true, id: result.insertId, message: "Project created" });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Failed to create project" });
-    }
-};
+    // Add owner as member
+    await prisma.projectMember.create({
+      data: {
+        projectId: project.id,
+        userId: ownerId,
+        role: "OWNER",
+      },
+    });
 
-// ─── GET /api/projects/:id ────────────────────────────────────────────────────
-export const getProjectById = async (req, res) => {
-    try {
-        const [rows] = await pool.query(
-            `SELECT p.*, u.full_name as owner_name
-       FROM projects p JOIN users u ON p.owner_id = u.id
-       WHERE p.id = ? AND p.owner_id = ?`,
-            [req.params.id, req.user.id]
-        );
-        if (!rows.length) return res.status(404).json({ message: "Project not found" });
+    res.status(201).json({ message: "Project created", project });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to create project" });
+  }
+}
 
-        const [members] = await pool.query(
-            `SELECT pm.*, u.full_name, u.email, u.profession, u.avatar_url
-       FROM project_members pm JOIN users u ON pm.user_id = u.id
-       WHERE pm.project_id = ?`,
-            [req.params.id]
-        );
+// Protected: get project by id with relations
+export async function getProjectById(req, res) {
+  try {
+    const projectId = BigInt(req.params.id);
+    await protectOwnership(req.user, projectId, "project");
 
-        const [milestones] = await pool.query(
-            "SELECT * FROM project_milestones WHERE project_id = ? ORDER BY sort_order",
-            [req.params.id]
-        );
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      include: {
+        owner: { select: { fullName: true, email: true } },
+        members: {
+          include: {
+            user: { select: { fullName: true, email: true, profession: true, avatarUrl: true } },
+          },
+        },
+        milestones: { orderBy: { sortOrder: 'asc' } },
+        documents: { orderBy: { createdAt: 'desc' } },
+        permits: { orderBy: { createdAt: 'desc' } },
+        progress: { orderBy: { createdAt: 'desc' } },
+      },
+    });
 
-        const [documents] = await pool.query(
-            "SELECT * FROM uploads WHERE entity_type = 'PROJECT' AND entity_id = ? ORDER BY created_at DESC",
-            [req.params.id]
-        );
+    if (!project) return res.status(404).json({ message: "Project not found" });
 
-        res.json({ success: true, project: { ...rows[0], members, milestones, documents } });
-    } catch (err) {
-        res.status(500).json({ message: "Failed to fetch project" });
-    }
-};
+    res.json(project);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch project" });
+  }
+}
 
-// ─── PUT /api/projects/:id ────────────────────────────────────────────────────
-export const updateProject = async (req, res) => {
-    try {
-        const { title, description, region, budget_amount, spent_amount, status, start_date, target_end_date } = req.body;
-        await pool.query(
-            `UPDATE projects SET
-        title = COALESCE(?,title), description = COALESCE(?,description),
-        region = COALESCE(?,region), budget_amount = COALESCE(?,budget_amount),
-        spent_amount = COALESCE(?,spent_amount), status = COALESCE(?,status),
-        start_date = COALESCE(?,start_date), target_end_date = COALESCE(?,target_end_date)
-       WHERE id = ? AND owner_id = ?`,
-            [title, description, region, budget_amount, spent_amount, status,
-                start_date, target_end_date, req.params.id, req.user.id]
-        );
-        res.json({ success: true, message: "Project updated" });
-    } catch (err) {
-        res.status(500).json({ message: "Failed to update project" });
-    }
-};
+// Protected: update project
+export async function updateProject(req, res) {
+  try {
+    const projectId = BigInt(req.params.id);
+    await protectOwnership(req.user, projectId, "project");
 
-// ─── DELETE /api/projects/:id ─────────────────────────────────────────────────
-export const deleteProject = async (req, res) => {
-    try {
-        await pool.query(
-            "UPDATE projects SET status = 'ARCHIVED' WHERE id = ? AND owner_id = ?",
-            [req.params.id, req.user.id]
-        );
-        res.json({ success: true, message: "Project archived" });
-    } catch (err) {
-        res.status(500).json({ message: "Failed to archive project" });
-    }
-};
+    const { title, description, region, budgetAmount, spentAmount, status, startDate, targetEndDate } = req.body;
 
-// ─── POST /api/projects/:id/members ───────────────────────────────────────────
-export const addProjectMember = async (req, res) => {
-    try {
-        const { user_id, member_role = "VIEWER" } = req.body;
-        await pool.query(
-            "INSERT INTO project_members (project_id, user_id, member_role) VALUES (?,?,?) ON DUPLICATE KEY UPDATE member_role = ?",
-            [req.params.id, user_id, member_role, member_role]
-        );
-        res.status(201).json({ success: true, message: "Member added" });
-    } catch (err) {
-        res.status(500).json({ message: "Failed to add member" });
-    }
-};
+    const project = await prisma.project.update({
+      where: { id: projectId },
+      data: {
+        title,
+        description,
+        region,
+        budgetAmount: budgetAmount ? Number(budgetAmount) : undefined,
+        spentAmount: spentAmount ? Number(spentAmount) : undefined,
+        status,
+        startDate: startDate ? new Date(startDate) : undefined,
+        targetEndDate: targetEndDate ? new Date(targetEndDate) : undefined,
+      },
+    });
+
+    res.json({ message: "Project updated", project });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to update project" });
+  }
+}
+
+// Protected: delete (archive) project
+export async function deleteProject(req, res) {
+  try {
+    const projectId = BigInt(req.params.id);
+    await protectOwnership(req.user, projectId, "project");
+
+    await prisma.project.update({
+      where: { id: projectId },
+      data: { status: "ARCHIVED" },
+    });
+
+    res.json({ message: "Project archived" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to archive project" });
+  }
+}
+
+// Protected: add member
+export async function addProjectMember(req, res) {
+  try {
+    const projectId = BigInt(req.params.id);
+    await protectOwnership(req.user, projectId, "project");
+
+    const { userId, role = "VIEWER" } = req.body;
+
+    await prisma.projectMember.upsert({
+      where: { projectId_userId: { projectId, userId: BigInt(userId) } },
+      update: { role },
+      create: { projectId, userId: BigInt(userId), role },
+    });
+
+    res.status(201).json({ message: "Member added" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to add member" });
+  }
+}
+
+// Protected: upload documents
+export async function uploadDocuments(req, res) {
+  try {
+    const projectId = BigInt(req.params.id);
+    await protectOwnership(req.user, projectId, "project");
+
+    if (!req.files?.length) return res.status(400).json({ message: "No documents uploaded" });
+
+    await prisma.projectDocument.createMany({
+      data: req.files.map((file, idx) => ({
+        projectId,
+        fileName: file.originalname,
+        fileUrl: `/uploads/projects/${file.filename}`,
+        uploadedBy: BigInt(req.user.id),
+      })),
+    });
+
+    res.json({ message: "Documents uploaded" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to upload documents" });
+  }
+}
+
+// Protected: delete document
+export async function deleteDocument(req, res) {
+  try {
+    const docId = BigInt(req.params.docId);
+    const doc = await prisma.projectDocument.findUnique({ where: { id: docId }, select: { projectId: true, uploadedBy: true } });
+    if (!doc) return res.status(404).json({ message: "Document not found" });
+    await protectOwnership(req.user, doc.projectId, "project");
+
+    await prisma.projectDocument.delete({ where: { id: docId } });
+
+    res.json({ message: "Document deleted" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to delete document" });
+  }
+}
+
+// Protected: add permit
+export async function addPermit(req, res) {
+  try {
+    const projectId = BigInt(req.params.id);
+    await protectOwnership(req.user, projectId, "project");
+
+    const { permitType, issuingAuthority, issuedDate, expiryDate, status, notes } = req.body;
+
+    const permit = await prisma.projectPermit.create({
+      data: {
+        projectId,
+        permitType,
+        issuingAuthority,
+        issuedDate: issuedDate ? new Date(issuedDate) : null,
+        expiryDate: expiryDate ? new Date(expiryDate) : null,
+        status,
+        notes,
+      },
+    });
+
+    res.status(201).json({ message: "Permit added", permit });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to add permit" });
+  }
+}
+
+// Protected: update permit
+export async function updatePermit(req, res) {
+  try {
+    const permitId = BigInt(req.params.permitId);
+    const permit = await prisma.projectPermit.findUnique({ where: { id: permitId }, select: { projectId: true } });
+    if (!permit) return res.status(404).json({ message: "Permit not found" });
+    await protectOwnership(req.user, permit.projectId, "project");
+
+    const { permitType, issuingAuthority, issuedDate, expiryDate, status, notes } = req.body;
+
+    await prisma.projectPermit.update({
+      where: { id: permitId },
+      data: {
+        permitType,
+        issuingAuthority,
+        issuedDate: issuedDate ? new Date(issuedDate) : undefined,
+        expiryDate: expiryDate ? new Date(expiryDate) : undefined,
+        status,
+        notes,
+      },
+    });
+
+    res.json({ message: "Permit updated" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to update permit" });
+  }
+}
+
+// Protected: delete permit
+export async function deletePermit(req, res) {
+  try {
+    const permitId = BigInt(req.params.permitId);
+    const permit = await prisma.projectPermit.findUnique({ where: { id: permitId }, select: { projectId: true } });
+    if (!permit) return res.status(404).json({ message: "Permit not found" });
+    await protectOwnership(req.user, permit.projectId, "project");
+
+    await prisma.projectPermit.delete({ where: { id: permitId } });
+
+    res.json({ message: "Permit deleted" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to delete permit" });
+  }
+}
+
+// Protected: add progress
+export async function addProgress(req, res) {
+  try {
+    const projectId = BigInt(req.params.id);
+    await protectOwnership(req.user, projectId, "project");
+
+    const { title, description, progressPercent, date } = req.body;
+
+    const progress = await prisma.projectProgress.create({
+      data: {
+        projectId,
+        title,
+        description,
+        progressPercent: Number(progressPercent),
+        date: date ? new Date(date) : new Date(),
+        createdBy: BigInt(req.user.id),
+      },
+    });
+
+    res.status(201).json({ message: "Progress added", progress });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to add progress" });
+  }
+}
+
+// Protected: update progress
+export async function updateProgress(req, res) {
+  try {
+    const progressId = BigInt(req.params.progressId);
+    const progress = await prisma.projectProgress.findUnique({ where: { id: progressId }, select: { projectId: true } });
+    if (!progress) return res.status(404).json({ message: "Progress not found" });
+    await protectOwnership(req.user, progress.projectId, "project");
+
+    const { title, description, progressPercent, date } = req.body;
+
+    await prisma.projectProgress.update({
+      where: { id: progressId },
+      data: {
+        title,
+        description,
+        progressPercent: Number(progressPercent),
+        date: date ? new Date(date) : undefined,
+      },
+    });
+
+    res.json({ message: "Progress updated" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to update progress" });
+  }
+}
+
+// Protected: delete progress
+export async function deleteProgress(req, res) {
+  try {
+    const progressId = BigInt(req.params.progressId);
+    const progress = await prisma.projectProgress.findUnique({ where: { id: progressId }, select: { projectId: true } });
+    if (!progress) return res.status(404).json({ message: "Progress not found" });
+    await protectOwnership(req.user, progress.projectId, "project");
+
+    await prisma.projectProgress.delete({ where: { id: progressId } });
+
+    res.json({ message: "Progress deleted" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to delete progress" });
+  }
+}

@@ -1,141 +1,226 @@
-import { pool } from "../../config/db.js";
+import prisma from "../../config/prisma.js";
+import { protectOwnership } from "../../utils/ownership.js";
 
-// ─── GET /api/listings ────────────────────────────────────────────────────────
-export const getListings = async (req, res) => {
-    try {
-        const { type, region, min_price, max_price, search, page = 1, limit = 20 } = req.query;
-        const offset = (Number(page) - 1) * Number(limit);
-        const params = [];
-        let where = "WHERE l.status = 'PUBLISHED'";
+// Public: get listings with filters
+export async function getListings(req, res) {
+  try {
+    const { page = 1, limit = 20, type, region, status = "ACTIVE", search } = req.query;
+    const where = { status };
+    if (type) where.listingType = type;
+    if (region) where.regionId = BigInt(region);
+    if (search) where.title = { contains: search };
 
-        if (type) { where += " AND l.listing_type = ?"; params.push(type); }
-        if (region) { where += " AND l.region LIKE ?"; params.push(`%${region}%`); }
-        if (min_price) { where += " AND l.price_amount >= ?"; params.push(min_price); }
-        if (max_price) { where += " AND l.price_amount <= ?"; params.push(max_price); }
-        if (search) {
-            where += " AND (l.title LIKE ? OR l.description LIKE ? OR l.district LIKE ?)";
-            const s = `%${search}%`;
-            params.push(s, s, s);
-        }
+    const listings = await prisma.listing.findMany({
+      where,
+      include: {
+        region: { select: { name: true } },
+        images: { orderBy: { sortOrder: "asc" } },
+        owner: { select: { fullName: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      skip: (Number(page) - 1) * Number(limit),
+      take: Number(limit),
+    });
 
-        const [listings] = await pool.query(
-            `SELECT l.id, l.title, l.listing_type, l.region, l.district, l.price_amount,
-              l.price_currency, l.size_sqm, l.ownership_type, l.view_count, l.created_at,
-              u.full_name as seller_name,
-              (SELECT url FROM listing_images WHERE listing_id = l.id ORDER BY sort_order LIMIT 1) as thumbnail
-       FROM listings l JOIN users u ON l.created_by = u.id
-       ${where} ORDER BY l.created_at DESC LIMIT ? OFFSET ?`,
-            [...params, Number(limit), offset]
-        );
+    const total = await prisma.listing.count({ where });
 
-        const [[{ total }]] = await pool.query(
-            `SELECT COUNT(*) as total FROM listings l ${where}`, params
-        );
+    res.json({ listings, total, page, limit });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch listings" });
+  }
+}
 
-        res.json({ success: true, listings, total, page: Number(page), limit: Number(limit) });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Failed to fetch listings" });
+// Public: get listing by id
+export async function getListingById(req, res) {
+  try {
+    const listing = await prisma.listing.findUnique({
+      where: { id: BigInt(req.params.id) },
+      include: {
+        region: { select: { name: true } },
+        images: { orderBy: { sortOrder: "asc" } },
+        owner: { select: { fullName: true } },
+      },
+    });
+
+    if (!listing) return res.status(404).json({ message: "Listing not found" });
+
+    res.json(listing);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch listing" });
+  }
+}
+
+// Protected: create listing
+export async function createListing(req, res) {
+  try {
+    const { title, description, regionId, locationText, price, currency, sizeM2, bedrooms, bathrooms, zoningInfo, listingType } = req.body;
+    const userId = BigInt(req.user.id);
+
+    const listing = await prisma.listing.create({
+      data: {
+        title,
+        description,
+        regionId: BigInt(regionId),
+        locationText,
+        price: price ? Number(price) : null,
+        currency: currency || "RWF",
+        sizeM2: sizeM2 ? Number(sizeM2) : null,
+        bedrooms: bedrooms ? Number(bedrooms) : null,
+        bathrooms: bathrooms ? Number(bathrooms) : null,
+        zoningInfo,
+        listingType,
+        ownerUserId: userId,
+        status: "PENDING", // Require moderation
+      },
+    });
+
+    // If images uploaded, associate them
+    if (req.files?.length) {
+      await prisma.listingImage.createMany({
+        data: req.files.map((file, idx) => ({
+          listingId: listing.id,
+          imageUrl: `/uploads/listings/${file.filename}`,
+          sortOrder: idx,
+        })),
+      });
     }
-};
 
-// ─── GET /api/listings/:id ────────────────────────────────────────────────────
-export const getListingById = async (req, res) => {
-    try {
-        const [rows] = await pool.query(
-            `SELECT l.*, u.full_name as seller_name, u.email as seller_email
-       FROM listings l JOIN users u ON l.created_by = u.id
-       WHERE l.id = ? AND l.status = 'PUBLISHED'`,
-            [req.params.id]
-        );
-        if (!rows.length) return res.status(404).json({ message: "Listing not found" });
+    res.status(201).json({ message: "Listing submitted for moderation", listing });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to create listing" });
+  }
+}
 
-        await pool.query("UPDATE listings SET view_count = view_count + 1 WHERE id = ?", [req.params.id]);
+// Protected: update listing
+export async function updateListing(req, res) {
+  try {
+    const listingId = BigInt(req.params.id);
+    await protectOwnership(req.user, listingId, "listing");
 
-        const [images] = await pool.query(
-            "SELECT * FROM listing_images WHERE listing_id = ? ORDER BY sort_order",
-            [req.params.id]
-        );
+    const { title, description, regionId, locationText, price, currency, sizeM2, bedrooms, bathrooms, zoningInfo, status } = req.body;
 
-        res.json({ success: true, listing: { ...rows[0], images } });
-    } catch (err) {
-        res.status(500).json({ message: "Failed to fetch listing" });
+    const listing = await prisma.listing.update({
+      where: { id: listingId },
+      data: {
+        title,
+        description,
+        regionId: regionId ? BigInt(regionId) : undefined,
+        locationText,
+        price: price ? Number(price) : null,
+        currency,
+        sizeM2: sizeM2 ? Number(sizeM2) : null,
+        bedrooms: bedrooms ? Number(bedrooms) : null,
+        bathrooms: bathrooms ? Number(bathrooms) : null,
+        zoningInfo,
+        status,
+      },
+    });
+
+    // If new images uploaded, associate them
+    if (req.files?.length) {
+      await prisma.listingImage.createMany({
+        data: req.files.map((file, idx) => ({
+          listingId,
+          imageUrl: `/uploads/listings/${file.filename}`,
+          sortOrder: idx,
+        })),
+      });
     }
-};
 
-// ─── POST /api/listings ───────────────────────────────────────────────────────
-export const createListing = async (req, res) => {
-    try {
-        const {
-            title, description, listing_type, region, district, sector,
-            address_text, size_sqm, price_amount, ownership_type, contact_phone, contact_email,
-        } = req.body;
+    res.json({ message: "Listing updated", listing });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to update listing" });
+  }
+}
 
-        const [result] = await pool.query(
-            `INSERT INTO listings (created_by, title, description, listing_type, region, district, sector,
-        address_text, size_sqm, price_amount, ownership_type, contact_phone, contact_email, status)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'DRAFT')`,
-            [req.user.id, title, description, listing_type || "LAND",
-                region, district, sector, address_text, size_sqm, price_amount, ownership_type, contact_phone, contact_email]
-        );
+// Protected: delete listing
+export async function deleteListing(req, res) {
+  try {
+    const listingId = BigInt(req.params.id);
+    await protectOwnership(req.user, listingId, "listing");
 
-        res.status(201).json({ success: true, id: result.insertId, message: "Listing created as draft" });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Failed to create listing" });
+    await prisma.listing.delete({ where: { id: listingId } });
+
+    res.json({ message: "Listing deleted" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to delete listing" });
+  }
+}
+
+// Protected: get my listings
+export async function getMyListings(req, res) {
+  try {
+    const listings = await prisma.listing.findMany({
+      where: { ownerUserId: BigInt(req.user.id) },
+      include: {
+        region: { select: { name: true } },
+        images: { orderBy: { sortOrder: "asc" } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    res.json(listings);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch your listings" });
+  }
+}
+
+// Protected: upload additional images
+export async function uploadListingImages(req, res) {
+  try {
+    const listingId = BigInt(req.params.id);
+    await protectOwnership(req.user, listingId, "listing");
+
+    if (!req.files?.length) return res.status(400).json({ message: "No images uploaded" });
+
+    await prisma.listingImage.createMany({
+      data: req.files.map((file, idx) => ({
+        listingId,
+        imageUrl: `/uploads/listings/${file.filename}`,
+        sortOrder: idx,
+      })),
+    });
+
+    res.json({ message: "Images uploaded" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to upload images" });
+  }
+}
+
+// Admin: moderate listing
+export async function moderateListing(req, res) {
+  try {
+    const listingId = BigInt(req.params.id);
+    const { status, rejectionReason } = req.body;
+
+    const listing = await prisma.listing.update({
+      where: { id: listingId },
+      data: { status },
+    });
+
+    // Optionally store rejection reason in audit log
+    if (status === "INACTIVE" && rejectionReason) {
+      await prisma.auditLog.create({
+        data: {
+          userId: BigInt(req.user.id),
+          action: "LISTING_REJECTED",
+          entityType: "listing",
+          entityId: listingId,
+          metaJson: { reason: rejectionReason },
+        },
+      });
     }
-};
 
-// ─── PUT /api/listings/:id ────────────────────────────────────────────────────
-export const updateListing = async (req, res) => {
-    try {
-        const [rows] = await pool.query("SELECT created_by FROM listings WHERE id = ?", [req.params.id]);
-        if (!rows.length) return res.status(404).json({ message: "Listing not found" });
-        if (rows[0].created_by !== req.user.id && req.user.role !== "ADMIN") {
-            return res.status(403).json({ message: "Not authorized" });
-        }
-
-        const { title, description, region, district, price_amount, size_sqm, contact_phone, status } = req.body;
-        await pool.query(
-            `UPDATE listings SET title = COALESCE(?,title), description = COALESCE(?,description),
-       region = COALESCE(?,region), district = COALESCE(?,district),
-       price_amount = COALESCE(?,price_amount), size_sqm = COALESCE(?,size_sqm),
-       contact_phone = COALESCE(?,contact_phone), status = COALESCE(?,status)
-       WHERE id = ?`,
-            [title, description, region, district, price_amount, size_sqm, contact_phone, status, req.params.id]
-        );
-
-        res.json({ success: true, message: "Listing updated" });
-    } catch (err) {
-        res.status(500).json({ message: "Failed to update listing" });
-    }
-};
-
-// ─── DELETE /api/listings/:id ─────────────────────────────────────────────────
-export const deleteListing = async (req, res) => {
-    try {
-        const [rows] = await pool.query("SELECT created_by FROM listings WHERE id = ?", [req.params.id]);
-        if (!rows.length) return res.status(404).json({ message: "Listing not found" });
-        if (rows[0].created_by !== req.user.id && req.user.role !== "ADMIN") {
-            return res.status(403).json({ message: "Not authorized" });
-        }
-        await pool.query("UPDATE listings SET status = 'ARCHIVED' WHERE id = ?", [req.params.id]);
-        res.json({ success: true, message: "Listing archived" });
-    } catch (err) {
-        res.status(500).json({ message: "Failed to delete listing" });
-    }
-};
-
-// ─── GET /api/listings/me ─────────────────────────────────────────────────────
-export const getMyListings = async (req, res) => {
-    try {
-        const [listings] = await pool.query(
-            `SELECT l.*, (SELECT url FROM listing_images WHERE listing_id = l.id ORDER BY sort_order LIMIT 1) as thumbnail
-       FROM listings l WHERE l.created_by = ? ORDER BY l.created_at DESC`,
-            [req.user.id]
-        );
-        res.json({ success: true, listings });
-    } catch (err) {
-        res.status(500).json({ message: "Failed to fetch your listings" });
-    }
-};
+    res.json({ message: "Listing moderated", listing });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to moderate listing" });
+  }
+}

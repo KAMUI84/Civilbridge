@@ -1,6 +1,6 @@
 import { NavLink, Link, useNavigate, useLocation } from "react-router-dom";
-import { useEffect, useMemo, useState } from "react";
-import { logout as doLogout, getUser, isAuthed } from "../../store/authStore";
+import { useEffect, useState } from "react";
+import { useAuthStore } from "../../store/authStore";
 
 /* ──────────────────────────────────────────────
    CivilBridge – Transparent / Dark Navbar
@@ -33,16 +33,7 @@ export default function Navbar() {
   const location = useLocation();
   const onAuth = isAuthRoute(location.pathname);
 
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    const r = () => setTick(t => t + 1);
-    window.addEventListener("cb_ls_changed", r);
-    window.addEventListener("storage", r);
-    return () => { window.removeEventListener("cb_ls_changed", r); window.removeEventListener("storage", r); };
-  }, []);
-
-  const authed = useMemo(() => isAuthed(), [tick]);
-  const user = useMemo(() => getUser(), [tick]);
+  const { isAuthenticated: authed, user, logout: doLogout } = useAuthStore();
 
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {

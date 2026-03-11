@@ -1,13 +1,15 @@
-import { useState } from "react";
-import { setAuth } from "../../store/authStore";
-import { useNavigate } from "react-router-dom";
-import { api } from "../../lib/api";
-import GoogleButton from "../../components/auth/GoogleButton";
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useGoogleLogin } from '@react-oauth/google';
+import { useAuthStore } from "../../store/authStore";
+import { api } from "../../services/apiClientService";
+import civilbridge from "/civilbridge.png";
 
 const STEP_DETAILS = 1;
 const STEP_OTP = 2;
 
 export default function Register() {
+  const navigate = useNavigate();
   const [step, setStep] = useState(STEP_DETAILS);
   const [fullName, setFullName] = useState("");
   const [emailOrPhone, setEmailOrPhone] = useState("");
@@ -16,8 +18,6 @@ export default function Register() {
   const [devOtp, setDevOtp] = useState("");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
-  const [otpSent, setOtpSent] = useState(false);
-  const nav = useNavigate();
 
   async function requestOtp(e) {
     e.preventDefault();
@@ -36,13 +36,9 @@ export default function Register() {
         payload.phone = emailOrPhone;
       }
 
-      const data = await api("/api/auth/register/request-otp", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
+      const data = await api.post("/api/auth/register/request-otp", payload);
 
       if (data.success) {
-        setOtpSent(true);
         setStep(STEP_OTP);
         setErr("");
         setDevOtp(data.otp);
@@ -78,14 +74,12 @@ export default function Register() {
         payload.phone = emailOrPhone;
       }
 
-      const data = await api("/api/auth/register", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
+      const data = await api.post("/api/auth/register", payload);
 
       if (data.success && data.token && data.user) {
-        setAuth({ token: data.token, user: data.user });
-        nav("/dashboard", { replace: true });
+        localStorage.setItem("cb_token", data.token);
+        useAuthStore.getState().setUser(data.user);
+        navigate("/dashboard", { replace: true });
       } else {
         throw new Error("Invalid response from server");
       }
@@ -96,207 +90,408 @@ export default function Register() {
     }
   }
 
-  async function handleGoogleLogin(credential) {
-    setErr("");
-    setLoading(true);
-
-    try {
-      const data = await api("/api/auth/google", {
-        method: "POST",
-        body: JSON.stringify({ credential }),
-      });
-
-      if (data.success && data.token && data.user) {
-        setAuth({ token: data.token, user: data.user });
-        nav("/dashboard", { replace: true });
-      } else {
-        throw new Error("Invalid response from server");
+  const googleSignIn = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      setLoading(true);
+      setErr('');
+      try {
+        const data = await api.post("/api/auth/google-login", { credential: tokenResponse.access_token });
+        if (data.success && data.token && data.user) {
+          localStorage.setItem("cb_token", data.token);
+          useAuthStore.getState().setUser(data.user);
+          navigate("/dashboard", { replace: true });
+        } else {
+          throw new Error("Invalid response from server");
+        }
+      } catch (error) {
+        setErr(error.message || 'Google signup failed. Please try again.');
+      } finally {
+        setLoading(false);
       }
-    } catch (e2) {
-      setErr(e2?.message || "Google registration failed");
-    } finally {
+    },
+    onError: () => {
+      setErr('Google signup failed. Please try again.');
       setLoading(false);
+    },
+    flow: 'implicit',
+  });
+
+  const handleGoogleClick = () => {
+    if (!loading) {
+      setLoading(true);
+      googleSignIn();
     }
   }
 
-  if (step === STEP_OTP) {
-    return (
-      <div>
-        {err ? <div style={errBox}>{err}</div> : null}
-
-        <div style={{ marginBottom: 20, color: "#0c1220", fontWeight: 700 }}>
-          Enter the 6-digit code sent to {emailOrPhone}
-        </div>
-
-        {devOtp && (
-          <div style={devOtpBox}>
-            <strong>🔑 DEV MODE - Your OTP:</strong> <span style={{ fontSize: 24, letterSpacing: 4 }}>{devOtp}</span>
-          </div>
-        )}
-
-        <form onSubmit={verifyAndRegister} style={{ display: "grid", gap: 12 }}>
-          <label style={labelStyle}>
-            OTP Code
-            <input
-              style={inputStyle}
-              value={otp}
-              onChange={(e) => setOtp(e.target.value)}
-              placeholder="123456"
-              maxLength={6}
-              autoFocus
-            />
-          </label>
-
-          <button type="submit" style={{ ...btnPrimary, opacity: loading ? 0.8 : 1 }} disabled={loading}>
-            {loading ? "Verifying..." : "Verify & Create Account"}
-          </button>
-
-          <button 
-            type="button" 
-            onClick={() => setStep(STEP_DETAILS)}
-            style={{ ...btnSecondary }}
-          >
-            Back
-          </button>
-        </form>
-      </div>
-    );
-  }
-
   return (
-    <div>
-      {err ? <div style={errBox}>{err}</div> : null}
+    <div style={S.page}>
+      {/* ── LEFT: Form Panel ── */}
+      <div style={S.left}>
+        <div style={S.formWrap}>
+          {/* Logo */}
+          <div style={S.logoRow}>
+            <div style={S.logoIcon}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" stroke="#00f2ff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <span style={S.logoText}>CivilBridge</span>
+          </div>
 
-      <GoogleButton onCredential={handleGoogleLogin} />
+          {step === STEP_DETAILS ? (
+            <>
+              {/* Heading */}
+              <h1 style={S.heading}>Create an account</h1>
+              <p style={S.subtext}>Join CivilBridge to unlock your platform access</p>
 
-      <div style={orRow}>
-        <div style={orLine} />
-        <div style={orText}>or</div>
-        <div style={orLine} />
+              {/* Google */}
+              <button type="button" onClick={handleGoogleClick} style={S.googleBtn} disabled={loading}>
+                <svg width="18" height="18" viewBox="0 0 24 24">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                  <path d="M5.84 14.09a6.97 6.97 0 0 1 0-4.18V7.07H2.18A11.01 11.01 0 0 0 1 12c0 1.78.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05" />
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+                </svg>
+                <span>Sign up with Google</span>
+              </button>
+
+              {/* Divider */}
+              <div style={S.divider}>
+                <div style={S.divLine} />
+                <span style={S.divText}>OR</span>
+                <div style={S.divLine} />
+              </div>
+
+              {/* Error */}
+              {err && <div style={S.error}>{err}</div>}
+
+              {/* Form */}
+              <form onSubmit={requestOtp} style={S.form}>
+                <label style={S.label}>
+                  Full Name
+                  <input
+                    type="text"
+                    value={fullName}
+                    onChange={e => setFullName(e.target.value)}
+                    placeholder="John Doe"
+                    style={S.input}
+                    required
+                  />
+                </label>
+
+                <label style={S.label}>
+                  Email or Phone
+                  <input
+                    type="text"
+                    value={emailOrPhone}
+                    onChange={e => setEmailOrPhone(e.target.value)}
+                    placeholder="you@example.com / +250..."
+                    style={S.input}
+                    required
+                  />
+                </label>
+
+                <label style={S.label}>
+                  Password
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    style={S.input}
+                    required
+                  />
+                </label>
+
+                <button type="submit" disabled={loading} style={S.submitBtn}>
+                  {loading ? 'Sending code…' : 'Continue'}
+                </button>
+              </form>
+
+              {/* Footer */}
+              <p style={S.footer}>
+                Already have an account?{' '}
+                <Link to="/login" style={S.footerLink}>Log in</Link>
+              </p>
+            </>
+          ) : (
+            <>
+              {/* Heading */}
+              <h1 style={S.heading}>Check your inbox</h1>
+              <p style={S.subtext}>Enter the 6-digit code sent to {emailOrPhone}</p>
+
+              {/* Error */}
+              {err && <div style={S.error}>{err}</div>}
+
+              {devOtp && (
+                <div style={S.devOtpBox}>
+                  <strong>🔑 DEV MODE OTP:</strong> <span style={{ fontSize: 24, letterSpacing: 4, display: 'block', marginTop: 6 }}>{devOtp}</span>
+                </div>
+              )}
+
+              {/* OTP Form */}
+              <form onSubmit={verifyAndRegister} style={S.form}>
+                <label style={S.label}>
+                  Verification Code
+                  <input
+                    type="text"
+                    value={otp}
+                    onChange={e => setOtp(e.target.value)}
+                    placeholder="123456"
+                    maxLength={6}
+                    style={S.input}
+                    required
+                    autoFocus
+                  />
+                </label>
+
+                <button type="submit" disabled={loading} style={S.submitBtn}>
+                  {loading ? 'Verifying…' : 'Verify & Create Account'}
+                </button>
+
+                <button 
+                  type="button" 
+                  onClick={() => setStep(STEP_DETAILS)}
+                  style={S.backBtn}
+                >
+                  Go Back
+                </button>
+              </form>
+            </>
+          )}
+        </div>
       </div>
 
-      <form onSubmit={requestOtp} style={{ display: "grid", gap: 12 }}>
-        <label style={labelStyle}>
-          Full name
-          <input
-            style={inputStyle}
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            placeholder="Samuel Nizeyimana"
-            autoComplete="name"
-          />
-        </label>
-
-        <label style={labelStyle}>
-          Email or phone
-          <input
-            style={inputStyle}
-            value={emailOrPhone}
-            onChange={(e) => setEmailOrPhone(e.target.value)}
-            placeholder="email or +250..."
-            autoComplete="email"
-          />
-        </label>
-
-        <label style={labelStyle}>
-          Password
-          <input
-            style={inputStyle}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            type="password"
-            autoComplete="new-password"
-            placeholder="Create a strong password"
-          />
-        </label>
-
-        <button type="submit" style={{ ...btnPrimary, opacity: loading ? 0.8 : 1 }} disabled={loading}>
-          {loading ? "Sending OTP..." : "Continue"}
-        </button>
-
-      </form>
+      {/* ── RIGHT: Branding Panel ── */}
+      <div style={S.right}>
+        <div style={S.brandOverlay} />
+        <div style={S.brandContent}>
+          <img src={civilbridge} alt="CivilBridge Logo" style={S.brandLogoImage} />
+        </div>
+      </div>
     </div>
   );
 }
 
-const labelStyle = { display: "grid", gap: 6, fontWeight: 900, color: "#0c1220", fontSize: 13 };
-const inputStyle = {
-  width: "100%",
-  boxSizing: "border-box",
-  padding: "12px 12px",
-  borderRadius: 12,
-  border: "1px solid #e9ecf2",
-  outline: "none",
-  fontWeight: 750,
-};
+/* ── Inline Styles ── */
+const accent = '#00f2ff';
 
-const btnPrimary = {
-  width: "100%",
-  padding: "12px 14px",
-  borderRadius: 12,
-  border: "1px solid rgba(29,78,216,0.2)",
-  background: "linear-gradient(135deg,#2a66ff,#1d4ed8)",
-  color: "#fff",
-  fontWeight: 950,
-  cursor: "pointer",
-  boxShadow: "0 14px 26px rgba(29,78,216,.18)",
-};
+const S = {
+  page: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    minHeight: '100vh',
+    background: '#050505',
+    fontFamily: "'Inter', 'DM Sans', system-ui, sans-serif",
+  },
 
-const errBox = {
-  padding: 12,
-  borderRadius: 12,
-  background: "#fff1f2",
-  border: "1px solid #ffe4e6",
-  color: "#9f1239",
-  fontWeight: 750,
-};
+  /* LEFT */
+  left: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '40px 32px',
+  },
+  formWrap: {
+    width: '100%',
+    maxWidth: 400,
+  },
+  logoRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 40,
+  },
+  logoIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    background: 'rgba(0,242,255,.08)',
+    border: '1px solid rgba(0,242,255,.15)',
+    display: 'grid',
+    placeItems: 'center',
+  },
+  logoText: {
+    fontSize: 16,
+    fontWeight: 700,
+    color: '#f0f0f0',
+    letterSpacing: '-0.02em',
+  },
+  heading: {
+    margin: '0 0 6px',
+    fontSize: 28,
+    fontWeight: 700,
+    color: '#f0f0f0',
+    letterSpacing: '-0.03em',
+  },
+  subtext: {
+    margin: '0 0 28px',
+    fontSize: 14,
+    color: '#64748b',
+    fontWeight: 400,
+  },
 
-const googleBtn = {
-  width: "100%",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: 10,
-  padding: "12px 14px",
-  borderRadius: 12,
-  border: "1px solid #e9ecf2",
-  background: "#fff",
-  fontWeight: 900,
-  cursor: "pointer",
-};
+  /* Google */
+  googleBtn: {
+    width: '100%',
+    height: 44,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    background: '#171717',
+    border: '1px solid #262626',
+    borderRadius: 10,
+    color: '#d4d4d8',
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'border-color .2s, background .2s',
+  },
 
-const gIcon = {
-  width: 28,
-  height: 28,
-  borderRadius: 10,
-  border: "1px solid #eef0f4",
-  display: "grid",
-  placeItems: "center",
-  fontWeight: 950,
-};
+  /* Divider */
+  divider: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+    margin: '22px 0',
+  },
+  divLine: {
+    flex: 1,
+    height: 1,
+    background: '#262626',
+  },
+  divText: {
+    fontSize: 11,
+    fontWeight: 700,
+    color: '#525252',
+    letterSpacing: '.08em',
+  },
 
-const orRow = { display: "flex", alignItems: "center", gap: 10, margin: "14px 0" };
-const orLine = { height: 1, background: "#eef0f4", flex: 1 };
-const orText = { color: "#94a3b8", fontWeight: 900, fontSize: 12 };
+  /* Error */
+  error: {
+    padding: '10px 14px',
+    marginBottom: 16,
+    borderRadius: 8,
+    background: 'rgba(239,68,68,.08)',
+    border: '1px solid rgba(239,68,68,.18)',
+    color: '#fca5a5',
+    fontSize: 13,
+    fontWeight: 500,
+  },
 
-const btnSecondary = {
-  width: "100%",
-  padding: "12px 14px",
-  borderRadius: 12,
-  border: "1px solid #e9ecf2",
-  background: "#fff",
-  color: "#0c1220",
-  fontWeight: 900,
-  cursor: "pointer",
-};
+  devOtpBox: {
+    padding: 16,
+    borderRadius: 12,
+    background: 'rgba(34,197,94,.08)',
+    border: '1px solid rgba(34,197,94,.18)',
+    color: '#86efac',
+    fontWeight: 700,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
 
-const devOtpBox = {
-  padding: 16,
-  borderRadius: 12,
-  background: "#f0fdf4",
-  border: "2px solid #86efac",
-  color: "#166534",
-  fontWeight: 700,
-  marginBottom: 20,
-  textAlign: "center",
+  /* Form */
+  form: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 18,
+  },
+  label: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+    fontSize: 13,
+    fontWeight: 600,
+    color: '#a1a1aa',
+  },
+  input: {
+    width: '100%',
+    height: 44,
+    padding: '0 14px',
+    background: '#1a1a1a',
+    border: '1px solid #262626',
+    borderRadius: 10,
+    color: '#f0f0f0',
+    fontSize: 14,
+    fontFamily: 'inherit',
+    outline: 'none',
+    transition: 'border-color .2s',
+    boxSizing: 'border-box',
+  },
+  submitBtn: {
+    width: '100%',
+    height: 44,
+    background: accent,
+    color: '#050505',
+    border: 'none',
+    borderRadius: 10,
+    fontSize: 14,
+    fontWeight: 700,
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+    letterSpacing: '-0.01em',
+    transition: 'opacity .2s',
+    marginTop: 4,
+  },
+  backBtn: {
+    width: '100%',
+    height: 44,
+    background: 'transparent',
+    color: '#a1a1aa',
+    border: '1px solid #262626',
+    borderRadius: 10,
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+    transition: 'border-color .2s',
+  },
+
+  /* Footer */
+  footer: {
+    marginTop: 28,
+    textAlign: 'center',
+    fontSize: 13,
+    color: '#64748b',
+  },
+  footerLink: {
+    color: accent,
+    fontWeight: 600,
+    textDecoration: 'none',
+  },
+
+  /* RIGHT */
+  right: {
+    position: 'relative',
+    background: '#0a0f1a',
+    overflow: 'hidden',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  brandOverlay: {
+    position: 'absolute',
+    inset: 0,
+    background:
+      'radial-gradient(600px 400px at 70% 30%, rgba(0,242,255,.06), transparent 65%), radial-gradient(500px 350px at 30% 70%, rgba(59,130,246,.05), transparent 60%)',
+    pointerEvents: 'none',
+  },
+  brandContent: {
+    position: 'relative',
+    zIndex: 1,
+    padding: '48px 40px',
+    width: '100%',
+    display: 'flex',
+    justifyContent: 'center',
+  },
+  brandLogoImage: {
+    width: '100%',
+    maxWidth: 480,
+    height: 'auto',
+    objectFit: 'contain',
+    filter: 'drop-shadow(0 0 60px rgba(0, 242, 255, 0.15))',
+    display: 'block',
+    margin: '0 auto',
+  },
 };

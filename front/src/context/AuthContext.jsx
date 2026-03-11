@@ -7,49 +7,57 @@ import authService from "../services/authService";
 // ─────────────────────────────────────────────────────────────────────────────
 const AuthContext = createContext(null);
 
+// Helper to read cookies
+function getCookie(name) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(';').shift();
+  return null;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Provider
 // ─────────────────────────────────────────────────────────────────────────────
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
-    const [token, setToken] = useState(null);
-    const [loading, setLoading] = useState(true); // true until rehydration done
+    const [csrfToken, setCsrfToken] = useState(null);
+    const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
-    // ── Rehydrate from localStorage on first mount ──────────────────────────
+    // ── Rehydrate from cookies on first mount ──────────────────────────
     useEffect(() => {
-        const storedToken = localStorage.getItem("token");
-        const storedUser = localStorage.getItem("user");
+        const token = getCookie('token');
+        const csrf = getCookie('csrf');
+        const storedUser = localStorage.getItem('user'); // Keep user in localStorage for non-sensitive data
         
-        if (storedToken && storedUser) {
-            setToken(storedToken);
+        if (token && storedUser) {
             setUser(JSON.parse(storedUser));
+            setCsrfToken(csrf);
         }
         setLoading(false);
     }, []);
 
     // ── Derived helpers ──────────────────────────────────────────────────────
     const role = user?.role ?? null;
-    const isAuthed = !!token;
+    const isAuthed = !!user;
 
     // ── Login ────────────────────────────────────────────────────────────────
     const login = useCallback(async (credentials) => {
         try {
             const data = await authService.login(credentials);
-            const { token: newToken, user: newUser } = data;
+            const { csrfToken: newCsrf, user: newUser } = data;
 
-            // Save to localStorage
-            localStorage.setItem("token", newToken);
-            localStorage.setItem("user", JSON.stringify(newUser));
+            // Store user in localStorage (non-sensitive)
+            localStorage.setItem('user', JSON.stringify(newUser));
             
-            setToken(newToken);
             setUser(newUser);
+            setCsrfToken(newCsrf);
 
             // Redirect based on role
-            if (newUser.role === "ADMIN") {
-                navigate("/admin", { replace: true });
+            if (newUser.role === 'ADMIN') {
+                navigate('/admin', { replace: true });
             } else {
-                navigate("/dashboard", { replace: true });
+                navigate('/dashboard', { replace: true });
             }
 
             return newUser;
@@ -63,20 +71,18 @@ export function AuthProvider({ children }) {
     const googleLogin = useCallback(async (credential) => {
         try {
             const data = await authService.googleLogin(credential);
-            const { token: newToken, user: newUser } = data;
+            const { csrfToken: newCsrf, user: newUser } = data;
 
-            // Save to localStorage
-            localStorage.setItem("token", newToken);
-            localStorage.setItem("user", JSON.stringify(newUser));
+            localStorage.setItem('user', JSON.stringify(newUser));
             
-            setToken(newToken);
             setUser(newUser);
+            setCsrfToken(newCsrf);
 
             // Redirect based on role
-            if (newUser.role === "ADMIN") {
-                navigate("/admin", { replace: true });
+            if (newUser.role === 'ADMIN') {
+                navigate('/admin', { replace: true });
             } else {
-                navigate("/dashboard", { replace: true });
+                navigate('/dashboard', { replace: true });
             }
 
             return newUser;
@@ -98,18 +104,23 @@ export function AuthProvider({ children }) {
     }, []);
 
     // ── Logout ───────────────────────────────────────────────────────────────
-    const logout = useCallback(() => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        setToken(null);
+    const logout = useCallback(async () => {
+        try {
+            await authService.logout();
+        } catch (err) {
+            console.error('Logout API error:', err);
+        }
+        // Always clear local state
+        localStorage.removeItem('user');
         setUser(null);
-        navigate("/login", { replace: true });
+        setCsrfToken(null);
+        navigate('/login', { replace: true });
     }, [navigate]);
 
     // ── Context value ────────────────────────────────────────────────────────
     const value = {
         user,
-        token,
+        csrfToken,
         role,
         isAuthed,
         loading,

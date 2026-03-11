@@ -1,24 +1,11 @@
 import { Navigate, useLocation } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
+import { useAuthStore } from "../../store/authStore";
 
-/**
- * RequireAuth
- * Redirects unauthenticated users to /login.
- * Shows a loading spinner while the context rehydrates from localStorage.
- */
 export default function RequireAuth({ children }) {
-    const { isAuthed, loading } = useAuth();
+    const isAuthenticated = useAuthStore(state => state.isAuthenticated);
     const location = useLocation();
 
-    if (loading) {
-        return (
-            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" }}>
-                <div className="auth-spinner" />
-            </div>
-        );
-    }
-
-    if (!isAuthed) {
+    if (!isAuthenticated) {
         return <Navigate to="/login" state={{ from: location }} replace />;
     }
 

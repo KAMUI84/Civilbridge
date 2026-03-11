@@ -5,6 +5,8 @@ const ADMIN_NAV = [
   { to: "/admin", label: "Overview", end: true },
   { to: "/admin/users", label: "Users Management" },
   { to: "/admin/verification", label: "Verification Queue" },
+  { to: "/admin/plans", label: "Plans Moderation" },
+  { to: "/admin/listings", label: "Listings Moderation" },
 ];
 
 const linkStyle = ({ isActive }) => ({
@@ -29,6 +31,8 @@ function pageTitle(pathname) {
     "/admin": "Admin Overview",
     "/admin/users": "Users Management",
     "/admin/verification": "Verification Queue",
+    "/admin/plans": "Plans Moderation",
+    "/admin/listings": "Listings Moderation",
   };
   return map[pathname] ?? "Admin Panel";
 }

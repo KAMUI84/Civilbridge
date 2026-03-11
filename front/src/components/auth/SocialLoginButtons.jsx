@@ -1,9 +1,11 @@
 import React from 'react';
 import { useGoogleLogin } from '@react-oauth/google';
-import { useAuth } from '../../context/AuthContext';
+import { useAuthStore } from '../../store/authStore';
+import { useNavigate } from 'react-router-dom';
 
 const SocialLoginButtons = ({ loading, setLoading, setError }) => {
-  const { googleLogin } = useAuth();
+  const googleLogin = useAuthStore(state => state.googleLogin);
+  const navigate = useNavigate();
 
   const googleSignIn = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
@@ -11,7 +13,9 @@ const SocialLoginButtons = ({ loading, setLoading, setError }) => {
       setError('');
       
       try {
-        await googleLogin(tokenResponse.access_token);
+        const user = await googleLogin(tokenResponse.access_token);
+        if (user?.role === "ADMIN") navigate('/admin', { replace: true });
+        else navigate('/dashboard', { replace: true });
       } catch (error) {
         setError('Google login failed. Please try again.');
       } finally {

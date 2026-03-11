@@ -1,9 +1,10 @@
-import { pool } from "../../config/db.js";
-import { hashPassword, comparePassword } from "../../utils/password.js";
+import prisma from "../../config/prisma.js";
+import { comparePassword } from "../../utils/password.js";
 import { generateToken } from "../../utils/jwt.js";
 import { OAuth2Client } from "google-auth-library";
 import { sendRegistrationOtp, verifyRegistrationOtp, createUser } from "./auth.service.js";
 import { emailService } from "../../services/email.service.js";
+import { setAuthCookie, clearAuthCookie, generateCSRFToken } from "../../utils/cookie.js";
 
 export const requestRegisterOtp = async (req, res) => {
   try {
@@ -14,12 +15,14 @@ export const requestRegisterOtp = async (req, res) => {
       return res.status(400).json({ message: "Email or phone required" });
     }
 
-    const [existing] = await pool.query(
-      "SELECT id FROM users WHERE email = ? OR phone = ?",
-      [target, target]
-    );
+    const existing = await prisma.user.findFirst({
+      where: {
+        OR: [{ email: target }, { phone: target }]
+      },
+      select: { id: true }
+    });
 
-    if (existing.length > 0) {
+    if (existing) {
       return res.status(400).json({ message: "User already exists" });
     }
 
@@ -34,7 +37,6 @@ export const requestRegisterOtp = async (req, res) => {
       }
     }
 
-    console.log(`[DEV] OTP for ${target}: ${otp}`); // Only in dev
     res.json({
       success: true,
       message: target.includes("@")
@@ -59,17 +61,16 @@ export const register = async (req, res) => {
 
     await verifyRegistrationOtp(target, otp);
 
-    // createUser returns an object with the new user data
-    const newUser = await createUser({ full_name, email, phone, password });
+    const authResult = await createUser({ full_name, email, phone, password });
 
-    // Send the email (using await to ensure it succeeds)
-    await emailService.sendWelcomeEmail(newUser.email, newUser.full_name);
+    if (authResult.user.email) {
+      await emailService.sendWelcomeEmail(authResult.user.email, authResult.user.full_name);
+    }
 
-    // Send response AFTER everything is successful
     res.status(201).json({
       success: true,
       message: "User registered and email sent!",
-      user: newUser
+      user: authResult.user
     });
 
   } catch (err) {
@@ -82,39 +83,49 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const [rows] = await pool.query(
-      "SELECT u.*, r.name as role_name FROM users u JOIN roles r ON u.role_id = r.id WHERE u.email = ?",
-      [email]
-    );
+    const user = await prisma.user.findUnique({
+      where: { email }
+    });
 
-    if (!rows.length)
+    if (!user)
       return res.status(400).json({ message: "Invalid credentials" });
 
-    const user = rows[0];
-
-    if (!user.password_hash)
+    if (!user.passwordHash)
       return res.status(400).json({ message: "Please use Google sign-in" });
 
-    const valid = await comparePassword(password, user.password_hash);
+    const valid = await comparePassword(password, user.passwordHash);
 
     if (!valid)
       return res.status(400).json({ message: "Invalid credentials" });
 
-    const token = generateToken({ id: user.id, role: user.role_name });
+    const token = generateToken({ id: user.id.toString(), role: user.role });
+    const csrfToken = generateCSRFToken();
 
-    await pool.query(
-      "INSERT INTO audit_logs (actor_user_id, action) VALUES (?, ?)",
-      [user.id, "LOGIN"]
-    );
+    // Set httpOnly cookie and CSRF token in response
+    setAuthCookie(res, token);
+    res.cookie('csrf', csrfToken, {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 1000 * 60 * 60 * 24 * 7,
+      path: '/',
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        userId: user.id,
+        action: "LOGIN"
+      }
+    });
 
     res.json({
       success: true,
-      token,
+      csrfToken,
       user: {
-        id: user.id,
-        full_name: user.full_name,
+        id: user.id.toString(),
+        full_name: user.fullName,
         email: user.email,
-        role: user.role_name
+        role: user.role
       }
     });
 
@@ -141,58 +152,76 @@ export const googleLogin = async (req, res) => {
     const payload = ticket.getPayload();
     const { email, name, sub: googleSub } = payload;
 
-    const [existingUsers] = await pool.query(
-      "SELECT u.*, r.name as role_name FROM users u JOIN roles r ON u.role_id = r.id WHERE u.email = ? OR u.google_sub = ?",
-      [email, googleSub]
-    );
+    let user = await prisma.user.findFirst({
+      where: {
+        OR: [{ email }, { googleSub }]
+      }
+    });
 
-    let user;
     let userId;
     let roleName;
 
-    if (existingUsers.length > 0) {
-      user = existingUsers[0];
+    if (user) {
       userId = user.id;
-      roleName = user.role_name;
+      roleName = user.role;
 
-      await pool.query(
-        "UPDATE users SET google_sub = ?, last_login_at = NOW() WHERE id = ?",
-        [googleSub, userId]
-      );
+      await prisma.user.update({
+        where: { id: userId },
+        data: { googleSub, lastLoginAt: new Date() }
+      });
     } else {
-      const [[defaultRole]] = await pool.query(
-        "SELECT id FROM roles WHERE name = 'USER' LIMIT 1"
-      );
+      user = await prisma.$transaction(async (tx) => {
+        const newUser = await tx.user.create({
+          data: {
+            fullName: name,
+            email,
+            googleSub,
+            role: "USER",
+            verificationStatus: "VERIFIED"
+          }
+        });
 
-      const [result] = await pool.query(
-        "INSERT INTO users (full_name, email, google_sub, role_id, verification_status) VALUES (?, ?, ?, ?, ?)",
-        [name, email, googleSub, defaultRole.id, 'VERIFIED']
-      );
-      userId = result.insertId;
-      roleName = 'USER';
+        await tx.auditLog.create({
+          data: {
+            userId: newUser.id,
+            action: "GOOGLE_REGISTER"
+          }
+        });
 
-      await pool.query(
-        "INSERT INTO audit_logs (actor_user_id, action) VALUES (?, ?)",
-        [userId, "GOOGLE_REGISTER"]
-      );
-
-      user = { id: userId, full_name: name, email, role_name: 'USER' };
+        return newUser;
+      });
+      
+      userId = user.id;
+      roleName = user.role;
     }
 
-    await pool.query(
-      "INSERT INTO audit_logs (actor_user_id, action) VALUES (?, ?)",
-      [userId, "GOOGLE_LOGIN"]
-    );
+    await prisma.auditLog.create({
+      data: {
+        userId: userId,
+        action: "GOOGLE_LOGIN"
+      }
+    });
 
-    const token = generateToken({ id: userId, role: roleName });
+    const token = generateToken({ id: userId.toString(), role: roleName });
+    const csrfToken = generateCSRFToken();
+
+    // Set httpOnly cookie and CSRF token in response
+    setAuthCookie(res, token);
+    res.cookie('csrf', csrfToken, {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 1000 * 60 * 60 * 24 * 7,
+      path: '/',
+    });
 
     res.json({
       success: true,
-      token,
+      csrfToken,
       user: {
-        id: userId,
-        full_name: user.full_name || name,
-        email: user.email || email,
+        id: userId.toString(),
+        full_name: user.fullName,
+        email: user.email,
         role: roleName,
       },
     });
@@ -203,6 +232,7 @@ export const googleLogin = async (req, res) => {
 };
 
 export const logout = async (req, res) => {
-  // Blacklist token or clear session
+  clearAuthCookie(res);
+  res.clearCookie('csrf', { path: '/' });
   res.json({ success: true, message: 'Logged out' });
 };

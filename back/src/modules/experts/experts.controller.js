@@ -1,142 +1,244 @@
-import { pool } from "../../config/db.js";
+import prisma from "../../config/prisma.js";
 
-// ─── GET /api/experts ─────────────────────────────────────────────────────────
-export const getExperts = async (req, res) => {
-    try {
-        const { role, region, search, verified, page = 1, limit = 20 } = req.query;
-        const offset = (Number(page) - 1) * Number(limit);
-        const params = [];
-
-        let where = "WHERE u.is_active = 1";
-        if (verified !== "false") {
-            where += " AND ep.verified_at IS NOT NULL";
-        }
-        if (role) {
-            where += " AND u.profession = ?";
-            params.push(role);
-        }
-        if (region) {
-            where += " AND (ep.region = ? OR u.region = ?)";
-            params.push(region, region);
-        }
-        if (search) {
-            where += " AND (u.full_name LIKE ? OR ep.headline LIKE ? OR ep.skills LIKE ? OR ep.company LIKE ?)";
-            const s = `%${search}%`;
-            params.push(s, s, s, s);
-        }
-
-        const [experts] = await pool.query(
-            `SELECT 
-        ep.id, ep.user_id, ep.headline, ep.bio, ep.experience_years,
-        ep.skills, ep.company, ep.region, ep.specialization,
-        ep.rating_avg, ep.rating_count, ep.projects_completed,
-        ep.verified_at, ep.website_url, ep.phone,
-        u.full_name, u.email, u.profession, u.avatar_url, u.region as user_region
-       FROM expert_profiles ep
-       JOIN users u ON ep.user_id = u.id
-       ${where}
-       ORDER BY ep.verified_at IS NOT NULL DESC, ep.rating_avg DESC, ep.rating_count DESC
-       LIMIT ? OFFSET ?`,
-            [...params, Number(limit), offset]
-        );
-
-        const [[{ total }]] = await pool.query(
-            `SELECT COUNT(*) as total FROM expert_profiles ep JOIN users u ON ep.user_id = u.id ${where}`,
-            params
-        );
-
-        res.json({ success: true, experts, total, page: Number(page), limit: Number(limit) });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Failed to fetch experts" });
+// Public: get experts with filters
+export async function getExperts(req, res) {
+  try {
+    const { role, region, search, verified, page = 1, limit = 20 } = req.query;
+    const where = { user: { isActive: true } };
+    if (verified !== "false") where.verifiedAt = { not: null };
+    if (role) where.user.profession = role;
+    if (region) where.OR = [{ region }, { user: { region } }];
+    if (search) {
+      where.OR = [
+        { user: { fullName: { contains: search } } },
+        { headline: { contains: search } },
+        { skills: { contains: search } },
+        { company: { contains: search } },
+      ];
     }
-};
 
-// ─── GET /api/experts/:id ─────────────────────────────────────────────────────
-export const getExpertById = async (req, res) => {
-    try {
-        const [rows] = await pool.query(
-            `SELECT ep.*, u.full_name, u.email, u.profession, u.avatar_url, u.region as user_region, u.created_at as member_since
-       FROM expert_profiles ep
-       JOIN users u ON ep.user_id = u.id
-       WHERE ep.id = ? AND u.is_active = 1`,
-            [req.params.id]
-        );
-        if (!rows.length) return res.status(404).json({ message: "Expert not found" });
+    const experts = await prisma.expertProfile.findMany({
+      where,
+      include: {
+        user: { select: { fullName: true, email: true, profession: true, avatarUrl: true, region: true } },
+      },
+      orderBy: [
+        { verifiedAt: { sort: 'desc', nulls: 'last' } },
+        { ratingAvg: 'desc' },
+        { ratingCount: 'desc' },
+      ],
+      skip: (Number(page) - 1) * Number(limit),
+      take: Number(limit),
+    });
 
-        // Get recent reviews
-        const [reviews] = await pool.query(
-            `SELECT r.*, u.full_name as reviewer_name, u.avatar_url as reviewer_avatar
-       FROM reviews r JOIN users u ON r.reviewer_id = u.id
-       WHERE r.expert_id = ?
-       ORDER BY r.created_at DESC LIMIT 10`,
-            [rows[0].id]
-        );
+    const total = await prisma.expertProfile.count({ where });
 
-        res.json({ success: true, expert: { ...rows[0], reviews } });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Failed to fetch expert" });
+    res.json({ experts, total, page, limit });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch experts" });
+  }
+}
+
+// Public: get expert by id with reviews
+export async function getExpertById(req, res) {
+  try {
+    const expert = await prisma.expertProfile.findUnique({
+      where: { id: BigInt(req.params.id) },
+      include: {
+        user: { select: { fullName: true, email: true, profession: true, avatarUrl: true, region: true, createdAt: true } },
+        reviews: {
+          include: {
+            reviewer: { select: { fullName: true, avatarUrl: true } },
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+        },
+      },
+    });
+
+    if (!expert) return res.status(404).json({ message: "Expert not found" });
+
+    res.json(expert);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch expert" });
+  }
+}
+
+// Protected: apply as expert
+export async function applyAsExpert(req, res) {
+  try {
+    const userId = BigInt(req.user.id);
+    const { headline, bio, experienceYears, skills, company, licenseId, region, specialization, websiteUrl, phone } = req.body;
+
+    const existing = await prisma.expertProfile.findUnique({ where: { userId } });
+    if (existing) {
+      return res.status(400).json({ message: "You already have an expert profile" });
     }
-};
 
-// ─── POST /api/experts/apply ──────────────────────────────────────────────────
-export const applyAsExpert = async (req, res) => {
-    try {
-        const userId = req.user.id;
-        const {
-            headline, bio, experience_years, skills, company,
-            license_id, region, specialization, website_url, phone,
-        } = req.body;
+    const expert = await prisma.expertProfile.create({
+      data: {
+        userId,
+        headline,
+        bio,
+        experienceYears: experienceYears ? Number(experienceYears) : null,
+        skills,
+        company,
+        licenseId,
+        region,
+        specialization,
+        websiteUrl,
+        phone,
+        verificationDocUrl: req.file?.filename ? `/uploads/experts/${req.file.filename}` : null,
+      },
+    });
 
-        const [existing] = await pool.query(
-            "SELECT id FROM expert_profiles WHERE user_id = ?",
-            [userId]
-        );
-        if (existing.length) {
-            return res.status(400).json({ message: "You already have an expert profile" });
-        }
+    // Update user verification status to PENDING
+    await prisma.user.update({
+      where: { id: userId },
+      data: { verificationStatus: "PENDING" },
+    });
 
-        const [result] = await pool.query(
-            `INSERT INTO expert_profiles (user_id, headline, bio, experience_years, skills, company, license_id, region, specialization, website_url, phone)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-            [userId, headline, bio, experience_years, skills, company, license_id, region, specialization, website_url, phone]
-        );
+    res.status(201).json({ message: "Expert application submitted. Awaiting admin verification.", expert });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to submit expert application" });
+  }
+}
 
-        // Update user verification status to PENDING
-        await pool.query(
-            "UPDATE users SET verification_status = 'PENDING' WHERE id = ?",
-            [userId]
-        );
+// Protected: update expert profile
+export async function updateExpertProfile(req, res) {
+  try {
+    const userId = BigInt(req.user.id);
+    const { headline, bio, experienceYears, skills, company, region, specialization, websiteUrl, phone } = req.body;
 
-        res.status(201).json({ success: true, id: result.insertId, message: "Expert application submitted. Awaiting admin verification." });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Failed to submit expert application" });
+    await prisma.expertProfile.update({
+      where: { userId },
+      data: {
+        headline,
+        bio,
+        experienceYears: experienceYears ? Number(experienceYears) : undefined,
+        skills,
+        company,
+        region,
+        specialization,
+        websiteUrl,
+        phone,
+        avatarUrl: req.file?.filename ? `/uploads/experts/${req.file.filename}` : undefined,
+      },
+    });
+
+    res.json({ message: "Profile updated" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to update profile" });
+  }
+}
+
+// Protected: create review
+export async function createReview(req, res) {
+  try {
+    const expertId = BigInt(req.params.id);
+    const { rating, comment } = req.body;
+    const reviewerId = BigInt(req.user.id);
+
+    // Prevent self-review
+    const expert = await prisma.expertProfile.findUnique({ where: { id: expertId }, select: { userId: true } });
+    if (!expert || expert.userId === reviewerId) {
+      return res.status(400).json({ message: "Cannot review yourself" });
     }
-};
 
-// ─── PUT /api/experts/profile ─────────────────────────────────────────────────
-export const updateExpertProfile = async (req, res) => {
-    try {
-        const userId = req.user.id;
-        const { headline, bio, experience_years, skills, company, region, specialization, website_url, phone } = req.body;
-        await pool.query(
-            `UPDATE expert_profiles SET
-        headline = COALESCE(?, headline),
-        bio = COALESCE(?, bio),
-        experience_years = COALESCE(?, experience_years),
-        skills = COALESCE(?, skills),
-        company = COALESCE(?, company),
-        region = COALESCE(?, region),
-        specialization = COALESCE(?, specialization),
-        website_url = COALESCE(?, website_url),
-        phone = COALESCE(?, phone)
-       WHERE user_id = ?`,
-            [headline, bio, experience_years, skills, company, region, specialization, website_url, phone, userId]
-        );
-        res.json({ success: true, message: "Profile updated" });
-    } catch (err) {
-        res.status(500).json({ message: "Failed to update profile" });
+    const review = await prisma.review.create({
+      data: {
+        expertId,
+        reviewerId,
+        rating: Number(rating),
+        comment,
+      },
+    });
+
+    // Update expert rating stats
+    const stats = await prisma.review.groupBy({
+      by: ['rating'],
+      where: { expertId },
+      _count: { rating: true },
+    });
+    const totalReviews = stats.reduce((sum, s) => sum + s._count.rating, 0);
+    const avgRating = stats.reduce((sum, s) => sum + s.rating * s._count.rating, 0) / totalReviews;
+
+    await prisma.expertProfile.update({
+      where: { id: expertId },
+      data: {
+        ratingAvg: avgRating,
+        ratingCount: totalReviews,
+      },
+    });
+
+    res.status(201).json({ message: "Review submitted", review });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to submit review" });
+  }
+}
+
+// Protected: update review
+export async function updateReview(req, res) {
+  try {
+    const reviewId = BigInt(req.params.reviewId);
+    const reviewerId = BigInt(req.user.id);
+
+    const review = await prisma.review.findUnique({ where: { id: reviewId }, select: { reviewerId: true } });
+    if (!review || review.reviewerId !== reviewerId) {
+      return res.status(404).json({ message: "Review not found or not authorized" });
     }
-};
+
+    const { rating, comment } = req.body;
+    await prisma.review.update({
+      where: { id: reviewId },
+      data: { rating: Number(rating), comment },
+    });
+
+    res.json({ message: "Review updated" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to update review" });
+  }
+}
+
+// Protected: delete review
+export async function deleteReview(req, res) {
+  try {
+    const reviewId = BigInt(req.params.reviewId);
+    const reviewerId = BigInt(req.user.id);
+
+    const review = await prisma.review.findUnique({ where: { id: reviewId }, select: { reviewerId: true, expertId: true } });
+    if (!review || review.reviewerId !== reviewerId) {
+      return res.status(404).json({ message: "Review not found or not authorized" });
+    }
+
+    await prisma.review.delete({ where: { id: reviewId } });
+
+    // Update expert rating stats
+    const stats = await prisma.review.groupBy({
+      by: ['rating'],
+      where: { expertId: review.expertId },
+      _count: { rating: true },
+    });
+    const totalReviews = stats.reduce((sum, s) => sum + s._count.rating, 0);
+    const avgRating = totalReviews > 0 ? stats.reduce((sum, s) => sum + s.rating * s._count.rating, 0) / totalReviews : null;
+
+    await prisma.expertProfile.update({
+      where: { id: review.expertId },
+      data: {
+        ratingAvg: avgRating,
+        ratingCount: totalReviews,
+      },
+    });
+
+    res.json({ message: "Review deleted" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to delete review" });
+  }
+}

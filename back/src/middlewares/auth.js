@@ -2,12 +2,10 @@ import jwt from "jsonwebtoken";
 
 export const protect = (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
+    const token = req.cookies?.token;
 
-    if (!authHeader)
+    if (!token)
       return res.status(401).json({ message: "Not authorized" });
-
-    const token = authHeader.split(" ")[1];
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
@@ -17,4 +15,13 @@ export const protect = (req, res, next) => {
   } catch (err) {
     return res.status(401).json({ message: "Invalid or expired token" });
   }
+};
+
+export const requireRole = (roles) => {
+  return (req, res, next) => {
+    if (!req.user || !req.user.role || !roles.includes(req.user.role)) {
+      return res.status(403).json({ message: "Forbidden: insufficient permissions" });
+    }
+    next();
+  };
 };

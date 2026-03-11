@@ -1,8 +1,15 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
+import cookieParser from "cookie-parser";
 import { rateLimit } from "express-rate-limit";
-import { protect } from "./middlewares/auth.js";
+import { protect, requireRole } from "./middlewares/auth.js";
+import { csrfGuard } from "./middlewares/csrf.js";
+
+// Patch BigInt serialization for Prisma
+BigInt.prototype.toJSON = function () {
+  return this.toString();
+};
 
 // ─── Auth & Core Routes ───────────────────────────────────────────────────────
 import authRoutes from "./modules/auth/auth.routes.js";
@@ -17,6 +24,7 @@ import plansRoutes from "./modules/plans/plans.routes.js";
 import listingsRoutes from "./modules/listings/listings.routes.js";
 import expertsRoutes from "./modules/experts/experts.routes.js";
 import catalogRoutes from "./modules/catalog/catalog.routes.js";
+import estimatorRoutes from "./modules/estimator/estimator.routes.js";
 import estimationRoutes from "./modules/estimation/estimation.routes.js";
 import boqRoutes from "./modules/boq/boq.routes.js";
 import documentsRoutes from "./modules/documents/documents.routes.js";
@@ -56,6 +64,7 @@ app.use(cors({
 // ─── Body Parsers ─────────────────────────────────────────────────────────────
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(cookieParser());
 
 // ─── Global Rate Limiting ─────────────────────────────────────────────────────
 const globalLimiter = rateLimit({
@@ -93,23 +102,24 @@ app.use("/api/catalog", catalogRoutes);
 app.use("/api/permits", permitsRoutes);
 
 // ─── Protected Routes (auth required) ────────────────────────────────────────
-app.use("/api/projects", protect, projectsRoutes);
-app.use("/api/estimation", protect, estimationRoutes);
-app.use("/api/boq", protect, boqRoutes);
-app.use("/api/documents", protect, documentsRoutes);
-app.use("/api/progress", protect, progressRoutes);
-app.use("/api/profiles", protect, profilesRoutes);
-app.use("/api/reviews", protect, reviewsRoutes);
-app.use("/api/roi", protect, roiRoutes);
-app.use("/api/carbon", protect, carbonRoutes);
-app.use("/api/uploads", protect, uploadsRoutes);
-app.use("/api/budget", protect, budgetAnalysisRoutes);
+app.use("/api/projects", protect, csrfGuard, projectsRoutes);
+app.use("/api/estimator", protect, csrfGuard, estimatorRoutes);
+app.use("/api/estimation", protect, csrfGuard, estimationRoutes);
+app.use("/api/boq", protect, csrfGuard, boqRoutes);
+app.use("/api/documents", protect, csrfGuard, documentsRoutes);
+app.use("/api/progress", protect, csrfGuard, progressRoutes);
+app.use("/api/profiles", protect, csrfGuard, profilesRoutes);
+app.use("/api/reviews", protect, csrfGuard, reviewsRoutes);
+app.use("/api/roi", protect, csrfGuard, roiRoutes);
+app.use("/api/carbon", protect, csrfGuard, carbonRoutes);
+app.use("/api/uploads", protect, csrfGuard, uploadsRoutes);
+app.use("/api/budget", protect, csrfGuard, budgetAnalysisRoutes);
 
 // AI routes handle auth internally (guest chat is public, threads require auth)
 app.use("/api/ai", aiRoutes);
 
 // ─── Admin Routes (auth + admin role enforced inside routes) ──────────────────
-app.use("/api/admin", protect, adminRoutes);
+app.use("/api/admin", protect, requireRole(["ADMIN"]), adminRoutes);
 
 // ─── Health ───────────────────────────────────────────────────────────────────
 app.get("/health", (req, res) => {

@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuthStore } from "../../store/authStore";
 
 /**
  * Shared login form card used by every role-specific login page.
@@ -11,7 +11,8 @@ import { useAuth } from "../../context/AuthContext";
  *   description – short role tagline
  */
 export default function LoginCard({ role, accentColor = "#0c1220", icon = "🔑", description = "" }) {
-    const { login } = useAuth();
+    const login = useAuthStore(s => s.login);
+    const navigate = useNavigate();
     const [form, setForm] = useState({ email: "", password: "" });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -23,7 +24,12 @@ export default function LoginCard({ role, accentColor = "#0c1220", icon = "🔑"
         setError("");
         setLoading(true);
         try {
-            await login(form); // context handles redirect
+            const user = await login(form);
+            if (user?.role === "ADMIN") {
+                navigate("/admin", { replace: true });
+            } else {
+                navigate("/dashboard", { replace: true });
+            }
         } catch (err) {
             setError(err.message || "Login failed. Check your credentials.");
         } finally {

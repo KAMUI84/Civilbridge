@@ -1,5 +1,5 @@
 import { NavLink, Outlet, Navigate, useLocation } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
+import { useAuthStore } from "../../store/authStore";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Nav config: each item declares which roles can see it
@@ -145,7 +145,8 @@ const linkStyle = (accentColor) =>
 // Main Layout
 // ─────────────────────────────────────────────────────────────────────────────
 export default function DashboardLayout() {
-  const { user, role, logout } = useAuth();
+  const { user, logout } = useAuthStore();
+  const role = user?.role;
   const { pathname } = useLocation();
   const meta = ROLE_META[role] ?? ROLE_META.HOME_BUILDER;
 

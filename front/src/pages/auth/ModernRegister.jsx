@@ -210,19 +210,17 @@ export default function ModernRegister() {
       <div style={S.right}>
         <div style={S.brandOverlay} />
         <div style={S.brandContent}>
-          <div style={S.stepTag}>
-            {step === 1 ? '1 / 2 — Account Info' : '2 / 2 — Verify'}
-          </div>
-          <h2 style={S.brandStat}>
-            Build Smarter,<br />Build with Data.
-          </h2>
-          <p style={S.brandDesc}>
-            Join thousands of construction professionals using CivilBridge to plan, estimate, and build with precision in Rwanda.
-          </p>
-          <div style={S.brandChips}>
-            <span style={S.chip}>✅ Free to start</span>
-            <span style={S.chip}>🔒 Bank-grade security</span>
-            <span style={S.chip}>🌍 Rwanda-focused data</span>
+          <img
+            src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&h=1000&fit=crop&auto=format"
+            alt="Construction Architecture"
+            style={S.brandImage}
+          />
+          <div style={S.brandTextOverlay}>
+            <div style={S.stepTag}>
+              {step === 1 ? '1 / 2 — Account Info' : '2 / 2 — Verify'}
+            </div>
+            <h2 style={S.brandTitle}>Join the Future of Construction</h2>
+            <p style={S.brandDesc}>Create your account to access estimates, plans, permits, and verified experts in Rwanda.</p>
           </div>
         </div>
       </div>
@@ -429,48 +427,52 @@ const S = {
   brandContent: {
     position: 'relative',
     zIndex: 1,
-    padding: '48px 40px',
-    maxWidth: 460,
+    width: '100%',
+    height: '100%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  brandImage: {
+    position: 'absolute',
+    inset: 0,
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+  },
+  brandTextOverlay: {
+    position: 'absolute',
+    bottom: 48,
+    left: 40,
+    right: 40,
+    textAlign: 'center',
+    color: '#fff',
+    textShadow: '0 2px 12px rgba(0,0,0,0.65)',
   },
   stepTag: {
     display: 'inline-block',
     padding: '6px 14px',
     borderRadius: 99,
-    background: 'rgba(0,242,255,.08)',
-    border: '1px solid rgba(0,242,255,.15)',
+    background: 'rgba(0,242,255,.2)',
+    border: '1px solid rgba(0,242,255,.3)',
     fontSize: 12,
     fontWeight: 700,
-    color: accent,
+    color: '#00f2ff',
     letterSpacing: '.03em',
-    marginBottom: 24,
+    marginBottom: 16,
   },
-  brandStat: {
-    margin: '0 0 16px',
-    fontSize: 34,
+  brandTitle: {
+    margin: '0 0 12px',
+    fontSize: 32,
     fontWeight: 800,
-    color: '#f0f0f0',
-    lineHeight: 1.15,
+    lineHeight: 1.2,
     letterSpacing: '-0.03em',
   },
   brandDesc: {
-    margin: '0 0 32px',
+    margin: 0,
     fontSize: 15,
-    color: '#94a3b8',
-    lineHeight: 1.65,
-  },
-  brandChips: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  chip: {
-    padding: '8px 14px',
-    borderRadius: 8,
-    fontSize: 12,
-    fontWeight: 600,
-    background: 'rgba(255,255,255,.04)',
-    border: '1px solid rgba(255,255,255,.06)',
-    color: '#94a3b8',
-    letterSpacing: '.01em',
+    fontWeight: 400,
+    lineHeight: 1.6,
+    opacity: 0.92,
   },
 };

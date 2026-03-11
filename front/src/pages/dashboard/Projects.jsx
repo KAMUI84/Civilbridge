@@ -32,7 +32,7 @@ export default function Projects() {
   async function fetchProjects() {
     try {
       const data = await api.get("/api/projects/user");
-      setProjects(data.projects || []);
+      setProjects(data || []);
     } catch (e) {
       setError(e.message);
     } finally {

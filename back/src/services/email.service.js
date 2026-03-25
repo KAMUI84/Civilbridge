@@ -20,11 +20,11 @@ class EmailService {
     };
 
     // For development, use ethereal.email if no real credentials
-    if (!emailConfig.auth.user) {
-      console.log('📧 Email: Using development mode (ethereal.email)');
+    if (!emailConfig.auth.user || !emailConfig.auth.pass) {
+      console.log('📧 Email: No credentials found, using development mode (ethereal.email)');
       this.setupDevelopmentTransporter();
     } else {
-      console.log('📧 Email: Using production SMTP');
+      console.log('📧 Email: Using production SMTP with:', emailConfig.auth.user);
       this.transporter = nodemailer.createTransport(emailConfig);
       this.isConfigured = true;
     }

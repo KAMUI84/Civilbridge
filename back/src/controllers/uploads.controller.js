@@ -31,10 +31,18 @@ const fileFilter = (req, file, cb) => {
     'model/3mf': true
   };
 
-  if (allowedTypes[file.mimetype]) {
+  const allowedExtensions = {
+    '.jpg': true, '.jpeg': true, '.png': true, '.gif': true,
+    '.pdf': true, '.doc': true, '.docx': true, '.xls': true, '.xlsx': true,
+    '.obj': true, '.stl': true, '.3mf': true
+  };
+
+  const ext = path.extname(file.originalname).toLowerCase();
+
+  if (allowedTypes[file.mimetype] && allowedExtensions[ext]) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type. Only images, PDFs, documents, and 3D models are allowed.'), false);
+    cb(new Error('Invalid file type or extension. Only images, PDFs, documents, and 3D models are allowed.'), false);
   }
 };
 
@@ -144,7 +152,20 @@ export async function getPlans(req, res) {
 
     let query = `
       SELECT p.*, u.full_name as uploader_name, u.email as uploader_email,
-             COUNT(pf.id) as file_count
+             COUNT(pf.id) as file_count,
+             COALESCE(
+               JSON_ARRAYAGG(
+                 IF(pf.id IS NOT NULL,
+                    JSON_OBJECT(
+                      'id', pf.id,
+                      'filename', pf.filename,
+                      'original_name', pf.original_name,
+                      'file_path', pf.file_path,
+                      'file_size', pf.file_size,
+                      'file_type', pf.file_type
+                    ), NULL)
+               ), JSON_ARRAY()
+             ) as files
       FROM plans p 
       LEFT JOIN users u ON p.uploaded_by = u.id
       LEFT JOIN plan_files pf ON p.id = pf.plan_id
@@ -163,16 +184,16 @@ export async function getPlans(req, res) {
 
     const [rows] = await pool.query(query, params);
 
-    // Get files for each plan
-    const plansWithFiles = await Promise.all(
-      rows.map(async (plan) => {
-        const [files] = await pool.query(
-          'SELECT * FROM plan_files WHERE plan_id = ?',
-          [plan.id]
-        );
-        return { ...plan, files };
-      })
-    );
+    // Parse the JSON files array from MySQL
+    const plansWithFiles = rows.map(plan => {
+      let parsedFiles = [];
+      try {
+        parsedFiles = typeof plan.files === 'string' ? JSON.parse(plan.files) : plan.files;
+        // Filter out nulls inserted by JSON_ARRAYAGG
+        parsedFiles = parsedFiles.filter(f => f !== null);
+      } catch (e) {}
+      return { ...plan, files: parsedFiles };
+    });
 
     res.json({ plans: plansWithFiles });
 
@@ -189,7 +210,20 @@ export async function getMarketplaceListings(req, res) {
 
     let query = `
       SELECT l.*, u.full_name as seller_name, u.email as seller_email,
-             COUNT(lf.id) as image_count
+             COUNT(lf.id) as image_count,
+             COALESCE(
+               JSON_ARRAYAGG(
+                 IF(lf.id IS NOT NULL,
+                    JSON_OBJECT(
+                      'id', lf.id,
+                      'filename', lf.filename,
+                      'original_name', lf.original_name,
+                      'file_path', lf.file_path,
+                      'file_size', lf.file_size,
+                      'file_type', lf.file_type
+                    ), NULL)
+               ), JSON_ARRAY()
+             ) as images
       FROM marketplace_listings l 
       LEFT JOIN users u ON l.seller_id = u.id
       LEFT JOIN listing_files lf ON l.id = lf.listing_id
@@ -208,16 +242,15 @@ export async function getMarketplaceListings(req, res) {
 
     const [rows] = await pool.query(query, params);
 
-    // Get images for each listing
-    const listingsWithImages = await Promise.all(
-      rows.map(async (listing) => {
-        const [images] = await pool.query(
-          'SELECT * FROM listing_files WHERE listing_id = ?',
-          [listing.id]
-        );
-        return { ...listing, images };
-      })
-    );
+    // Parse the JSON images array from MySQL
+    const listingsWithImages = rows.map(listing => {
+      let parsedImages = [];
+      try {
+        parsedImages = typeof listing.images === 'string' ? JSON.parse(listing.images) : listing.images;
+        parsedImages = parsedImages.filter(f => f !== null);
+      } catch (e) {}
+      return { ...listing, images: parsedImages };
+    });
 
     res.json({ listings: listingsWithImages });
 

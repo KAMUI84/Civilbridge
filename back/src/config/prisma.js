@@ -1,5 +1,5 @@
-// Using CommonJS (require)
-const { PrismaClient } = require('../generated/prisma');
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
-module.exports = { default: prisma };
+
+export default prisma;

@@ -9,7 +9,7 @@ const NAV_ITEMS = [
     to: "/dashboard",
     label: "Overview",
     end: true,
-    roles: ["HOME_BUILDER", "ENGINEER", "CONTRACTOR", "SUPPLIER", "STUDENT"],
+    roles: ["CLIENT", "ENGINEER", "CONTRACTOR", "SUPPLIER", "STUDENT"],
     icon: (
       <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
         <path d="M3 13h8V3H3v10Zm10 8h8V11h-8v10ZM3 21h8v-6H3v6Zm10-18v6h8V3h-8Z" stroke="currentColor" strokeWidth="1.8" />
@@ -19,7 +19,7 @@ const NAV_ITEMS = [
   {
     to: "/dashboard/projects",
     label: "Projects",
-    roles: ["HOME_BUILDER", "ENGINEER", "CONTRACTOR"],
+    roles: ["CLIENT", "ENGINEER", "CONTRACTOR"],
     icon: (
       <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
         <path d="M4 7h16M4 12h16M4 17h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
@@ -29,7 +29,7 @@ const NAV_ITEMS = [
   {
     to: "/dashboard/estimator",
     label: "BOQs & Estimates",
-    roles: ["HOME_BUILDER", "ENGINEER", "CONTRACTOR"],
+    roles: ["CLIENT", "ENGINEER", "CONTRACTOR"],
     icon: (
       <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
         <path d="M7 3h10v18H7V3Z" stroke="currentColor" strokeWidth="1.8" />
@@ -40,7 +40,7 @@ const NAV_ITEMS = [
   {
     to: "/dashboard/documents",
     label: "Documents",
-    roles: ["HOME_BUILDER", "ENGINEER", "CONTRACTOR", "SUPPLIER"],
+    roles: ["CLIENT", "ENGINEER", "CONTRACTOR", "SUPPLIER"],
     icon: (
       <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
         <path d="M7 3h7l3 3v15H7V3Z" stroke="currentColor" strokeWidth="1.8" />
@@ -51,7 +51,7 @@ const NAV_ITEMS = [
   {
     to: "/dashboard/permits",
     label: "Permit Guide",
-    roles: ["ENGINEER", "HOME_BUILDER", "CONTRACTOR"],
+    roles: ["ENGINEER", "CLIENT", "CONTRACTOR"],
     icon: (
       <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
         <path d="M20 6 9 17l-5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -61,7 +61,7 @@ const NAV_ITEMS = [
   {
     to: "/dashboard/intelligence/roi",
     label: "ROI Tools",
-    roles: ["HOME_BUILDER", "ENGINEER", "CONTRACTOR", "SUPPLIER"],
+    roles: ["CLIENT", "ENGINEER", "CONTRACTOR", "SUPPLIER"],
     icon: (
       <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
         <path d="M3 17l4-4 4 4 4-6 4 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -71,7 +71,7 @@ const NAV_ITEMS = [
   {
     to: "/dashboard/intelligence/ai",
     label: "AI Studio",
-    roles: ["HOME_BUILDER", "ENGINEER", "CONTRACTOR", "SUPPLIER", "STUDENT"],
+    roles: ["CLIENT", "ENGINEER", "CONTRACTOR", "SUPPLIER", "STUDENT"],
     icon: (
       <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
         <path d="M12 3v3M12 18v3M3 12h3M18 12h3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
@@ -85,12 +85,17 @@ const NAV_ITEMS = [
 // Role display config
 // ─────────────────────────────────────────────────────────────────────────────
 const ROLE_META = {
-  HOME_BUILDER: { label: "Home Builder", color: "#16a34a", bg: "#f0fdf4" },
-  ENGINEER: { label: "Engineer", color: "#2563eb", bg: "#eff6ff" },
-  CONTRACTOR: { label: "Contractor", color: "#d97706", bg: "#fffbeb" },
-  SUPPLIER: { label: "Supplier", color: "#0d9488", bg: "#f0fdfa" },
-  STUDENT: { label: "Student", color: "#7c3aed", bg: "#faf5ff" },
-  ADMIN: { label: "Admin", color: "#1a1a2e", bg: "#f8fafc" },
+  CLIENT: { label: "Client", color: "#10b981", bg: "#064e3b", border: "#10b98130" },
+  ENGINEER: { label: "Engineer", color: "#3b82f6", bg: "#1e3a8a", border: "#3b82f630" },
+  CONTRACTOR: { label: "Contractor", color: "#f59e0b", bg: "#78350f", border: "#f59e0b30" },
+  SUPPLIER: { label: "Supplier", color: "#06b6d4", bg: "#164e63", border: "#06b6d430" },
+  STUDENT: { label: "Student", color: "#8b5cf6", bg: "#4c1d95", border: "#8b5cf630" },
+  ADMIN: { label: "Admin", color: "#ef4444", bg: "#7f1d1d", border: "#ef444430" },
+  SUPER_ADMIN: { label: "Super Admin", color: "#dc2626", bg: "#991b1b", border: "#dc262630" },
+  PROFESSIONAL: { label: "Professional", color: "#3b82f6", bg: "#1e3a8a", border: "#3b82f630" },
+  VIEWER: { label: "Viewer", color: "#6b7280", bg: "#374151", border: "#6b728030" },
+  AUDITOR: { label: "Auditor", color: "#059669", bg: "#064e3b", border: "#05966930" },
+  FINANCE: { label: "Finance", color: "#d97706", bg: "#78350f", border: "#d9770630" }
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -135,9 +140,9 @@ const linkStyle = (accentColor) =>
     textDecoration: "none",
     fontWeight: 700,
     fontSize: 14,
-    color: isActive ? accentColor : "#4b5563",
-    background: isActive ? accentColor + "12" : "transparent",
-    border: isActive ? `1px solid ${accentColor}25` : "1px solid transparent",
+    color: isActive ? accentColor : "#a0a0a0",
+    background: isActive ? accentColor + "20" : "transparent",
+    border: isActive ? `1px solid ${accentColor}40` : "1px solid transparent",
     transition: "all .18s ease",
   });
 
@@ -148,7 +153,7 @@ export default function DashboardLayout() {
   const { user, logout } = useAuthStore();
   const role = user?.role;
   const { pathname } = useLocation();
-  const meta = ROLE_META[role] ?? ROLE_META.HOME_BUILDER;
+  const meta = ROLE_META[role] ?? ROLE_META.CLIENT;
 
   // Admins go to their own layout
   if (role === "ADMIN") return <Navigate to="/admin" replace />;
@@ -260,7 +265,7 @@ const styles = {
     display: "grid",
     gridTemplateRows: `${HEADER_H}px 1fr`,
     minHeight: "100vh",
-    background: "#f4f6fb",
+    background: "#000000",
   },
   // Header
   header: {
@@ -268,13 +273,13 @@ const styles = {
     top: 0,
     zIndex: 100,
     height: HEADER_H,
-    background: "#ffffff",
-    borderBottom: "1px solid #e5e7eb",
+    background: "#000000",
+    borderBottom: "1px solid #1a1a1a",
     display: "flex",
     alignItems: "center",
     padding: "0 24px",
     gap: 18,
-    boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+    boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
   },
   logoRow: {
     display: "flex",
@@ -292,14 +297,14 @@ const styles = {
   logoText: {
     fontWeight: 900,
     fontSize: 17,
-    color: "#0c1220",
+    color: "#ffffff",
     letterSpacing: "-0.4px",
   },
   pageTitle: {
     flex: 1,
     fontWeight: 800,
     fontSize: 16,
-    color: "#0c1220",
+    color: "#ffffff",
     letterSpacing: "-0.3px",
   },
   headerRight: {
@@ -330,9 +335,9 @@ const styles = {
   logoutBtn: {
     padding: "6px 14px",
     borderRadius: 10,
-    border: "1.5px solid #e5e7eb",
-    background: "#fff",
-    color: "#374151",
+    border: "1.5px solid #1a1a1a",
+    background: "#0a0a0a",
+    color: "#ffffff",
     fontWeight: 700,
     fontSize: 13,
     cursor: "pointer",
@@ -347,8 +352,8 @@ const styles = {
   },
   // Sidebar
   sidebar: {
-    borderRight: "1px solid #e5e7eb",
-    background: "#ffffff",
+    borderRight: "1px solid #1a1a1a",
+    background: "#0a0a0a",
     padding: "16px 14px",
     display: "flex",
     flexDirection: "column",
@@ -359,6 +364,7 @@ const styles = {
   userBlock: {
     display: "flex",
     alignItems: "center",
+    justifyContent: "center",
     gap: 10,
     padding: "8px 4px",
     marginBottom: 8,
@@ -378,7 +384,7 @@ const styles = {
   userName: {
     fontWeight: 800,
     fontSize: 14,
-    color: "#0c1220",
+    color: "#ffffff",
     letterSpacing: "-0.2px",
     lineHeight: 1.2,
   },
@@ -390,20 +396,20 @@ const styles = {
   },
   divider: {
     height: 1,
-    background: "#f0f0f4",
+    background: "#1a1a1a",
     margin: "12px 0",
   },
   actionBtn: {
     width: "100%",
     padding: "9px 12px",
     borderRadius: 10,
-    border: "1px solid #e5e7eb",
-    background: "#f9fafb",
+    border: "1px solid #1a1a1a",
+    background: "#0a0a0a",
     fontWeight: 700,
     fontSize: 13,
     cursor: "pointer",
     textAlign: "left",
-    color: "#374151",
+    color: "#ffffff",
     transition: "all .18s ease",
   },
   // Main outlet
@@ -411,5 +417,6 @@ const styles = {
     overflowY: "auto",
     padding: "24px",
     height: "100%",
+    background: "#000000",
   },
 };

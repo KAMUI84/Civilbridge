@@ -29,7 +29,10 @@ export async function sendRegistrationOtp(target) {
     }
   });
 
-  console.log(`[DEV] OTP for ${target}: ${otp}`);
+  // Only show OTP in development mode for testing
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[DEV] OTP for ${target}: ${otp}`);
+  }
   
   return { otp, expiresAt };
 }
@@ -64,18 +67,35 @@ export async function verifyRegistrationOtp(target, otp) {
 }
 
 export async function createUser(userData) {
-  const { full_name, email, phone, password } = userData;
+  // Log exactly what the service receives
+  console.log("Service received userData:", userData);
+
+  const { fullname, fullName, full_name, email, phone, password } = userData;
+  const finalName = fullname || fullName || full_name;
+
+  if (!finalName || finalName.trim() === "") {
+    throw new Error("fullname is required to create a user");
+  }
   
+  if (!password) {
+    throw new Error("password is required to create a user");
+  }
+
+  // 🔒 SECURITY: Force CLIENT role for all new registrations
+  // Users cannot choose their own role - only admins can assign roles
+  const forcedRole = "CLIENT";
+
   const hashed = await hashPassword(password);
 
+  // 3. Perform Database Transaction
   const result = await prisma.$transaction(async (tx) => {
     const user = await tx.user.create({
       data: {
-        fullName: full_name,
+        fullName: finalName, 
         email: email || null,
         phone: phone || null,
         passwordHash: hashed,
-        role: "USER",
+        role: forcedRole, // 🔒 Forced to CLIENT - no user choice
         verificationStatus: "VERIFIED"
       }
     });
@@ -90,7 +110,8 @@ export async function createUser(userData) {
     return user;
   });
 
-  const token = generateToken({ id: result.id.toString(), role: "USER" });
+  // 4. Generate token and return response object
+  const token = generateToken({ id: result.id.toString(), role: forcedRole });
 
   return {
     token,
@@ -99,7 +120,7 @@ export async function createUser(userData) {
       full_name: result.fullName, 
       email: result.email, 
       phone: result.phone, 
-      role: "USER" 
+      role: forcedRole 
     }
-  };
+  };  
 }

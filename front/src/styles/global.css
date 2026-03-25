@@ -135,8 +135,21 @@
 }
 
 /* Dark mode variables */
+.dark {
+  --color-background: #0f172a;
+  --color-background-secondary: #1e293b;
+  --color-background-tertiary: #334155;
+  --color-border: #334155;
+  --color-border-secondary: #475569;
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #cbd5e1;
+  --color-text-tertiary: #94a3b8;
+  --color-text-inverse: #0f172a;
+}
+
+/* System preference dark mode (fallback) */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not(.light) {
     --color-background: #0f172a;
     --color-background-secondary: #1e293b;
     --color-background-tertiary: #334155;

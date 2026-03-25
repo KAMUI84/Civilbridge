@@ -1,49 +1,27 @@
-import React, { useEffect, useRef } from 'react';
-import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-
-gsap.registerPlugin(ScrollTrigger);
+import React, { useEffect, useRef } from "react";
 
 const PageTransition = ({ children }) => {
   const containerRef = useRef();
 
   useEffect(() => {
-    // Scroll-triggered reveals only (no page-blocking opacity animation)
-    gsap.utils.toArray('.smooth-scroll').forEach(element => {
-      gsap.fromTo(element,
-        { y: 40, opacity: 0 },
-        {
-          y: 0,
-          opacity: 1,
-          duration: 0.7,
-          ease: 'power2.out',
-          scrollTrigger: {
-            trigger: element,
-            start: 'top 85%',
-            once: true
-          }
-        }
-      );
-    });
-
-    // Floating elements animation
-    gsap.utils.toArray('.float-animation').forEach(element => {
-      gsap.to(element, {
-        y: -10,
-        duration: 2,
-        repeat: -1,
-        yoyo: true,
-        ease: 'power1.inOut'
-      });
-    });
-
-    return () => {
-      ScrollTrigger.getAll().forEach(trigger => trigger.kill());
-    };
+    // Simple fade-in animation without GSAP
+    const container = containerRef.current;
+    if (container) {
+      container.style.opacity = "0";
+      container.style.transform = "translateY(20px)";
+      
+      const timer = setTimeout(() => {
+        container.style.transition = "all 0.6s ease";
+        container.style.opacity = "1";
+        container.style.transform = "translateY(0)";
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
   }, []);
 
   return (
-    <div ref={containerRef} className="page-transition" style={{ opacity: 1 }}>
+    <div ref={containerRef} style={{ width: "100%", height: "100%" }}>
       {children}
     </div>
   );

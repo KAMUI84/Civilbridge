@@ -26,8 +26,8 @@ export default function Contact() {
         <form onSubmit={submit} style={{ display: "grid", gap: 12 }}>
           {err ? <div style={errBox}>{err}</div> : null}
           {sent ? (
-            <div style={{ padding: 12, borderRadius: 12, background: "#ecfdf5", border: "1px solid #d1fae5", color: "#065f46", fontWeight: 800 }}>
-              Message sent. We’ll respond soon.
+            <div style={{ padding: 12, borderRadius: 12, background: "rgba(34,197,94,.1)", border: "1px solid rgba(34,197,94,.2)", color: "#22c55e", fontWeight: 800 }}>
+              Message sent. We'll respond soon.
             </div>
           ) : null}
 
@@ -49,20 +49,20 @@ export default function Contact() {
           <button style={primaryBtn}>Send Message</button>
         </form>
 
-        <div style={{ border: "1px solid #eef0f4", borderRadius: 16, padding: 16, background: "#f7f9ff" }}>
-          <div style={{ fontWeight: 950, color: "#0c1220", marginBottom: 10 }}>Quick options</div>
-          <ul style={{ margin: 0, paddingLeft: 18, display: "grid", gap: 10, color: "#3a4357", fontWeight: 650 }}>
+        <div style={{ border: "1px solid #1a1a1a", borderRadius: 16, padding: 16, background: "#0a0a0a" }}>
+          <div style={{ fontWeight: 950, color: "#ffffff", marginBottom: 10 }}>Quick options</div>
+          <ul style={{ margin: 0, paddingLeft: 18, display: "grid", gap: 10, color: "#a0a0a0", fontWeight: 650 }}>
             <li>Request site visit for a property/land</li>
             <li>Upload your plan and request estimation</li>
             <li>Ask about verified engineers/contractors</li>
             <li>Permits & compliance guidance</li>
           </ul>
 
-          <div style={{ height: 1, background: "#eef0f4", margin: "14px 0" }} />
+          <div style={{ height: 1, background: "#1a1a1a", margin: "14px 0" }} />
 
-          <div style={{ display: "grid", gap: 8, color: "#64708a", fontWeight: 650 }}>
-            <div><b style={{ color: "#0c1220" }}>Email:</b> support@civilbridge.example</div>
-            <div><b style={{ color: "#0c1220" }}>Office:</b> Kigali (Pilot launch)</div>
+          <div style={{ display: "grid", gap: 8, color: "#a0a0a0", fontWeight: 650 }}>
+            <div><b style={{ color: "#ffffff" }}>Email:</b> support@civilbridge.example</div>
+            <div><b style={{ color: "#ffffff" }}>Office:</b> Kigali (Pilot launch)</div>
           </div>
         </div>
       </div>

@@ -25,9 +25,9 @@ export default function Uploads() {
             style={{
               ...ghostBtn,
               borderRadius: 999,
-              background: tab === t.id ? "#0c1220" : "#fff",
-              color: tab === t.id ? "#fff" : "#0c1220",
-              borderColor: tab === t.id ? "#0c1220" : "#e9ecf2",
+              background: tab === t.id ? "#000000" : "#0a0a0a",
+              color: tab === t.id ? "#ffffff" : "#ffffff",
+              borderColor: tab === t.id ? "#3b82f6" : "#1a1a1a",
             }}
           >
             {t.label}

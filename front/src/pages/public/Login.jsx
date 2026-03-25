@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import GoogleButton from "../../components/auth/GoogleButton";
 import civilbridge from "/civilbridge.png";
@@ -44,98 +44,81 @@ export default function Login() {
   }
 
   return (
-    <div style={{ display: "flex", gap: 60, alignItems: "center", maxWidth: 900, margin: "0 auto" }}>
-      <div style={{ flex: 1 }}>
-        {err ? <div style={errBox}>{err}</div> : null}
-
-        <GoogleButton onCredential={handleGoogleLogin} />
-
-        <div style={orRow}>
-          <div style={orLine} />
-          <div style={orText}>or</div>
-          <div style={orLine} />
-        </div>
-
-        <form onSubmit={onSubmit} style={{ display: "grid", gap: 30 }}>
-          <label style={labelStyle}>
-            Email
-            <input
-              style={inputStyle}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              type="email"
-              autoComplete="email"
-              placeholder="name@example.com"
-            />
-          </label>
-
-          <label style={labelStyle}>
-            Password
-            <input
-              style={inputStyle}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              type="password"
-              autoComplete="current-password"
-              placeholder="••••••••"
-            />
-          </label>
-
-          <button type="submit" style={{ ...btnPrimary, opacity: loading ? 0.8 : 1 }} disabled={loading}>
-            {loading ? "Signing in..." : "Sign in"}
-          </button>
-
-          <div style={{ color: "#64708a", fontWeight: 650, fontSize: 12, marginLeft: 20 }}>
-            Forgot password?
+    <div style={S.page}>
+      <div style={S.left}>
+        <div style={S.formWrap}>
+          <div style={S.logoRow}>
+            <div style={S.logoIcon}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" stroke="#3b82f6" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <span style={S.logoText}>CivilBridge</span>
           </div>
-        </form>
-      </div>
 
-      <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center" }}>
-        <img 
-          src={civilbridge} 
-          alt="CivilBridge" 
-          style={{ 
-            maxWidth: "100%", 
-            height: "auto",
-            maxHeight: 400,
-            objectFit: "contain"
-          }} 
-        />
+          <h1 style={S.heading}>Welcome back</h1>
+          <p style={S.subtext}>Enter your credentials to access your account</p>
+
+          <GoogleButton onCredential={handleGoogleLogin} />
+
+          <div style={S.divider}><div style={S.divLine} /><span style={S.divText}>OR</span><div style={S.divLine} /></div>
+          
+          {err && <div style={S.error}>{err}</div>}
+
+          <form onSubmit={onSubmit} style={S.form}>
+            <label style={S.label}>Email
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" style={S.input} required autoComplete="email" />
+            </label>
+            <label style={S.label}>Password
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" style={S.input} required autoComplete="current-password" />
+            </label>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', marginTop: -6, marginBottom: 8 }}>
+              <div style={S.forgotPassword}>Forgot password?</div>
+            </div>
+
+            <button type="submit" disabled={loading} style={{ ...S.submitBtn, opacity: loading ? 0.6 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}>
+              {loading ? 'Signing in…' : 'Sign in'}
+            </button>
+          </form>
+
+          <p style={S.footer}>Don't have an account? <Link to="/register" style={S.footerLink}>Sign up</Link></p>
+        </div>
+      </div>
+      
+      <div style={S.right}>
+        <div style={S.brandOverlay} />
+        <div style={S.brandContent}>
+          <img src={civilbridge} alt="CivilBridge Logo" style={S.brandLogoImage} />
+        </div>
       </div>
     </div>
   );
 }
 
-const labelStyle = { display: "grid", gap: 12, fontWeight: 900, color: "#0c1220", fontSize: 18, margin: 10 };
-const inputStyle = {
-  width: "100%",
-  boxSizing: "border-box",
-  padding: "12px 12px",
-  borderRadius: 12,
-  border: "1px solid #e9ecf2",
-  outline: "none",
-  fontWeight: 750,
+const accent = '#3b82f6';
+const S = {
+  page: { display: 'grid', gridTemplateColumns: '1fr 1fr', minHeight: '100vh', background: '#000000', fontFamily: "'Inter', sans-serif" },
+  left: { display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 32px', background: '#000000' },
+  formWrap: { width: '100%', maxWidth: 400 },
+  logoRow: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 40 },
+  logoIcon: { width: 36, height: 36, borderRadius: 10, background: 'rgba(59,130,246,.15)', border: '1px solid rgba(59,130,246,.25)', display: 'grid', placeItems: 'center' },
+  logoText: { fontSize: 16, fontWeight: 700, color: '#ffffff' },
+  heading: { margin: '0 0 6px', fontSize: 28, fontWeight: 700, color: '#ffffff' },
+  subtext: { margin: '0 0 28px', fontSize: 14, color: '#a0a0a0' },
+  divider: { display: 'flex', alignItems: 'center', gap: 12, margin: '22px 0' },
+  divLine: { flex: 1, height: 1, background: '#1a1a1a' },
+  divText: { fontSize: 11, fontWeight: 700, color: '#666666' },
+  error: { padding: '10px 14px', marginBottom: 16, borderRadius: 8, background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.2)', color: '#ef4444', fontSize: 13 },
+  form: { display: 'flex', flexDirection: 'column', gap: 18 },
+  label: { display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, fontWeight: 600, color: '#ffffff' },
+  input: { width: '100%', height: 44, padding: '0 14px', background: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: 8, color: '#ffffff', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.2s ease' },
+  submitBtn: { width: '100%', height: 44, background: accent, color: '#ffffff', borderRadius: 8, fontWeight: 600, cursor: 'pointer', marginTop: 4, border: 'none', transition: 'background-color 0.2s ease', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)' },
+  forgotPassword: { color: '#a0a0a0', fontWeight: 600, fontSize: 12, cursor: 'pointer', outline: 'none', '&:hover': { color: '#ffffff' } },
+  footer: { marginTop: 28, textAlign: 'center', fontSize: 13, color: '#a0a0a0' },
+  footerLink: { color: accent, fontWeight: 600, textDecoration: 'none' },
+  right: { position: 'relative', background: '#0a0a0a', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  brandOverlay: { position: 'absolute', inset: 0, background: 'radial-gradient(600px 400px at 70% 30%, rgba(59,130,246,.1), transparent 65%)', pointerEvents: 'none' },
+  brandContent: { position: 'relative', zIndex: 1, padding: '48px 40px', width: '100%', display: 'flex', justifyContent: 'center' },
+  brandLogoImage: { width: '100%', maxWidth: 480, height: 'auto', objectFit: 'contain', filter: 'drop-shadow(0 0 60px rgba(59, 130, 246, 0.25))' },
 };
-const btnPrimary = {
-  width: "100%",
-  padding: "12px 14px",
-  borderRadius: 12,
-  border: "1px solid rgba(29,78,216,0.2)",
-  background: "linear-gradient(135deg,#2a66ff,#1d4ed8)",
-  color: "#fff",
-  fontWeight: 950,
-  cursor: "pointer",
-  boxShadow: "0 14px 26px rgba(29,78,216,.18)",
-};
-const errBox = {
-  padding: 12,
-  borderRadius: 12,
-  background: "#fff1f2",
-  border: "1px solid #ffe4e6",
-  color: "#9f1239",
-  fontWeight: 750,
-};
-const orRow = { display: "flex", alignItems: "center", gap: 10, margin: "14px 0" };
-const orLine = { height: 1, background: "#eef0f4", flex: 1 };
-const orText = { color: "#94a3b8", fontWeight: 900, fontSize: 12 };

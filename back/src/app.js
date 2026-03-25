@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import { rateLimit } from "express-rate-limit";
 import { protect, requireRole } from "./middlewares/auth.js";
 import { csrfGuard } from "./middlewares/csrf.js";
+import emailService from "./services/emailService.js";
 
 // Patch BigInt serialization for Prisma
 BigInt.prototype.toJSON = function () {
@@ -124,6 +125,43 @@ app.use("/api/admin", protect, requireRole(["ADMIN"]), adminRoutes);
 // ─── Health ───────────────────────────────────────────────────────────────────
 app.get("/health", (req, res) => {
   res.json({ status: "CivilBridge API running", timestamp: new Date().toISOString() });
+});
+
+// ─── Email Service Status ───────────────────────────────────────────────────────
+app.get("/api/email-status", (req, res) => {
+  try {
+    const emailStatus = emailService.getStatus();
+    res.json({ 
+      status: "Email service operational",
+      ...emailStatus,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      status: "Email service error", 
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// ─── Test Email Endpoint ───────────────────────────────────────────────────────
+app.post("/api/test-email", async (req, res) => {
+  try {
+    const { to = 'samuelnizeyimana505@gmail.com' } = req.body;
+    const result = await emailService.sendTestEmail(to);
+    res.json({ 
+      status: "Test email sent successfully",
+      ...result,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      status: "Failed to send test email", 
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 app.get("/", (req, res) => {

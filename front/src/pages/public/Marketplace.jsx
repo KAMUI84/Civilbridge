@@ -31,8 +31,8 @@ export default function Marketplace() {
     <div style={{ maxWidth: 1200, margin: "0 auto", padding: "26px 18px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
-          <h1 style={{ margin: 0 }}>Marketplace</h1>
-          <p style={{ color: "#64708a", fontWeight: 650 }}>
+          <h1 style={{ margin: 0, color: "#ffffff", fontSize: 28, fontWeight: 800 }}>Marketplace</h1>
+          <p style={{ color: "#a0a0a0", fontWeight: 650 }}>
             Browse property and land listings across Rwanda.
           </p>
         </div>
@@ -41,11 +41,12 @@ export default function Marketplace() {
             to="/dashboard/listings/new"
             style={{
               textDecoration: "none",
-              background: "#00f2ff",
-              color: "#050505",
+              background: "#3b82f6",
+              color: "#ffffff",
               padding: "10px 20px",
               borderRadius: 8,
               fontWeight: 700,
+              boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)"
             }}
           >
             + Create Listing
@@ -60,12 +61,12 @@ export default function Marketplace() {
           placeholder="Search listings..."
           value={filters.search}
           onChange={e => setFilters({ ...filters, search: e.target.value })}
-          style={{ padding: "8px 12px", border: "1px solid #d1d5db", borderRadius: 6 }}
+          style={{ padding: "8px 12px", border: "1px solid #1a1a1a", borderRadius: 6, background: "#0a0a0a", color: "#ffffff" }}
         />
         <select
           value={filters.type}
           onChange={e => setFilters({ ...filters, type: e.target.value })}
-          style={{ padding: "8px 12px", border: "1px solid #d1d5db", borderRadius: 6 }}
+          style={{ padding: "8px 12px", border: "1px solid #1a1a1a", borderRadius: 6, background: "#0a0a0a", color: "#ffffff" }}
         >
           <option value="">All Types</option>
           <option value="PROPERTY">Property</option>
@@ -74,7 +75,7 @@ export default function Marketplace() {
         <select
           value={filters.region}
           onChange={e => setFilters({ ...filters, region: e.target.value })}
-          style={{ padding: "8px 12px", border: "1px solid #d1d5db", borderRadius: 6 }}
+          style={{ padding: "8px 12px", border: "1px solid #1a1a1a", borderRadius: 6, background: "#0a0a0a", color: "#ffffff" }}
         >
           <option value="">All Regions</option>
           <option value="1">Kigali</option>
@@ -85,11 +86,11 @@ export default function Marketplace() {
         </select>
       </div>
 
-      {state.loading ? <div>Loading...</div> : null}
-      {state.error ? <div style={{ color: "#b91c1c" }}>{state.error}</div> : null}
+      {state.loading ? <div style={{ color: "#ffffff" }}>Loading...</div> : null}
+      {state.error ? <div style={{ color: "#ef4444" }}>{state.error}</div> : null}
 
       {!state.loading && !state.error && listings.length === 0 ? (
-        <div style={{ padding: 18, border: "1px solid #eef0f4", borderRadius: 16 }}>
+        <div style={{ padding: 18, border: "1px solid #1a1a1a", borderRadius: 16, background: "#0a0a0a", color: "#ffffff" }}>
           No listings found. {isAuthed ? "Create your first listing!" : "Sign in to create a listing."}
         </div>
       ) : null}
@@ -101,27 +102,27 @@ export default function Marketplace() {
             to={`/marketplace/${listing.id}`}
             style={{
               textDecoration: "none",
-              border: "1px solid #eef0f4",
+              border: "1px solid #1a1a1a",
               borderRadius: 16,
               overflow: "hidden",
-              background: "#fff",
-              color: "#0c1220",
+              background: "#0a0a0a",
+              color: "#ffffff",
             }}
           >
             <div
               style={{
                 height: 200,
                 background: `url("${listing.images?.[0]?.imageUrl || "/placeholder.jpg"}") center/cover no-repeat`,
-                backgroundColor: "#f7f8fb",
+                backgroundColor: "#000000",
               }}
             />
             <div style={{ padding: 16, display: "grid", gap: 8 }}>
               <div style={{ fontWeight: 700, fontSize: 18 }}>{listing.title}</div>
-              <div style={{ color: "#64708a", fontWeight: 500, fontSize: 14 }}>
+              <div style={{ color: "#a0a0a0", fontWeight: 500, fontSize: 14 }}>
                 {listing.region?.name || "—"} • {listing.price ? `${listing.currency} ${listing.price.toLocaleString()}` : "Price on request"}
               </div>
               {listing.sizeM2 && (
-                <div style={{ color: "#64708a", fontSize: 13 }}>
+                <div style={{ color: "#a0a0a0", fontSize: 13 }}>
                   Size: {listing.sizeM2} m²
                 </div>
               )}

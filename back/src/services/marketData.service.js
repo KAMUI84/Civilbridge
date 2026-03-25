@@ -9,9 +9,12 @@ class MarketDataService {
   }
 
   async initializeData() {
-    await this.loadRegions();
-    await this.loadMaterials();
-    await this.loadLaborRates();
+    console.log('🏪 Initializing market data with fallback data...');
+    // Use fallback data directly since MySQL tables don't exist in SQLite
+    this.addFallbackRegions();
+    this.addFallbackMaterials();
+    this.addFallbackLaborRates();
+    console.log('✅ Market data initialized successfully');
   }
 
   async loadRegions() {
@@ -171,6 +174,25 @@ class MarketDataService {
     fallbackMaterials.forEach(material => {
       this.materials.set(material.id, material);
     });
+    console.log(`🧱 Loaded ${fallbackMaterials.length} fallback materials`);
+  }
+
+  addFallbackLaborRates() {
+    // Labor rates are already included in the materials fallback
+    // This method is for consistency and future extensibility
+    const laborMaterials = Array.from(this.materials.values())
+      .filter(material => material.category === 'labor');
+    
+    laborMaterials.forEach(labor => {
+      const skillLevel = labor.specifications?.skill_level || 'unskilled';
+      this.laborRates.set(`default_${skillLevel}`, {
+        region_id: 0,
+        skill_level: skillLevel,
+        daily_rate: labor.base_price_rwf,
+        hourly_rate: labor.base_price_rwf / 8
+      });
+    });
+    console.log(`👷 Loaded ${this.laborRates.size} fallback labor rates`);
   }
 
   async loadLaborRates() {

@@ -8,13 +8,14 @@ datasource db {
 }
 
 enum UserRole {
-  USER
-  HOME_BUILDER
-  STUDENT
-  ENGINEER
-  CONTRACTOR
-  SUPPLIER
+  SUPER_ADMIN
   ADMIN
+  ENGINEER
+  HOME_BUILDER
+  VIEWER
+  AUDITOR
+  FINANCE
+  STUDENT
 }
 
 enum VerificationStatus {
@@ -743,19 +744,26 @@ model AuditLog {
   @@index([entityType, entityId])
   @@map("audit_logs")
 }
-datasource db {
-  provider = "postgresql" // or "mysql" depending on what you use
-  url      = env("DATABASE_URL")
+
+model Permission {
+  id          BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  name        String   @unique @db.VarChar(100)
+  description String?  @db.VarChar(255)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  roleMappings RolePermission[]
+
+  @@map("permissions")
 }
 
-generator client {
-  provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
-}
+model RolePermission {
+  id           BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  role         UserRole
+  permissionId BigInt   @map("permission_id") @db.UnsignedBigInt
+  createdAt    DateTime @default(now()) @map("created_at")
 
-model User {
-  id    Int     @id @default(autoincrement())
-  email String  @unique
-  name  String?
-  role  String  @default("USER")
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([role, permissionId])
+  @@map("role_permissions")
 }

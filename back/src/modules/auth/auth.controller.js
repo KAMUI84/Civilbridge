@@ -9,41 +9,36 @@ import { setAuthCookie, clearAuthCookie, generateCSRFToken } from "../../utils/c
 export const requestRegisterOtp = async (req, res) => {
   try {
     const { email, phone } = req.body;
-    const target = email || phone;
+    // Normalize target for consistent DB lookups
+    const target = email ? email.toLowerCase().trim() : phone;
 
-    if (!target) {
-      return res.status(400).json({ message: "Email or phone required" });
-    }
+    if (!target) return res.status(400).json({ message: "Email or phone required" });
 
     const existing = await prisma.user.findFirst({
-      where: {
-        OR: [{ email: target }, { phone: target }]
-      },
+      where: { OR: [{ email: target }, { phone: target }] },
       select: { id: true }
     });
 
-    if (existing) {
-      return res.status(400).json({ message: "User already exists" });
-    }
+    if (existing) return res.status(400).json({ message: "User already exists" });
 
     const { otp } = await sendRegistrationOtp(target);
-
-    // Send OTP by email if target is an email address
+    
     if (target.includes("@")) {
       try {
         await emailService.sendVerificationEmail(target, otp);
       } catch (emailErr) {
         console.error("Failed to send OTP email:", emailErr.message);
+        return res.status(500).json({ message: "Failed to send OTP email" });
       }
     }
 
-    res.json({
+    const response = {
       success: true,
-      message: target.includes("@")
-        ? "OTP sent to your email address"
-        : "OTP sent to your phone number",
+      message: target.includes("@") ? "OTP sent to email" : "OTP sent to phone",
       expires_in_sec: 300,
-    });
+    };
+
+    res.json(response);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Failed to send OTP" });
@@ -52,29 +47,63 @@ export const requestRegisterOtp = async (req, res) => {
 
 export const register = async (req, res) => {
   try {
-    const { full_name, email, phone, password, otp } = req.body;
+    // 1. Extract EVERYTHING from the request body at once
+    const { 
+      fullname, 
+      fullName, 
+      full_name, 
+      email, 
+      phone, 
+      password,
+      otp 
+    } = req.body;
+
+    // 2. Identify the name and the target (email or phone)
+    const extractedName = fullname || fullName || full_name;
     const target = email || phone;
 
+    // 3. Strict Validation with better error messages
+    if (!extractedName) {
+      return res.status(400).json({ message: "Full name is required." });
+    }
+    if (!password) {
+      return res.status(400).json({ message: "Password is required." });
+    }
     if (!target || !otp) {
-      return res.status(400).json({ message: "Email/phone and OTP required" });
+      return res.status(400).json({ message: "Email/Phone and OTP are required." });
     }
 
+    // 4. Verify OTP
     await verifyRegistrationOtp(target, otp);
 
-    const authResult = await createUser({ full_name, email, phone, password });
+    // 5. Create user in database via the service
+    const authResult = await createUser({ 
+      fullname: extractedName, 
+      email: email ? email.toLowerCase().trim() : null, 
+      phone, 
+      password // <--- This is now safely passed to the service
+    });
 
-    if (authResult.user.email) {
-      await emailService.sendWelcomeEmail(authResult.user.email, authResult.user.full_name);
-    }
+    // 6. Set Auth Cookies for Auto-Login
+    const csrfToken = generateCSRFToken();
+    setAuthCookie(res, authResult.token);
+    res.cookie('csrf', csrfToken, {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 1000 * 60 * 60 * 24 * 7,
+      path: '/',
+    });
 
     res.status(201).json({
       success: true,
-      message: "User registered and email sent!",
+      token: authResult.token,
+      csrfToken,
       user: authResult.user
     });
 
   } catch (err) {
-    console.error(err);
+    console.error("Registration Error:", err.message);
     res.status(400).json({ success: false, message: err.message || "Registration failed" });
   }
 };
@@ -82,26 +111,22 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
+    const cleanEmail = email.toLowerCase().trim();
 
-    const user = await prisma.user.findUnique({
-      where: { email }
-    });
-
-    if (!user)
-      return res.status(400).json({ message: "Invalid credentials" });
-
-    if (!user.passwordHash)
-      return res.status(400).json({ message: "Please use Google sign-in" });
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [{ email: cleanEmail }, { phone: email }]
+      }
+    }); 
+    
+    if (!user) return res.status(400).json({ message: "Invalid credentials" });
 
     const valid = await comparePassword(password, user.passwordHash);
-
-    if (!valid)
-      return res.status(400).json({ message: "Invalid credentials" });
+    if (!valid) return res.status(400).json({ message: "Invalid credentials" });
 
     const token = generateToken({ id: user.id.toString(), role: user.role });
     const csrfToken = generateCSRFToken();
 
-    // Set httpOnly cookie and CSRF token in response
     setAuthCookie(res, token);
     res.cookie('csrf', csrfToken, {
       httpOnly: false,
@@ -111,15 +136,11 @@ export const login = async (req, res) => {
       path: '/',
     });
 
-    await prisma.auditLog.create({
-      data: {
-        userId: user.id,
-        action: "LOGIN"
-      }
-    });
+    await prisma.auditLog.create({ data: { userId: user.id, action: "LOGIN" } });
 
     res.json({
       success: true,
+      token,
       csrfToken,
       user: {
         id: user.id.toString(),
@@ -128,7 +149,6 @@ export const login = async (req, res) => {
         role: user.role
       }
     });
-
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Login failed" });
@@ -176,7 +196,7 @@ export const googleLogin = async (req, res) => {
             fullName: name,
             email,
             googleSub,
-            role: "USER",
+            role: "CLIENT", // 🔒 Forced to CLIENT - no user choice
             verificationStatus: "VERIFIED"
           }
         });
@@ -217,6 +237,7 @@ export const googleLogin = async (req, res) => {
 
     res.json({
       success: true,
+      token,
       csrfToken,
       user: {
         id: userId.toString(),

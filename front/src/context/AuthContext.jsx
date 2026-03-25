@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import authService from "../services/authService";
+import { useAuthStore } from "../store/authStore";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Context definition
@@ -23,6 +24,9 @@ export function AuthProvider({ children }) {
     const [csrfToken, setCsrfToken] = useState(null);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
+    const setAuth = useAuthStore(state => state.setAuth);
+    const logoutStore = useAuthStore(state => state.logout);
+    const initializeAuth = useAuthStore(state => state.initializeAuth);
 
     // ── Rehydrate from cookies on first mount ──────────────────────────
     useEffect(() => {
@@ -31,11 +35,14 @@ export function AuthProvider({ children }) {
         const storedUser = localStorage.getItem('user'); // Keep user in localStorage for non-sensitive data
         
         if (token && storedUser) {
-            setUser(JSON.parse(storedUser));
+            const parsedUser = JSON.parse(storedUser);
+            setUser(parsedUser);
             setCsrfToken(csrf);
+            // Also initialize authStore for RequireAuth guard
+            initializeAuth();
         }
         setLoading(false);
-    }, []);
+    }, [initializeAuth]);
 
     // ── Derived helpers ──────────────────────────────────────────────────────
     const role = user?.role ?? null;
@@ -45,13 +52,17 @@ export function AuthProvider({ children }) {
     const login = useCallback(async (credentials) => {
         try {
             const data = await authService.login(credentials);
-            const { csrfToken: newCsrf, user: newUser } = data;
+            const { token, csrfToken: newCsrf, user: newUser } = data;
 
-            // Store user in localStorage (non-sensitive)
+            // Store user and token in localStorage (non-sensitive)
             localStorage.setItem('user', JSON.stringify(newUser));
+            localStorage.setItem('cb_token', token);
             
             setUser(newUser);
             setCsrfToken(newCsrf);
+            
+            // Also update authStore for RequireAuth guard
+            setAuth(newUser, token);
 
             // Redirect based on role
             if (newUser.role === 'ADMIN') {
@@ -65,18 +76,22 @@ export function AuthProvider({ children }) {
             console.error('Login failed:', error);
             throw error;
         }
-    }, [navigate]);
+    }, [navigate, setAuth]);
 
     // ── Google Login ───────────────────────────────────────────────────────
     const googleLogin = useCallback(async (credential) => {
         try {
             const data = await authService.googleLogin(credential);
-            const { csrfToken: newCsrf, user: newUser } = data;
+            const { token, csrfToken: newCsrf, user: newUser } = data;
 
             localStorage.setItem('user', JSON.stringify(newUser));
+            localStorage.setItem('cb_token', token);
             
             setUser(newUser);
             setCsrfToken(newCsrf);
+            
+            // Also update authStore for RequireAuth guard
+            setAuth(newUser, token);
 
             // Redirect based on role
             if (newUser.role === 'ADMIN') {
@@ -90,7 +105,7 @@ export function AuthProvider({ children }) {
             console.error('Google login failed:', error);
             throw error;
         }
-    }, [navigate]);
+    }, [navigate, setAuth]);
 
     // ── Register ─────────────────────────────────────────────────────────────
     const register = useCallback(async (userData) => {
@@ -112,10 +127,12 @@ export function AuthProvider({ children }) {
         }
         // Always clear local state
         localStorage.removeItem('user');
+        localStorage.removeItem('cb_token');
         setUser(null);
         setCsrfToken(null);
+        logoutStore(); // Also clear authStore
         navigate('/login', { replace: true });
-    }, [navigate]);
+    }, [navigate, logoutStore]);
 
     // ── Context value ────────────────────────────────────────────────────────
     const value = {

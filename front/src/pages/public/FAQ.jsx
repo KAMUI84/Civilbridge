@@ -12,9 +12,9 @@ export default function FAQ() {
     <PageShell title="FAQ" subtitle="Quick answers about how the platform works.">
       <div style={{ display: "grid", gap: 12 }}>
         {faqs.map((f) => (
-          <div key={f.q} style={{ border: "1px solid #eef0f4", borderRadius: 16, padding: 16 }}>
-            <div style={{ fontWeight: 950, color: "#0c1220" }}>{f.q}</div>
-            <div style={{ color: "#3a4357", fontWeight: 650, marginTop: 8, lineHeight: 1.6 }}>{f.a}</div>
+          <div key={f.q} style={{ border: "1px solid #1a1a1a", borderRadius: 16, padding: 16, background: "#0a0a0a" }}>
+            <div style={{ fontWeight: 950, color: "#ffffff" }}>{f.q}</div>
+            <div style={{ color: "#a0a0a0", fontWeight: 650, marginTop: 8, lineHeight: 1.6 }}>{f.a}</div>
           </div>
         ))}
       </div>

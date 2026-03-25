@@ -17,8 +17,8 @@ export const requireRole = (...roles) => (req, res, next) => {
 };
 
 export const requireVerified = (req, res, next) => {
-    if (!["ADMIN", "ENGINEER", "CONTRACTOR", "SUPPLIER"].includes(req.user?.role)) {
-        return res.status(403).json({ message: "Verified professional account required" });
+    if (!["SUPER_ADMIN", "ADMIN", "ENGINEER"].includes(req.user?.role)) {
+        return res.status(403).json({ message: "Verified professional or admin account required" });
     }
     next();
 };

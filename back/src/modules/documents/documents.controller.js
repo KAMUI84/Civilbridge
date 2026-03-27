@@ -50,8 +50,17 @@ export const deleteDocument = async (req, res) => {
 // ─── GET /api/documents/:id/download ─────────────────────────────────────────
 export const downloadDocument = async (req, res) => {
     try {
-        const [rows] = await pool.query("SELECT * FROM uploads WHERE id = ?", [req.params.id]);
+        const [rows] = await pool.query(
+            "SELECT id, uploaded_by, url, original_name FROM uploads WHERE id = ?",
+            [req.params.id]
+        );
         if (!rows.length) return res.status(404).json({ message: "Document not found" });
+
+        // Prevent IDOR: only the uploader (or ADMIN) can download.
+        if (rows[0].uploaded_by !== req.user.id && req.user.role !== "ADMIN") {
+            return res.status(403).json({ message: "Not authorized" });
+        }
+
         res.json({ success: true, url: rows[0].url, filename: rows[0].original_name });
     } catch (err) {
         res.status(500).json({ message: "Failed to fetch document" });

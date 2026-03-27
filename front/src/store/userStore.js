@@ -1,8 +1,7 @@
-const TOKEN_KEY = "cb_token";
-const USER_KEY = "cb_user_profile";
+const USER_KEY = "cb_user";
 
 export function isAuthed() {
-  return Boolean(localStorage.getItem(TOKEN_KEY));
+  return Boolean(localStorage.getItem(USER_KEY));
 }
 
 export function getUser() {
@@ -15,13 +14,12 @@ export function getUser() {
 }
 
 export function setAuth({ token, user }) {
-  localStorage.setItem(TOKEN_KEY, token);
+  // Token is stored server-side in an httpOnly cookie; keep only user profile.
   localStorage.setItem(USER_KEY, JSON.stringify(user));
   window.dispatchEvent(new Event("cb_auth_changed"));
 }
 
 export function clearAuth() {
-  localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
   window.dispatchEvent(new Event("cb_auth_changed"));
 }

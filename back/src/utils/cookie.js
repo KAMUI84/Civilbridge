@@ -7,12 +7,17 @@ export function generateCSRFToken() {
 
 // Verify CSRF token
 export function verifyCSRFToken(req, res, next) {
-  const token = req.headers['x-csrf-token'];
-  const sessionToken = req.session?.csrfToken;
-  if (!token || token !== sessionToken) {
+  const headerToken = req.headers['x-csrf-token'];
+  const cookieToken = req.cookies?.csrf;
+
+  // Stateless double-submit cookie pattern:
+  // - Server sets a non-httpOnly `csrf` cookie
+  // - Client sends the same token via `X-CSRF-Token` header on mutations
+  if (!headerToken || !cookieToken || headerToken !== cookieToken) {
     return res.status(403).json({ message: 'Invalid CSRF token' });
   }
-  next();
+
+  return next();
 }
 
 // Set httpOnly cookie with token

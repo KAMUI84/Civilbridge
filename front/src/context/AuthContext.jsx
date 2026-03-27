@@ -28,21 +28,43 @@ export function AuthProvider({ children }) {
     const logoutStore = useAuthStore(state => state.logout);
     const initializeAuth = useAuthStore(state => state.initializeAuth);
 
-    // ── Rehydrate from cookies on first mount ──────────────────────────
+    // ── Rehydrate auth state on first mount ──────────────────────────
     useEffect(() => {
-        const token = getCookie('token');
-        const csrf = getCookie('csrf');
-        const storedUser = localStorage.getItem('user'); // Keep user in localStorage for non-sensitive data
-        
-        if (token && storedUser) {
-            const parsedUser = JSON.parse(storedUser);
-            setUser(parsedUser);
-            setCsrfToken(csrf);
-            // Also initialize authStore for RequireAuth guard
-            initializeAuth();
-        }
-        setLoading(false);
-    }, [initializeAuth]);
+        const csrf = getCookie("csrf");
+
+        // We cannot read httpOnly `token` cookie from JS, so validate via /api/me.
+        // If it fails, we'll fall back to local cached profile (cb_user) and let API 401 handlers clear it.
+        (async () => {
+            try {
+                const res = await authService.getCurrentUser();
+                const fetchedUser = res?.user ?? res?.data?.user ?? null;
+                if (fetchedUser) {
+                    setUser(fetchedUser);
+                    setCsrfToken(csrf);
+                    setAuth(fetchedUser);
+                    return;
+                }
+            } catch (e) {
+                // If the cookie is missing/expired, just use cached user state.
+                // Guard will redirect if backend rejects calls.
+                console.warn("Auth rehydrate /api/me failed:", e?.message || e);
+            }
+
+            try {
+                const cachedUserStr = localStorage.getItem("cb_user");
+                if (cachedUserStr) {
+                    const parsedUser = JSON.parse(cachedUserStr);
+                    setUser(parsedUser);
+                    setCsrfToken(csrf);
+                    initializeAuth();
+                }
+            } catch {
+                // Ignore cache parse errors
+            } finally {
+                setLoading(false);
+            }
+        })();
+    }, [initializeAuth, setAuth]);
 
     // ── Derived helpers ──────────────────────────────────────────────────────
     const role = user?.role ?? null;
@@ -52,17 +74,16 @@ export function AuthProvider({ children }) {
     const login = useCallback(async (credentials) => {
         try {
             const data = await authService.login(credentials);
-            const { token, csrfToken: newCsrf, user: newUser } = data;
+            const { csrfToken: newCsrf, user: newUser } = data;
 
-            // Store user and token in localStorage (non-sensitive)
-            localStorage.setItem('user', JSON.stringify(newUser));
-            localStorage.setItem('cb_token', token);
-            
+            // Store only non-sensitive user profile client-side.
+            localStorage.setItem("cb_user", JSON.stringify(newUser));
+
             setUser(newUser);
             setCsrfToken(newCsrf);
             
             // Also update authStore for RequireAuth guard
-            setAuth(newUser, token);
+            setAuth(newUser);
 
             // Redirect based on role
             if (newUser.role === 'ADMIN') {
@@ -82,16 +103,15 @@ export function AuthProvider({ children }) {
     const googleLogin = useCallback(async (credential) => {
         try {
             const data = await authService.googleLogin(credential);
-            const { token, csrfToken: newCsrf, user: newUser } = data;
+            const { csrfToken: newCsrf, user: newUser } = data;
 
-            localStorage.setItem('user', JSON.stringify(newUser));
-            localStorage.setItem('cb_token', token);
-            
+            localStorage.setItem("cb_user", JSON.stringify(newUser));
+
             setUser(newUser);
             setCsrfToken(newCsrf);
             
             // Also update authStore for RequireAuth guard
-            setAuth(newUser, token);
+            setAuth(newUser);
 
             // Redirect based on role
             if (newUser.role === 'ADMIN') {
@@ -126,8 +146,7 @@ export function AuthProvider({ children }) {
             console.error('Logout API error:', err);
         }
         // Always clear local state
-        localStorage.removeItem('user');
-        localStorage.removeItem('cb_token');
+        localStorage.removeItem("cb_user");
         setUser(null);
         setCsrfToken(null);
         logoutStore(); // Also clear authStore

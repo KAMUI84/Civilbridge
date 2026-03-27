@@ -16,8 +16,8 @@
   font-family: 'Inter', 'DM Sans', system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color: #e8eaed;
-  background-color: #050505;
+  color: #1a1a1a;
+  background-color: #ffffff;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -27,7 +27,7 @@
 body {
   min-width: 320px;
   min-height: 100vh;
-  background-color: #050505;
+  background-color: #ffffff;
 }
 
 a {
@@ -56,27 +56,27 @@ button {
   animation: spin 0.7s linear infinite;
 }
 
-/* ── Dark-mode form defaults ────────────────────────── */
+/* ── Light-mode form defaults ────────────────────────── */
 input,
 textarea,
 select {
-  color: #f0f0f0;
-  background: #1a1a1a;
-  border: 1px solid #262626;
+  color: #1a1a1a;
+  background: #ffffff;
+  border: 1px solid #e5e5e5;
   font-family: inherit;
 }
 
 input::placeholder,
 textarea::placeholder {
-  color: #525252;
+  color: #9ca3af;
 }
 
 input:focus,
 textarea:focus,
 select:focus {
   outline: none;
-  border-color: #00f2ff;
-  box-shadow: 0 0 0 3px rgba(0, 242, 255, .12);
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, .12);
 }
 
 /* ── Scrollbar ────────────────────────── */
@@ -85,14 +85,14 @@ select:focus {
 }
 
 ::-webkit-scrollbar-track {
-  background: #0a0a0a;
+  background: #f5f5f5;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #262626;
+  background: #d1d5db;
   border-radius: 99px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #404040;
+  background: #9ca3af;
 }

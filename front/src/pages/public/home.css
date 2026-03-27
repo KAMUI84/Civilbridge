@@ -1,5 +1,5 @@
 .cb-home {
-  background: #0a0a0a;
+  background: #ffffff;
 }
 
 .cb-hero {
@@ -22,21 +22,22 @@
   gap: 10px;
   padding: 8px 12px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, .04);
-  border: 1px solid #1e293b;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid #e5e7eb;
   font-weight: 800;
-  color: #e8eaed;
+  color: #3b82f6;
   font-size: 12px;
 }
 
 .cb-title {
   font-size: 52px;
   font-weight: 900;
+  color: #1a1a1a;
 }
 
 .cb-subtitle {
   margin: 0 0 18px;
-  color: #94a3b8;
+  color: #6b7280;
   font-size: 16px;
   line-height: 1.6;
   max-width: 58ch;
@@ -54,33 +55,33 @@
   border-radius: 12px;
   font-weight: 800;
   text-decoration: none;
-  border: 1px solid #1e293b;
-  color: #e8eaed;
-  background: rgba(255, 255, 255, .04);
+  border: 1px solid #e5e7eb;
+  color: #1a1a1a;
+  background: #ffffff;
 }
 
 .cb-btn.primary {
-  background: linear-gradient(135deg, #2a66ff, #1d4ed8);
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
   color: #fff;
   border-color: rgba(29, 78, 216, 0.25);
   box-shadow: 0 10px 22px rgba(29, 78, 216, .10);
 }
 
 .cb-btn.ghost {
-  background: rgba(255, 255, 255, .04);
+  background: #ffffff;
 }
 
 .cb-trustRow {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
-  color: #94a3b8;
+  color: #6b7280;
   font-weight: 650;
 }
 
 .cb-trustItem {
-  background: rgba(255, 255, 255, .04);
-  border: 1px solid #1e293b;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
   padding: 10px 12px;
   border-radius: 12px;
 }
@@ -215,21 +216,21 @@
 }
 
 .cb-card {
-  background: #171717;
-  border: 1px solid #1e293b;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
   border-radius: 16px;
   padding: 16px;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, .15);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.05);
 }
 
 .cb-cardTitle {
   font-weight: 900;
-  color: #e8eaed;
+  color: #1a1a1a;
   margin-bottom: 6px;
 }
 
 .cb-cardDesc {
-  color: #94a3b8;
+  color: #6b7280;
   line-height: 1.55;
 }
 
@@ -246,26 +247,26 @@
 }
 
 .cb-previewCard {
-  border: 1px solid #1e293b;
+  border: 1px solid #e5e7eb;
   border-radius: 16px;
   padding: 16px;
-  background: #171717;
+  background: #ffffff;
 }
 
 .cb-previewTitle {
   font-weight: 900;
-  color: #e8eaed;
+  color: #1a1a1a;
   margin-bottom: 6px;
 }
 
 .cb-previewDesc {
-  color: #94a3b8;
+  color: #6b7280;
   margin-bottom: 12px;
 }
 
 .cb-link {
   font-weight: 900;
-  color: #e8eaed;
+  color: #3b82f6;
   text-decoration: none;
 }
 
@@ -277,8 +278,8 @@
 
 .cb-footBox {
   border-radius: 18px;
-  border: 1px solid #1e293b;
-  background: linear-gradient(90deg, #0c1220, #1a2540);
+  border: 1px solid #e5e7eb;
+  background: linear-gradient(90deg, #3b82f6, #1d4ed8);
   color: #fff;
   padding: 18px;
   display: flex;

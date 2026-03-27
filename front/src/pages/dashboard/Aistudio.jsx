@@ -96,14 +96,65 @@ export default function AiStudio() {
     }
   }
 
-  function formatMessage(content) {
-    // Simple markdown-like formatting
-    return content
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/```([\s\S]*?)```/g, '<pre class="bg-gray-800 text-green-400 p-3 rounded-lg text-xs my-2 overflow-x-auto">$1</pre>')
-      .replace(/`(.*?)`/g, '<code class="bg-gray-100 text-red-600 px-1 rounded text-sm">$1</code>')
-      .replace(/\n/g, '<br/>');
+  function renderAssistantMessage(content) {
+    const text = String(content ?? "");
+
+    // Split into code blocks (``` ... ```)
+    const parts = text.split(/```([\s\S]*?)```/g); // even idx = text, odd idx = code
+
+    return parts.map((part, idx) => {
+      const isCode = idx % 2 === 1;
+      if (isCode) {
+        return (
+          <pre
+            key={`code-${idx}`}
+            className="bg-gray-800 text-green-400 p-3 rounded-lg text-xs my-2 overflow-x-auto whitespace-pre-wrap"
+          >
+            {part}
+          </pre>
+        );
+      }
+
+      // Inline formatting for non-code segments:
+      // - backticks: `code`
+      // - bold: **text**
+      // - italic: *text*
+      // We do this by tokenizing, never by injecting HTML.
+      const tokens = part.split(/(`[^`]*`|\*\*[^*]+\*\*|\*[^*]+\*)/g).filter(Boolean);
+
+      return (
+        <span key={`txt-${idx}`}>
+          {tokens.map((t, j) => {
+            if (t.startsWith("`") && t.endsWith("`")) {
+              return (
+                <code key={`inlcode-${idx}-${j}`} className="bg-gray-100 text-red-600 px-1 rounded text-sm">
+                  {t.slice(1, -1)}
+                </code>
+              );
+            }
+            if (t.startsWith("**") && t.endsWith("**")) {
+              return <strong key={`bold-${idx}-${j}`}>{t.slice(2, -2)}</strong>;
+            }
+            if (t.startsWith("*") && t.endsWith("*")) {
+              return <em key={`em-${idx}-${j}`}>{t.slice(1, -1)}</em>;
+            }
+
+            // Preserve newlines without HTML.
+            const lines = t.split("\n");
+            return (
+              <span key={`plain-${idx}-${j}`}>
+                {lines.map((line, k) => (
+                  <span key={`line-${idx}-${j}-${k}`}>
+                    {line}
+                    {k < lines.length - 1 ? <br /> : null}
+                  </span>
+                ))}
+              </span>
+            );
+          })}
+        </span>
+      );
+    });
   }
 
   return (
@@ -195,9 +246,8 @@ export default function AiStudio() {
                           ? "bg-emerald-600 text-white rounded-tr-none"
                           : "bg-white border border-gray-100 text-gray-800 rounded-tl-none shadow-sm"
                         }`}
-                      dangerouslySetInnerHTML={m.role === "assistant" ? { __html: formatMessage(m.content) } : undefined}
                     >
-                      {m.role === "user" ? m.content : null}
+                      {m.role === "user" ? m.content : renderAssistantMessage(m.content)}
                     </div>
                   </div>
                 ))

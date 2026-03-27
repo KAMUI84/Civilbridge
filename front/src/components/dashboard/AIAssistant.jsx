@@ -63,11 +63,13 @@ export default function AIAssistant() {
 
       const data = await response.json();
 
-      if (data.reply) {
+      // Backend returns `response`; keep backward-compat with `reply` if older clients exist.
+      const assistantText = data?.response ?? data?.reply;
+      if (assistantText) {
         const assistantMessage = {
           id: Date.now() + 1,
           type: 'assistant',
-          content: data.reply
+          content: assistantText
         };
         setMessages(prev => [...prev, assistantMessage]);
       } else {

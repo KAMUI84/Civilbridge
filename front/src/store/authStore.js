@@ -3,27 +3,27 @@ import authService from '../services/authService';
 
 export const useAuthStore = create((set) => ({
   user: JSON.parse(localStorage.getItem("cb_user")) || null,
-  token: localStorage.getItem("cb_token") || null,
-  isAuthenticated: !!localStorage.getItem("cb_token"),
+  // JWT is stored server-side in an httpOnly cookie; keep no client-side token.
+  token: null,
+  isAuthenticated: !!localStorage.getItem("cb_user"),
 
   // Centralized login/register success handler
-  setAuth: (user, token) => {
-    localStorage.setItem("cb_token", token || "session");
+  setAuth: (user) => {
     localStorage.setItem("cb_user", JSON.stringify(user));
-    set({ user, token: token || "session", isAuthenticated: true });
+    set({ user, token: null, isAuthenticated: true });
   },
 
   login: async (credentials) => {
     const data = await authService.login(credentials);
     const { token, user } = data;
-    useAuthStore.getState().setAuth(user, token);
+    useAuthStore.getState().setAuth(user);
     return user;
   },
 
   googleLogin: async (credential) => {
     const data = await authService.googleLogin(credential);
     const { token, user } = data;
-    useAuthStore.getState().setAuth(user, token);
+    useAuthStore.getState().setAuth(user);
     return user;
   },
 
@@ -32,7 +32,6 @@ export const useAuthStore = create((set) => ({
   },
 
   logout: () => {
-    localStorage.removeItem("cb_token");
     localStorage.removeItem("cb_user");
     set({ user: null, token: null, isAuthenticated: false });
   },
@@ -47,12 +46,11 @@ export const useAuthStore = create((set) => ({
   },
 
   initializeAuth: () => {
-    const token = localStorage.getItem("cb_token");
     const userStr = localStorage.getItem("cb_user");
-    if (token && userStr) {
+    if (userStr) {
       try {
         const user = JSON.parse(userStr);
-        set({ user, token, isAuthenticated: true });
+        set({ user, token: null, isAuthenticated: true });
       } catch (err) {
         console.error("Failed to parse user", err);
         set({ user: null, token: null, isAuthenticated: false });

@@ -9,6 +9,7 @@ import { createLogger, format, transports } from "winston";
 import Sentry from "@sentry/node";
 import { protect, requireRole } from "./middlewares/auth.js";
 import { csrfGuard } from "./middlewares/csrf.js";
+import prisma from "./config/prisma.js";
 
 // Patch BigInt serialization for Prisma
 BigInt.prototype.toJSON = function () {
@@ -239,6 +240,29 @@ app.use("/api/listings", listingsRoutes);
 app.use("/api/experts", expertsRoutes);
 app.use("/api/catalog", catalogRoutes);
 app.use("/api/permits", permitsRoutes);
+
+// ─── Current User ──────────────────────────────────────────────────────────
+app.get("/api/me", protect, async (req, res) => {
+  try {
+    const userId = Number(req.user.id);
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        phone: true,
+        role: true,
+        verificationStatus: true,
+        isActive: true,
+      },
+    });
+    if (!user) return res.status(404).json({ message: "User not found" });
+    return res.json({ success: true, user });
+  } catch (err) {
+    return res.status(500).json({ message: "Failed to fetch current user" });
+  }
+});
 
 // ─── Protected Routes (auth required) ────────────────────────────────────────
 app.use("/api/projects", protect, csrfGuard, projectsRoutes);

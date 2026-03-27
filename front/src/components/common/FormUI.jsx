@@ -1,5 +1,5 @@
-export const labelStyle = { display: "grid", gap: 6, fontWeight: 900, color: "#ffffff", fontSize: 13 };
-export const inputStyle = { padding: "12px 12px", borderRadius: 14, border: "1px solid #1a1a1a", outline: "none", fontWeight: 750, background: "#0a0a0a", color: "#ffffff" };
+export const labelStyle = { display: "grid", gap: 6, fontWeight: 900, color: "#1a1a1a", fontSize: 13 };
+export const inputStyle = { padding: "12px 12px", borderRadius: 14, border: "1px solid #e5e7eb", outline: "none", fontWeight: 750, background: "#ffffff", color: "#1a1a1a" };
 export const textareaStyle = { ...inputStyle, minHeight: 110, resize: "vertical" };
 
 export const primaryBtn = {
@@ -16,9 +16,9 @@ export const primaryBtn = {
 export const ghostBtn = {
   padding: "12px 14px",
   borderRadius: 14,
-  border: "1px solid #1a1a1a",
-  background: "#0a0a0a",
-  color: "#ffffff",
+  border: "1px solid #e5e7eb",
+  background: "#ffffff",
+  color: "#1a1a1a",
   fontWeight: 950,
   cursor: "pointer",
 };

@@ -1,382 +1,260 @@
-// Top Bar Component with Search, Profile, and Notifications
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+﻿import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import NotificationInbox from '../../../components/common/NotificationInbox';
+import authService from '../../../services/authService';
+import { useAuthStore } from '../../../store/authStore';
 
-export default function TopBar({ user, onToggleSidebar, onToggleRightPanel }) {
+function SearchIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M16 16l5 5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function MenuIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function getInitials(user) {
+  const value = user?.fullName || user?.email || 'User';
+  return value
+    .split(' ')
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+}
+
+function formatSectionName(section) {
+  return String(section || 'overview')
+    .replaceAll('-', ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+export default function TopBar({ user, config, activeSection, onToggleSidebar, onOpenRightPanel }) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const navigate = useNavigate();
+  const logout = useAuthStore((state) => state.logout);
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/dashboard/search?q=${encodeURIComponent(searchQuery.trim())}`);
+  const handleSearch = (event) => {
+    event.preventDefault();
+    navigate(`/dashboard/projects${searchQuery.trim() ? `?search=${encodeURIComponent(searchQuery.trim())}` : ''}`);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+    } catch {
+      // Continue clearing local state even if the API logout call fails.
     }
+    logout();
+    navigate('/login', { replace: true });
   };
-
-  const handleLogout = () => {
-    // Clear auth store and redirect to login
-    localStorage.removeItem('auth-token');
-    localStorage.removeItem('user');
-    navigate('/login');
-  };
-
-  const notifications = [
-    { id: 1, type: 'project', message: 'New project request from John Doe', time: '2m ago', read: false },
-    { id: 2, type: 'message', message: 'Sarah sent you a message', time: '15m ago', read: false },
-    { id: 3, type: 'approval', message: 'Project "Bridge Design" approved', time: '1h ago', read: true },
-    { id: 4, type: 'payment', message: 'Payment received from Client ABC', time: '2h ago', read: true }
-  ];
-
-  const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
-    <div style={styles.topBar}>
-      {/* Left Section */}
+    <header style={styles.topBar}>
       <div style={styles.leftSection}>
-        <button style={styles.menuButton} onClick={onToggleSidebar}>
-          ☰
+        <button type="button" style={styles.iconButton} onClick={onToggleSidebar} aria-label="Toggle sidebar">
+          <MenuIcon />
         </button>
-        
-        {/* Search Bar */}
+
+        <div style={styles.titleBlock}>
+          <span style={styles.eyebrow}>{config?.workspaceLabel || 'Workspace'}</span>
+          <div style={styles.pageTitle}>{formatSectionName(activeSection)}</div>
+        </div>
+
         <form onSubmit={handleSearch} style={styles.searchForm}>
           <div style={styles.searchContainer}>
-            <span style={styles.searchIcon}>🔍</span>
+            <span style={styles.searchIcon}><SearchIcon /></span>
             <input
               type="text"
-              placeholder="Search users, projects, logs..."
+              placeholder="Search projects, people, and files"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(event) => setSearchQuery(event.target.value)}
               style={styles.searchInput}
             />
           </div>
         </form>
       </div>
 
-      {/* Right Section */}
       <div style={styles.rightSection}>
-        {/* Notifications */}
-        <div style={styles.notificationWrapper}>
-          <button 
-            style={styles.notificationButton}
-            onClick={() => setShowNotifications(!showNotifications)}
-          >
-            🔔
-            {unreadCount > 0 && (
-              <span style={styles.notificationBadge}>{unreadCount}</span>
-            )}
+        {config?.quickAction ? (
+          <button type="button" onClick={() => navigate(config.quickAction.path)} style={styles.primaryAction}>
+            {config.quickAction.label}
           </button>
-          
-          {showNotifications && (
-            <div style={styles.notificationDropdown}>
-              <div style={styles.notificationHeader}>
-                <h4 style={styles.notificationTitle}>Notifications</h4>
-                <button style={styles.markAllRead}>Mark all read</button>
-              </div>
-              <div style={styles.notificationList}>
-                {notifications.map(notification => (
-                  <div 
-                    key={notification.id}
-                    style={{
-                      ...styles.notificationItem,
-                      ...(notification.read ? styles.notificationRead : {})
-                    }}
-                  >
-                    <div style={styles.notificationContent}>
-                      <div style={styles.notificationMessage}>
-                        {notification.message}
-                      </div>
-                      <div style={styles.notificationTime}>
-                        {notification.time}
-                      </div>
-                    </div>
-                    {!notification.read && (
-                      <div style={styles.notificationDot} />
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+        ) : null}
 
-        {/* Profile Menu */}
-        <div style={styles.profileWrapper}>
-          <button 
-            style={styles.profileButton}
-            onClick={() => setShowProfileMenu(!showProfileMenu)}
-          >
-            <div style={styles.profileAvatar}>
-              {user?.fullName?.charAt(0)?.toUpperCase()}
-            </div>
-            <span style={styles.profileName}>{user?.fullName}</span>
-            <span style={styles.profileArrow}>▼</span>
-          </button>
-          
-          {showProfileMenu && (
-            <div style={styles.profileDropdown}>
-              <Link to="/dashboard/profile" style={styles.profileMenuItem}>
-                👤 Profile Settings
-              </Link>
-              <Link to="/dashboard/settings" style={styles.profileMenuItem}>
-                ⚙️ Account Settings
-              </Link>
-              <div style={styles.profileDivider} />
-              <button style={styles.profileLogout} onClick={handleLogout}>
-                🚪 Logout
-              </button>
-            </div>
-          )}
-        </div>
+        <NotificationInbox compact dark />
 
-        {/* Right Panel Toggle */}
-        <button style={styles.rightPanelButton} onClick={onToggleRightPanel}>
-          🤖
+        <Link to="/dashboard/profile" style={styles.secondaryAction}>
+          Profile
+        </Link>
+        <button type="button" onClick={handleLogout} style={styles.secondaryAction}>
+          Logout
+        </button>
+
+        <button type="button" onClick={onOpenRightPanel} style={styles.profileButton} aria-label="Open account panel">
+          <div style={styles.profileAvatar}>{getInitials(user)}</div>
+          <div style={styles.profileTextWrap}>
+            <span style={styles.profileName}>{user?.fullName || 'CivilBridge user'}</span>
+            <span style={styles.profileRole}>{String(user?.role || 'CLIENT').replace('_', ' ')}</span>
+          </div>
         </button>
       </div>
-    </div>
+    </header>
   );
 }
 
 const styles = {
   topBar: {
-    height: 64,
-    background: 'var(--card-bg)',
-    borderBottom: '1px solid #1a1a1a',
+    minHeight: 76,
+    background: 'var(--topbar-bg)',
+    borderBottom: '1px solid var(--surface-border)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: '0 24px',
     position: 'sticky',
     top: 0,
-    zIndex: 100
+    zIndex: 100,
+    backdropFilter: 'blur(18px)',
+    gap: 18,
   },
   leftSection: {
     display: 'flex',
     alignItems: 'center',
-    gap: 16
+    gap: 16,
+    minWidth: 0,
   },
-  menuButton: {
-    background: 'none',
-    border: 'none',
-    color: 'var(--text-muted)',
-    fontSize: 20,
+  iconButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    border: '1px solid rgba(255,255,255,0.08)',
+    background: 'rgba(255,255,255,0.02)',
+    color: 'var(--text-color)',
+    display: 'grid',
+    placeItems: 'center',
     cursor: 'pointer',
-    padding: 8,
-    borderRadius: 6,
-    transition: 'background 0.2s ease'
+  },
+  titleBlock: {
+    display: 'grid',
+    gap: 2,
+  },
+  eyebrow: {
+    fontSize: 11,
+    fontWeight: 800,
+    textTransform: 'uppercase',
+    letterSpacing: '0.14em',
+    color: 'var(--text-muted)',
+  },
+  pageTitle: {
+    color: 'var(--text-color)',
+    fontSize: 20,
+    fontWeight: 800,
+    lineHeight: 1.2,
   },
   searchForm: {
-    margin: 0
+    margin: 0,
   },
   searchContainer: {
     display: 'flex',
     alignItems: 'center',
-    background: 'var(--border-color)',
-    border: '1px solid #262626',
-    borderRadius: 8,
-    padding: '8px 12px',
-    width: 320,
-    transition: 'border-color 0.2s ease'
+    background: 'rgba(255,255,255,0.03)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: 16,
+    padding: '10px 14px',
+    width: 340,
+    maxWidth: '44vw',
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
   },
   searchIcon: {
+    display: 'flex',
+    alignItems: 'center',
     color: 'var(--text-muted)',
-    marginRight: 8,
-    fontSize: 14
+    marginRight: 10,
   },
   searchInput: {
-    background: 'none',
+    background: 'transparent',
     border: 'none',
     color: 'var(--text-color)',
     fontSize: 14,
     outline: 'none',
     flex: 1,
-    width: '100%'
   },
   rightSection: {
     display: 'flex',
     alignItems: 'center',
-    gap: 16
+    gap: 12,
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
   },
-  notificationWrapper: {
-    position: 'relative'
-  },
-  notificationButton: {
-    background: 'none',
-    border: 'none',
-    color: 'var(--text-muted)',
-    fontSize: 18,
-    cursor: 'pointer',
-    padding: 8,
-    borderRadius: 6,
-    position: 'relative',
-    transition: 'background 0.2s ease'
-  },
-  notificationBadge: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    background: '#ef4444',
-    color: 'white',
-    fontSize: 10,
-    fontWeight: 600,
-    padding: '2px 4px',
-    borderRadius: 10,
-    minWidth: 16,
-    textAlign: 'center'
-  },
-  notificationDropdown: {
-    position: 'absolute',
-    top: 48,
-    right: 0,
-    width: 320,
-    background: '#0f0f0f',
-    border: '1px solid #1a1a1a',
-    borderRadius: 12,
-    boxShadow: '0 10px 40px rgba(0, 0, 0, 0.5)',
-    zIndex: 1000
-  },
-  notificationHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '16px 20px',
-    borderBottom: '1px solid #1a1a1a'
-  },
-  notificationTitle: {
-    margin: 0,
-    fontSize: 14,
-    fontWeight: 600,
-    color: 'var(--text-color)'
-  },
-  markAllRead: {
-    background: 'none',
-    border: 'none',
-    color: '#00f2ff',
-    fontSize: 12,
-    cursor: 'pointer',
-    padding: 4,
-    borderRadius: 4
-  },
-  notificationList: {
-    maxHeight: 300,
-    overflowY: 'auto'
-  },
-  notificationItem: {
-    display: 'flex',
-    alignItems: 'center',
-    padding: '12px 20px',
-    borderBottom: '1px solid #1a1a1a',
-    cursor: 'pointer',
-    transition: 'background 0.2s ease'
-  },
-  notificationRead: {
-    opacity: 0.6
-  },
-  notificationContent: {
-    flex: 1,
-    minWidth: 0
-  },
-  notificationMessage: {
+  primaryAction: {
+    height: 40,
+    padding: '0 16px',
+    borderRadius: 14,
+    border: '1px solid var(--accent-glow)',
+    background: 'linear-gradient(135deg, var(--accent-color), var(--accent-secondary))',
+    color: '#061018',
     fontSize: 13,
+    fontWeight: 800,
+    cursor: 'pointer',
+  },
+  secondaryAction: {
+    height: 40,
+    padding: '0 14px',
+    borderRadius: 14,
+    border: '1px solid rgba(255,255,255,0.08)',
+    background: 'rgba(255,255,255,0.02)',
     color: 'var(--text-color)',
-    marginBottom: 4
-  },
-  notificationTime: {
-    fontSize: 11,
-    color: 'var(--text-muted)'
-  },
-  notificationDot: {
-    width: 6,
-    height: 6,
-    borderRadius: '50%',
-    background: '#00f2ff',
-    marginLeft: 8
-  },
-  profileWrapper: {
-    position: 'relative'
+    textDecoration: 'none',
+    display: 'flex',
+    alignItems: 'center',
+    fontSize: 13,
+    fontWeight: 700,
+    cursor: 'pointer',
   },
   profileButton: {
     display: 'flex',
     alignItems: 'center',
-    gap: 8,
-    background: 'none',
-    border: '1px solid #1a1a1a',
-    borderRadius: 8,
-    padding: '6px 12px',
+    gap: 10,
+    background: 'rgba(255,255,255,0.03)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: 18,
+    padding: '8px 12px',
     cursor: 'pointer',
-    transition: 'all 0.2s ease'
   },
   profileAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
-    background: 'linear-gradient(135deg, #00f2ff, #6366f1)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    background: 'linear-gradient(135deg, var(--accent-color), var(--accent-secondary))',
+    display: 'grid',
+    placeItems: 'center',
     fontSize: 12,
-    fontWeight: 600,
-    color: 'var(--bg-color)'
+    fontWeight: 800,
+    color: '#061018',
+  },
+  profileTextWrap: {
+    display: 'grid',
+    textAlign: 'left',
   },
   profileName: {
-    fontSize: 13,
-    fontWeight: 500,
-    color: 'var(--text-color)'
-  },
-  profileArrow: {
-    fontSize: 10,
-    color: 'var(--text-muted)'
-  },
-  profileDropdown: {
-    position: 'absolute',
-    top: 48,
-    right: 0,
-    width: 200,
-    background: '#0f0f0f',
-    border: '1px solid #1a1a1a',
-    borderRadius: 12,
-    boxShadow: '0 10px 40px rgba(0, 0, 0, 0.5)',
-    zIndex: 1000,
-    padding: '8px 0'
-  },
-  profileMenuItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-    padding: '10px 16px',
     color: 'var(--text-color)',
-    textDecoration: 'none',
     fontSize: 13,
-    transition: 'background 0.2s ease'
+    fontWeight: 700,
   },
-  profileDivider: {
-    height: 1,
-    background: 'var(--border-color)',
-    margin: '8px 0'
-  },
-  profileLogout: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-    width: '100%',
-    padding: '10px 16px',
-    background: 'none',
-    border: 'none',
-    color: '#ef4444',
-    fontSize: 13,
-    cursor: 'pointer',
-    transition: 'background 0.2s ease'
-  },
-  rightPanelButton: {
-    background: 'none',
-    border: 'none',
+  profileRole: {
     color: 'var(--text-muted)',
-    fontSize: 18,
-    cursor: 'pointer',
-    padding: 8,
-    borderRadius: 6,
-    transition: 'background 0.2s ease'
-  }
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: '0.06em',
+  },
 };
+

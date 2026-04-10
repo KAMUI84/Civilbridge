@@ -1,6 +1,6 @@
 import prisma from "../../config/prisma.js";
 import { hashPassword } from "../../utils/password.js";
-import { generateToken } from "../../utils/jwt.js";
+import { generateToken, generateRefreshToken, hashToken, refreshTokenExpiresAt } from "../../utils/jwt.js";
 import crypto from "crypto";
 
 function hashOtp(otp) {
@@ -64,6 +64,24 @@ export async function verifyRegistrationOtp(target, otp) {
 
   await prisma.oTPCode.delete({ where: { id: row.id } });
   return true;
+}
+
+/**
+ * Create a UserSession row for a newly issued refresh token.
+ * Returns the plain-text refresh token to be placed in the cookie.
+ */
+export async function createSession(userId, req) {
+  const refreshToken = generateRefreshToken();
+  await prisma.userSession.create({
+    data: {
+      userId,
+      tokenHash: hashToken(refreshToken),
+      expiresAt: refreshTokenExpiresAt(),
+      deviceInfo: req.headers?.["user-agent"]?.slice(0, 255) ?? null,
+      ipAddress:  req.ip ?? null,
+    },
+  });
+  return refreshToken;
 }
 
 export async function createUser(userData) {

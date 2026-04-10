@@ -1,57 +1,66 @@
-// Sidebar Navigation Component
-import React from 'react';
+﻿import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+
+function getUserInitials(user) {
+  const value = user?.fullName || user?.email || 'User';
+  return value
+    .split(' ')
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+}
+
+function getRoleLabel(role) {
+  return String(role || 'CLIENT').replaceAll('_', ' ');
+}
 
 export default function Sidebar({ isOpen, onClose, config, activeSection, onSectionChange, user }) {
   const location = useLocation();
+  const isMobile = typeof window !== 'undefined' ? window.innerWidth < 768 : false;
+  const roleLabel = getRoleLabel(user?.role);
 
   const handleNavClick = (sectionId) => {
     onSectionChange(sectionId);
-    // Mobile: close sidebar after navigation
-    if (window.innerWidth < 768) {
+    if (isMobile) {
       onClose();
     }
   };
 
   return (
     <>
-      {/* Mobile Overlay */}
-      {isOpen && (
-        <div 
-          style={styles.overlay}
-          onClick={onClose}
-        />
-      )}
+      {isOpen && isMobile ? <div style={styles.overlay} onClick={onClose} /> : null}
 
-      {/* Sidebar */}
-      <div style={{ 
-        ...styles.sidebar, 
-        ...(isOpen ? styles.sidebarOpen : styles.sidebarClosed),
-        ...(window.innerWidth < 768 && { 
-          ...styles.sidebarMobile,
-          transform: isOpen ? 'translateX(0)' : 'translateX(-100%)'
-        })
-      }}>
-        {/* Logo Section */}
+      <aside
+        style={{
+          ...styles.sidebar,
+          ...(isOpen ? styles.sidebarOpen : styles.sidebarClosed),
+          ...(isMobile ? styles.sidebarMobile : {}),
+          ...(isMobile && !isOpen ? { transform: 'translateX(-100%)' } : {}),
+        }}
+      >
         <div style={styles.logoSection}>
-          <div style={styles.logo}>
-            <span style={styles.logoIcon}>🏗️</span>
-            <span style={{ ...styles.logoText, ...(isOpen ? {} : styles.logoTextClosed) }}>
-              CivilBridge
-            </span>
-          </div>
-          {isOpen && (
-            <div style={styles.userRole}>
-              {user?.role?.replace('_', ' ')}
+          <Link to="/" style={styles.logoLink}>
+            <div style={styles.logoMark}>CB</div>
+            {isOpen ? (
+              <div style={styles.logoTextWrap}>
+                <span style={styles.logoText}>CivilBridge</span>
+                <span style={styles.logoSubtext}>{config.workspaceLabel || 'Workspace'}</span>
+              </div>
+            ) : null}
+          </Link>
+          {isOpen ? (
+            <div style={styles.workspaceBadge}>
+              <span style={styles.workspaceBadgeLabel}>{roleLabel}</span>
+              <span style={styles.workspaceBadgeText}>{config.workspaceDescription || 'Live workspace only'}</span>
             </div>
-          )}
+          ) : null}
         </div>
 
-        {/* Navigation */}
         <nav style={styles.navigation}>
+          {isOpen ? <div style={styles.navHeading}>Navigation</div> : null}
           {config.navigation.map((item) => {
             const isActive = activeSection === item.id || location.pathname === item.path;
-            
             return (
               <Link
                 key={item.id}
@@ -60,47 +69,44 @@ export default function Sidebar({ isOpen, onClose, config, activeSection, onSect
                 style={{
                   ...styles.navItem,
                   ...(isActive ? styles.navItemActive : {}),
-                  ...(!isOpen ? styles.navItemClosed : {})
+                  ...(!isOpen ? styles.navItemClosed : {}),
                 }}
               >
-                <span style={styles.navIcon}>{item.icon}</span>
-                {isOpen && (
-                  <span style={styles.navLabel}>{item.label}</span>
-                )}
-                {isActive && (
-                  <div style={styles.activeIndicator} />
-                )}
+                <span style={{ ...styles.navBadge, ...(isActive ? styles.navBadgeActive : {}) }}>{item.shortLabel || item.label.slice(0, 2).toUpperCase()}</span>
+                {isOpen ? (
+                  <div style={styles.navCopy}>
+                    <span style={styles.navLabel}>{item.label}</span>
+                    <span style={styles.navCaption}>{item.path === '/dashboard' ? 'Main workspace' : 'Open live data'}</span>
+                  </div>
+                ) : null}
+                {isActive ? <div style={styles.activeIndicator} /> : null}
               </Link>
             );
           })}
         </nav>
 
-        {/* Bottom Section */}
-        {isOpen && (
+        {isOpen ? (
           <div style={styles.bottomSection}>
+            {config.quickAction ? (
+              <Link to={config.quickAction.path} style={styles.quickAction}>
+                <span style={styles.quickActionLabel}>Quick focus</span>
+                <strong style={styles.quickActionText}>{config.quickAction.label}</strong>
+              </Link>
+            ) : null}
             <div style={styles.userInfo}>
-              <div style={styles.userAvatar}>
-                {user?.fullName?.charAt(0)?.toUpperCase()}
-              </div>
+              <div style={styles.userAvatar}>{getUserInitials(user)}</div>
               <div style={styles.userDetails}>
-                <div style={styles.userName}>{user?.fullName}</div>
-                <div style={styles.userEmail}>{user?.email}</div>
+                <div style={styles.userName}>{user?.fullName || 'CivilBridge user'}</div>
+                <div style={styles.userEmail}>{user?.email || 'No email available'}</div>
               </div>
             </div>
           </div>
-        )}
+        ) : null}
 
-        {/* Toggle Button (for desktop) */}
-        <button
-          style={{
-            ...styles.toggleButton,
-            ...(window.innerWidth >= 768 ? styles.toggleButtonDesktop : styles.toggleButtonMobile)
-          }}
-          onClick={onClose}
-        >
-          {isOpen ? '◀' : '▶'}
+        <button style={styles.toggleButton} type="button" onClick={onClose}>
+          {isOpen ? 'Close' : 'Open'}
         </button>
-      </div>
+      </aside>
     </>
   );
 }
@@ -111,177 +117,236 @@ const styles = {
     left: 0,
     top: 0,
     height: '100vh',
-    width: 240,
-    background: 'linear-gradient(180deg, #0a0a0a 0%, #0f0f0f 100%)',
-    borderRight: '1px solid #1a1a1a',
+    width: 248,
+    background: 'var(--sidebar-bg)',
+    borderRight: '1px solid var(--surface-border)',
     display: 'flex',
     flexDirection: 'column',
     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-    zIndex: 1000
+    zIndex: 1000,
+    boxShadow: '24px 0 60px rgba(0,0,0,0.28)',
+    backdropFilter: 'blur(20px)',
   },
   sidebarOpen: {
-    transform: 'translateX(0)'
+    transform: 'translateX(0)',
   },
   sidebarClosed: {
-    transform: 'translateX(-180px)',
-    width: 60
+    width: 72,
+    transform: 'translateX(0)',
   },
   sidebarMobile: {
-    width: 240
+    width: 240,
   },
   overlay: {
     position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: 'rgba(0, 0, 0, 0.5)',
+    inset: 0,
+    background: 'rgba(0, 0, 0, 0.45)',
     zIndex: 999,
-    display: 'none'
   },
   logoSection: {
-    padding: '20px 16px',
-    borderBottom: '1px solid #1a1a1a',
-    textAlign: 'center'
+    padding: '22px 16px 16px',
+    borderBottom: '1px solid rgba(255,255,255,0.08)',
+    display: 'grid',
+    gap: 12,
   },
-  logo: {
+  logoLink: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginBottom: 8
+    gap: 12,
+    textDecoration: 'none',
   },
-  logoIcon: {
-    fontSize: 24,
-    color: '#00f2ff'
+  logoMark: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    background: 'linear-gradient(135deg, var(--accent-color), var(--accent-secondary))',
+    color: '#ffffff',
+    display: 'grid',
+    placeItems: 'center',
+    fontWeight: 800,
+    fontSize: 13,
+    boxShadow: '0 0 0 6px rgba(255,255,255,0.03)',
+  },
+  logoTextWrap: {
+    display: 'grid',
+    gap: 3,
   },
   logoText: {
     fontSize: 16,
-    fontWeight: 700,
+    fontWeight: 800,
     color: 'var(--text-color)',
-    transition: 'opacity 0.3s ease'
   },
-  logoTextClosed: {
-    opacity: 0,
-    width: 0,
-    overflow: 'hidden'
-  },
-  userRole: {
+  logoSubtext: {
     fontSize: 11,
     color: 'var(--text-muted)',
     textTransform: 'uppercase',
-    letterSpacing: 1,
-    fontWeight: 600
+    letterSpacing: '0.12em',
+    fontWeight: 700,
+  },
+  workspaceBadge: {
+    display: 'grid',
+    gap: 6,
+    padding: 14,
+    borderRadius: 18,
+    border: '1px solid rgba(255,255,255,0.08)',
+    background: 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015))',
+  },
+  workspaceBadgeLabel: {
+    color: 'var(--highlight-color)',
+    fontSize: 11,
+    fontWeight: 800,
+    textTransform: 'uppercase',
+    letterSpacing: '0.12em',
+  },
+  workspaceBadgeText: {
+    color: 'var(--text-muted)',
+    fontSize: 12,
+    lineHeight: 1.6,
   },
   navigation: {
     flex: 1,
-    padding: '16px 8px',
-    overflowY: 'auto'
+    padding: '16px 10px',
+    overflowY: 'auto',
+  },
+  navHeading: {
+    padding: '0 8px 10px',
+    color: 'var(--text-muted)',
+    fontSize: 11,
+    fontWeight: 800,
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase',
   },
   navItem: {
     display: 'flex',
     alignItems: 'center',
-    padding: '12px 16px',
-    margin: '2px 8px',
-    borderRadius: 8,
+    gap: 12,
+    padding: '12px 14px',
+    marginBottom: 6,
+    borderRadius: 16,
     color: 'var(--text-muted)',
     textDecoration: 'none',
-    transition: 'all 0.2s ease',
+    border: '1px solid transparent',
     position: 'relative',
-    cursor: 'pointer'
+    minHeight: 60,
   },
   navItemActive: {
-    background: 'rgba(0, 242, 255, 0.1)',
-    color: '#00f2ff',
-    border: '1px solid rgba(0, 242, 255, 0.2)'
+    background: 'linear-gradient(135deg, var(--accent-soft), rgba(255,255,255,0.03))',
+    color: 'var(--text-color)',
+    borderColor: 'var(--surface-border)',
+    boxShadow: '0 14px 26px rgba(0,0,0,0.18)',
   },
   navItemClosed: {
     justifyContent: 'center',
-    padding: '12px'
+    padding: '12px 8px',
   },
-  navIcon: {
-    fontSize: 18,
-    minWidth: 18,
-    textAlign: 'center'
+  navBadge: {
+    minWidth: 34,
+    height: 28,
+    borderRadius: 8,
+    background: 'rgba(255,255,255,0.06)',
+    color: 'var(--text-color)',
+    display: 'grid',
+    placeItems: 'center',
+    fontSize: 11,
+    fontWeight: 800,
+    letterSpacing: '0.04em',
+  },
+  navBadgeActive: {
+    background: 'linear-gradient(135deg, var(--accent-color), var(--accent-secondary))',
+    color: '#061018',
+  },
+  navCopy: {
+    display: 'grid',
+    gap: 3,
   },
   navLabel: {
-    marginLeft: 12,
     fontSize: 14,
-    fontWeight: 500
+    fontWeight: 600,
+  },
+  navCaption: {
+    fontSize: 11,
+    color: 'var(--text-muted)',
+    lineHeight: 1.4,
   },
   activeIndicator: {
     position: 'absolute',
-    right: 0,
-    top: '50%',
-    transform: 'translateY(-50%)',
-    width: 3,
-    height: 20,
-    background: '#00f2ff',
-    borderRadius: 2
+    right: 10,
+    width: 4,
+    height: 24,
+    borderRadius: 4,
+    background: 'var(--accent-color)',
+    boxShadow: '0 0 18px var(--accent-glow)',
   },
   bottomSection: {
-    padding: '16px',
-    borderTop: '1px solid #1a1a1a'
+    padding: 16,
+    borderTop: '1px solid rgba(255,255,255,0.08)',
+    display: 'grid',
+    gap: 14,
+  },
+  quickAction: {
+    display: 'grid',
+    gap: 4,
+    padding: 14,
+    borderRadius: 18,
+    textDecoration: 'none',
+    border: '1px solid rgba(255,255,255,0.08)',
+    background: 'linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.015))',
+  },
+  quickActionLabel: {
+    color: 'var(--text-muted)',
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: '0.12em',
+    fontWeight: 700,
+  },
+  quickActionText: {
+    color: 'var(--text-color)',
+    fontSize: 14,
   },
   userInfo: {
     display: 'flex',
     alignItems: 'center',
-    gap: 12
+    gap: 12,
   },
   userAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    background: 'linear-gradient(135deg, #00f2ff, #6366f1)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 14,
-    fontWeight: 600,
-    color: 'var(--bg-color)'
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    background: 'linear-gradient(135deg, var(--accent-soft), rgba(255,255,255,0.05))',
+    color: 'var(--highlight-color)',
+    display: 'grid',
+    placeItems: 'center',
+    fontWeight: 800,
   },
   userDetails: {
-    flex: 1,
-    minWidth: 0
+    minWidth: 0,
+    display: 'grid',
+    gap: 4,
   },
   userName: {
-    fontSize: 14,
-    fontWeight: 600,
     color: 'var(--text-color)',
+    fontSize: 14,
+    fontWeight: 700,
     whiteSpace: 'nowrap',
     overflow: 'hidden',
-    textOverflow: 'ellipsis'
+    textOverflow: 'ellipsis',
   },
   userEmail: {
-    fontSize: 12,
     color: 'var(--text-muted)',
+    fontSize: 12,
     whiteSpace: 'nowrap',
     overflow: 'hidden',
-    textOverflow: 'ellipsis'
+    textOverflow: 'ellipsis',
   },
   toggleButton: {
-    position: 'absolute',
-    right: -12,
-    top: 20,
-    width: 24,
-    height: 24,
-    borderRadius: '50%',
-    background: '#00f2ff',
-    border: '2px solid #050505',
-    color: 'var(--bg-color)',
+    margin: 12,
+    height: 38,
+    borderRadius: 12,
+    border: '1px solid rgba(255,255,255,0.1)',
+    background: 'rgba(255,255,255,0.02)',
+    color: 'var(--text-color)',
+    fontSize: 12,
+    fontWeight: 700,
     cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 10,
-    fontWeight: 600,
-    transition: 'all 0.2s ease',
-    zIndex: 1001
   },
-  toggleButtonDesktop: {
-    display: 'flex'
-  },
-  toggleButtonMobile: {
-    display: 'none'
-  }
 };

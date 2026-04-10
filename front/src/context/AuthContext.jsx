@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import React, { createContext, useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import authService from "../services/authService";
 import { useAuthStore } from "../store/authStore";
+import { getPostLoginRoute } from "../utils/roles";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Context definition
@@ -85,12 +86,7 @@ export function AuthProvider({ children }) {
             // Also update authStore for RequireAuth guard
             setAuth(newUser);
 
-            // Redirect based on role
-            if (newUser.role === 'ADMIN') {
-                navigate('/admin', { replace: true });
-            } else {
-                navigate('/dashboard', { replace: true });
-            }
+            navigate(getPostLoginRoute(newUser.role), { replace: true });
 
             return newUser;
         } catch (error) {
@@ -113,12 +109,7 @@ export function AuthProvider({ children }) {
             // Also update authStore for RequireAuth guard
             setAuth(newUser);
 
-            // Redirect based on role
-            if (newUser.role === 'ADMIN') {
-                navigate('/admin', { replace: true });
-            } else {
-                navigate('/dashboard', { replace: true });
-            }
+            navigate(getPostLoginRoute(newUser.role), { replace: true });
 
             return newUser;
         } catch (error) {
@@ -172,12 +163,4 @@ export function AuthProvider({ children }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Hook
 // ─────────────────────────────────────────────────────────────────────────────
-export function useAuth() {
-    const ctx = useContext(AuthContext);
-    if (!ctx) {
-        throw new Error("useAuth() must be used inside <AuthProvider>");
-    }
-    return ctx;
-}
-
 export default AuthContext;

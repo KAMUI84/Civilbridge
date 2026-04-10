@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { protect } from "../../middlewares/auth.js";
 import {
     runEstimation,
     checkFeasibility,
@@ -9,11 +10,10 @@ import {
 
 const router = Router();
 
-// All routes already protected by protect middleware from app.js
-router.post("/run", runEstimation);
-router.post("/feasibility", checkFeasibility);
-router.get("/", getMyEstimates);
-router.get("/:id", getEstimateById);
-router.delete("/:id", deleteEstimate);
+router.post("/run",         protect, runEstimation);
+router.post("/feasibility", protect, checkFeasibility);
+router.get("/",             protect, getMyEstimates);
+router.get("/:id",          protect, getEstimateById);
+router.delete("/:id",       protect, deleteEstimate);
 
 export default router;

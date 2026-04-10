@@ -1,6 +1,7 @@
 // User Management Controller - Role Assignment and Management
 import prisma from "../../config/prisma.js";
-import { hasPermission, requirePermission, requireOwnershipOrAdmin } from "../middleware/rbac.js";
+import { hasPermission, requirePermission, requireOwnershipOrAdmin, getUserPermissions } from "../../middleware/rbac.core.js";
+import { ALL_USER_ROLES } from "../../constants/roles.js";
 import { hashPassword } from "../../utils/password.js";
 
 /**
@@ -123,8 +124,7 @@ export const updateUserRole = async (req, res) => {
     // 🔒 SECURITY VALIDATIONS
     
     // 1. Validate role
-    const validRoles = ['SUPER_ADMIN', 'ADMIN', 'PROFESSIONAL', 'CLIENT', 'VIEWER', 'AUDITOR', 'FINANCE'];
-    if (role && !validRoles.includes(role)) {
+    if (role && !ALL_USER_ROLES.includes(role)) {
       return res.status(400).json({ message: 'Invalid role provided' });
     }
     
@@ -180,9 +180,11 @@ export const updateUserRole = async (req, res) => {
       data: {
         userId: req.user.id,
         action: "ROLE_CHANGE",
-        metadata: {
+        entityType: "USER",
+        entityId: BigInt(id),
+        metaJson: {
           targetUserId: parseInt(id),
-          oldRole: user.role,
+          oldRole: current?.role || null,
           newRole: role,
           changedBy: req.user.email || req.user.id,
           timestamp: new Date().toISOString()
@@ -238,7 +240,9 @@ export const updateUserStatus = async (req, res) => {
       data: {
         userId: req.user.id,
         action: isActive ? "USER_ACTIVATED" : "USER_DEACTIVATED",
-        metadata: { targetUserId: parseInt(id) }
+        entityType: "USER",
+        entityId: BigInt(id),
+        metaJson: { targetUserId: parseInt(id) }
       }
     });
     
@@ -263,6 +267,13 @@ export const updateUserStatus = async (req, res) => {
 export const createUser = async (req, res) => {
   try {
     const { fullName, email, phone, password, role = 'CLIENT' } = req.body;
+
+    if (!ALL_USER_ROLES.includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid role provided'
+      });
+    }
     
     // Validate required fields
     if (!fullName || (!email && !phone) || !password) {
@@ -317,7 +328,9 @@ export const createUser = async (req, res) => {
       data: {
         userId: req.user.id,
         action: "USER_CREATED",
-        metadata: { createdUserId: user.id }
+        entityType: "USER",
+        entityId: BigInt(user.id),
+        metaJson: { createdUserId: user.id }
       }
     });
     
@@ -378,7 +391,9 @@ export const deleteUser = async (req, res) => {
       data: {
         userId: req.user.id,
         action: "USER_DELETED",
-        metadata: { deletedUserId: parseInt(id) }
+        entityType: "USER",
+        entityId: BigInt(id),
+        metaJson: { deletedUserId: parseInt(id) }
       }
     });
     

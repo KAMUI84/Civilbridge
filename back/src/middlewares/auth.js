@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import prisma from "../config/prisma.js";
+import { normalizeRoles } from "../constants/roles.js";
 
 export const protect = (req, res, next) => {
   try {
@@ -18,10 +19,18 @@ export const protect = (req, res, next) => {
   }
 };
 
-export const requireRole = (roles) => {
+export const requireRole = (...roles) => {
+  const allowedRoles = normalizeRoles(...roles);
+
   return (req, res, next) => {
-    if (!req.user || !req.user.role || !roles.includes(req.user.role)) {
-      return res.status(403).json({ message: "Forbidden: insufficient permissions" });
+    // SUPER_ADMIN bypasses all role restrictions.
+    if (req.user?.role === "SUPER_ADMIN") return next();
+
+    if (!req.user || !req.user.role || !allowedRoles.includes(req.user.role)) {
+      return res.status(403).json({
+        message: "Forbidden: insufficient permissions",
+        allowedRoles,
+      });
     }
     next();
   };

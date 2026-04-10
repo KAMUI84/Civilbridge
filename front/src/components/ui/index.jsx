@@ -1,6 +1,24 @@
 import React from 'react';
 import { getColor, getSpacing, getRadius, getShadow, getTransition } from '../../styles/tokens';
 
+function renderIcon(icon, size) {
+  if (!icon) {
+    return null;
+  }
+
+  return (
+    <span
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        fontSize: size === 'sm' ? '0.875rem' : size === 'lg' ? '1.25rem' : '1rem',
+      }}
+    >
+      {icon}
+    </span>
+  );
+}
+
 // Button Component
 export const Button = ({
   children,
@@ -86,22 +104,12 @@ export const Button = ({
     ...baseStyles,
     ...variants[variant],
     ...(disabled ? disabledStyles : {}),
-    ...(className ? { className } : {}),
   };
-
-  const IconWrapper = ({ children: iconChildren }) => (
-    <span style={{ 
-      display: 'flex', 
-      alignItems: 'center',
-      fontSize: size === 'sm' ? '0.875rem' : size === 'lg' ? '1.25rem' : '1rem'
-    }}>
-      {iconChildren}
-    </span>
-  );
 
   return (
     <button
       type={type}
+      className={className}
       style={styles}
       disabled={disabled || loading}
       onClick={onClick}
@@ -132,9 +140,9 @@ export const Button = ({
           animation: 'spin 1s linear infinite',
         }} />
       )}
-      {icon && iconPosition === 'left' && !loading && <IconWrapper>{icon}</IconWrapper>}
+      {icon && iconPosition === 'left' && !loading && renderIcon(icon, size)}
       {children}
-      {icon && iconPosition === 'right' && !loading && <IconWrapper>{icon}</IconWrapper>}
+      {icon && iconPosition === 'right' && !loading && renderIcon(icon, size)}
     </button>
   );
 };
@@ -166,11 +174,11 @@ export const Card = ({
     ...(hover && {
       cursor: 'pointer',
     }),
-    ...(className ? { className } : {}),
   };
 
   return (
     <div
+      className={className}
       style={styles}
       onMouseEnter={hover ? (e) => {
         e.target.style.transform = 'translateY(-2px)';
@@ -212,7 +220,6 @@ export const Input = ({
       opacity: 0.6,
       cursor: 'not-allowed',
     } : {}),
-    ...(className ? { className } : {}),
   };
 
   const labelStyles = {
@@ -244,6 +251,7 @@ export const Input = ({
         </label>
       )}
       <input
+        className={className}
         style={inputStyles}
         disabled={disabled}
         onFocus={(e) => {
@@ -279,7 +287,6 @@ export const Badge = ({
     fontSize: size === 'sm' ? '0.75rem' : '0.875rem',
     padding: size === 'sm' ? `${getSpacing(1)} ${getSpacing(2)}` : `${getSpacing(2)} ${getSpacing(3)}`,
     borderRadius: getRadius('full'),
-    ...(className ? { className } : {}),
   };
 
   const variants = {
@@ -311,6 +318,7 @@ export const Badge = ({
 
   return (
     <span
+      className={className}
       style={{
         ...baseStyles,
         ...variants[variant],
@@ -368,7 +376,7 @@ export const Modal = ({
           overflowY: 'auto',
           animation: 'scaleIn 0.2s ease-out',
         }}
-        className={sizes[size]}
+        className={`${sizes[size]} ${className}`.trim()}
         onClick={(e) => e.stopPropagation()}
         {...props}
       >
@@ -498,6 +506,7 @@ export const Toast = ({
 
   return (
     <div
+      className={className}
       style={{
         ...types[type],
         padding: `${getSpacing(3)} ${getSpacing(4)}`,
@@ -508,7 +517,6 @@ export const Toast = ({
         gap: getSpacing(3),
         minWidth: '300px',
         animation: 'slideRight 0.3s ease-out',
-        ...(className ? { className } : {}),
       }}
       {...props}
     >
@@ -544,6 +552,7 @@ export const Container = ({ children, size = 'lg', className = '', ...props }) =
 
   return (
     <div
+      className={className}
       style={{
         width: '100%',
         maxWidth: sizes[size],
@@ -551,7 +560,6 @@ export const Container = ({ children, size = 'lg', className = '', ...props }) =
         marginRight: 'auto',
         paddingLeft: getSpacing(4),
         paddingRight: getSpacing(4),
-        ...(className ? { className } : {}),
       }}
       {...props}
     >

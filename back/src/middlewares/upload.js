@@ -12,14 +12,26 @@ const storage = multer.diskStorage({
 });
 
 function fileFilter(req, file, cb) {
-  const allowedTypes = /jpeg|jpg|png|gif|webp/;
-  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-  const mimetype = allowedTypes.test(file.mimetype);
+  const allowedExtensions = new Set([".jpeg", ".jpg", ".png", ".gif", ".webp", ".pdf", ".doc", ".docx", ".xls", ".xlsx"]);
+  const allowedMimeTypes = new Set([
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/gif",
+    "image/webp",
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ]);
+  const extname = allowedExtensions.has(path.extname(file.originalname).toLowerCase());
+  const mimetype = allowedMimeTypes.has((file.mimetype || "").toLowerCase());
 
   if (mimetype && extname) {
     return cb(null, true);
   } else {
-    cb(new Error("Only image files are allowed"));
+    cb(new Error("Only image, PDF, Word, and Excel files are allowed"));
   }
 }
 

@@ -1,244 +1,797 @@
-// Admin Dashboard - Clean Professional Workspace
-import React from 'react';
-import { useOutletContext } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import adminAnalyticsService from '../../../services/adminAnalyticsService';
+import adminOperationsService from '../../../services/adminOperationsService';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+
+function formatMoney(value, currency = 'RWF') {
+  return new Intl.NumberFormat('en-RW', { style: 'currency', currency, maximumFractionDigits: 0 }).format(Number(value || 0));
+}
+
+function formatCompact(value) {
+  return new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(Number(value || 0));
+}
+
+function percentOf(value, total) {
+  if (!total) return 0;
+  return Math.max(8, (Number(value || 0) / Number(total || 1)) * 100);
+}
+
+function SparkBar({ label, value, max, tone = '#f4c14f' }) {
+  return (
+    <div style={styles.sparkRow}>
+      <div style={styles.sparkLabelRow}>
+        <span style={styles.sparkLabel}>{label}</span>
+        <strong style={styles.sparkValue}>{formatCompact(value)}</strong>
+      </div>
+      <div style={styles.sparkTrack}>
+        <div style={{ ...styles.sparkFill, width: `${percentOf(value, max)}%`, background: `linear-gradient(90deg, ${tone}, rgba(255,255,255,0.95))` }} />
+      </div>
+    </div>
+  );
+}
+
+function MetricCard({ label, value, hint, accent }) {
+  return (
+    <div style={{ ...styles.metricCard, background: `radial-gradient(circle at top right, ${accent}30, transparent 42%), linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))` }}>
+      <span style={styles.metricLabel}>{label}</span>
+      <strong style={styles.metricValue}>{value}</strong>
+      <span style={styles.metricHint}>{hint}</span>
+    </div>
+  );
+}
 
 export default function AdminDashboard() {
-  const { dashboardConfig } = useOutletContext();
+  const navigate = useNavigate();
+  const [overview, setOverview] = useState(null);
+  const [verificationQueue, setVerificationQueue] = useState([]);
+  const [benchmarks, setBenchmarks] = useState([]);
+  const [planRequests, setPlanRequests] = useState([]);
+  const [leadRequests, setLeadRequests] = useState([]);
+  const [state, setState] = useState({ loading: true, error: '' });
+  const [actionState, setActionState] = useState({ loading: '', message: '', type: '' });
+  const [notesByUser, setNotesByUser] = useState({});
+  const [benchmarkForm, setBenchmarkForm] = useState({ province: '', district: '', buildingType: '', minCostPerM2: '', maxCostPerM2: '', currency: 'RWF', notes: '' });
+
+  const loadDashboard = useCallback(async () => {
+    try {
+      setState({ loading: true, error: '' });
+      const [overviewResponse, queueResponse, benchmarkResponse, planRequestsResponse, leadRequestsResponse] = await Promise.all([
+        adminAnalyticsService.getOverview(),
+        adminOperationsService.getVerificationQueue(),
+        adminOperationsService.listCostBenchmarks(),
+        adminOperationsService.getPlanRequests({ limit: 20 }),
+        adminOperationsService.getLeadRequests({ limit: 20 }),
+      ]);
+      setOverview(overviewResponse);
+      setVerificationQueue(queueResponse?.queue || []);
+      setBenchmarks(benchmarkResponse?.data || []);
+      setPlanRequests(planRequestsResponse?.requests || []);
+      setLeadRequests(leadRequestsResponse?.requests || []);
+      setState({ loading: false, error: '' });
+    } catch (error) {
+      setState({ loading: false, error: error.message || 'Failed to load admin dashboard.' });
+    }
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      loadDashboard();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [loadDashboard]);
+
+  const kpis = useMemo(() => ([
+    {
+      label: 'Total users',
+      value: formatCompact(overview?.users?.total || 0),
+      hint: `${formatCompact(overview?.users?.newThisMonth || 0)} joined this month`,
+      accent: '#f4c14f',
+    },
+    {
+      label: 'Verified accounts',
+      value: formatCompact(overview?.users?.verified || 0),
+      hint: `${formatCompact(overview?.users?.active || 0)} active right now`,
+      accent: '#7ee787',
+    },
+    {
+      label: 'Projects tracked',
+      value: formatCompact(overview?.projects?.total || 0),
+      hint: `${overview?.projects?.byStatus?.length || 0} live status channels`,
+      accent: '#64b5ff',
+    },
+    {
+      label: 'Confirmed revenue',
+      value: formatMoney(overview?.revenue?.totalConfirmedRWF || 0),
+      hint: `${overview?.revenue?.byProvider?.length || 0} payment providers contributing`,
+      accent: '#c19bff',
+    },
+  ]), [overview]);
+
+  const roleBreakdown = useMemo(() => overview?.users?.byRole || [], [overview]);
+  const providerBars = useMemo(() => overview?.revenue?.byProvider || [], [overview]);
+  const projectTypes = useMemo(() => overview?.projects?.byType || [], [overview]);
+  const projectStatuses = useMemo(() => overview?.projects?.byStatus || [], [overview]);
+  const totalUsers = Number(overview?.users?.total || 0);
+  const maxRoleCount = Math.max(1, ...roleBreakdown.map((item) => Number(item.count || 0)));
+  const maxProviderValue = Math.max(1, ...providerBars.map((item) => Number(item.total || 0)));
+  const maxProjectTypeCount = Math.max(1, ...projectTypes.map((item) => Number(item.count || 0)));
+  const topRole = roleBreakdown[0];
+
+  const handleVerification = useCallback(async (userId, action) => {
+    try {
+      setActionState({ loading: `${action}-${userId}`, message: '', type: '' });
+      const payload = action === 'approve'
+        ? { notes: notesByUser[userId] || '' }
+        : { reason: notesByUser[userId] || 'Credentials need revision' };
+
+      if (action === 'approve') {
+        await adminOperationsService.approveVerification(userId, payload);
+      } else {
+        await adminOperationsService.rejectVerification(userId, payload);
+      }
+
+      setVerificationQueue((current) => current.filter((item) => String(item.user?.id) !== String(userId)));
+      setActionState({ loading: '', message: `Expert ${action === 'approve' ? 'approved' : 'rejected'} successfully.`, type: 'success' });
+    } catch (error) {
+      setActionState({ loading: '', message: error.message || 'Failed to update verification state.', type: 'error' });
+    }
+  }, [notesByUser]);
+
+  const handleBenchmarkSubmit = useCallback(async (event) => {
+    event.preventDefault();
+    try {
+      setActionState({ loading: 'benchmark', message: '', type: '' });
+      await adminOperationsService.upsertCostBenchmark(benchmarkForm);
+      setBenchmarkForm({ province: '', district: '', buildingType: '', minCostPerM2: '', maxCostPerM2: '', currency: 'RWF', notes: '' });
+      await loadDashboard();
+      setActionState({ loading: '', message: 'Cost benchmark saved successfully.', type: 'success' });
+    } catch (error) {
+      setActionState({ loading: '', message: error.message || 'Failed to save cost benchmark.', type: 'error' });
+    }
+  }, [benchmarkForm, loadDashboard]);
+
+  if (state.loading) {
+    return (
+      <div style={styles.page}>
+        <section style={styles.heroShell}>
+          <div style={styles.heroMain}>
+            <div style={styles.heroEyebrow}>Admin Command</div>
+            <h1 style={styles.heroTitle}>Operations dashboard is loading.</h1>
+            <p style={styles.heroText}>Bringing in live users, revenue, moderation, and benchmark signals.</p>
+          </div>
+          <div style={styles.heroAside}>
+            {Array.from({ length: 3 }).map((_, index) => <div key={index} style={styles.skeletonPulseCard} />)}
+          </div>
+        </section>
+        <div style={styles.metricGrid}>{Array.from({ length: 4 }).map((_, index) => <div key={index} style={styles.skeletonCard} />)}</div>
+      </div>
+    );
+  }
+
+  if (state.error) {
+    return (
+      <div style={styles.page}>
+        <div style={styles.stateCard}>
+          <h3 style={styles.sectionTitle}>Could not load admin dashboard</h3>
+          <p style={styles.stateText}>{state.error}</p>
+          <button type="button" onClick={loadDashboard} style={styles.primaryButton}>Retry</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div style={styles.dashboard}>
-      {/* Header */}
-      <div style={styles.header}>
-        <h1 style={styles.title}>Admin Workspace</h1>
-        <p style={styles.subtitle}>Manage platform operations and user activities</p>
+    <div style={styles.page}>
+      <section style={styles.heroShell}>
+        <div style={styles.heroMain}>
+          <div style={styles.heroEyebrow}>Admin Command</div>
+          <h1 style={styles.heroTitle}>Moderation, benchmarks, and growth in one premium workspace.</h1>
+          <p style={styles.heroText}>
+            This is the shared admin command layer: review expert credentials, watch platform growth, and keep the Rwanda benchmark data accurate with no filler or mock content.
+          </p>
+          <div style={styles.heroActions}>
+            <button type="button" onClick={() => navigate('/dashboard/users')} style={styles.primaryButton}>User control</button>
+            <button type="button" onClick={() => navigate('/dashboard/analytics')} style={styles.secondaryButton}>Open analytics</button>
+            <button type="button" onClick={() => navigate('/dashboard/projects')} style={styles.secondaryButton}>Projects</button>
+          </div>
+        </div>
+
+        <div style={styles.heroAside}>
+          <div style={styles.pulseCard}>
+            <span style={styles.pulseLabel}>Queue pressure</span>
+            <strong style={styles.pulseValue}>{formatCompact(verificationQueue.length)}</strong>
+            <span style={styles.pulseHint}>experts waiting for review</span>
+          </div>
+          <div style={styles.pulseCard}>
+            <span style={styles.pulseLabel}>Top user segment</span>
+            <strong style={styles.pulseValue}>{topRole?.role ? topRole.role.replaceAll('_', ' ') : 'N/A'}</strong>
+            <span style={styles.pulseHint}>{topRole ? `${formatCompact(topRole.count)} accounts` : 'no distribution yet'}</span>
+          </div>
+          <div style={styles.pulseCard}>
+            <span style={styles.pulseLabel}>Benchmark coverage</span>
+            <strong style={styles.pulseValue}>{formatCompact(benchmarks.length)}</strong>
+            <span style={styles.pulseHint}>province and district entries saved</span>
+          </div>
+        </div>
+      </section>
+
+      {actionState.message ? <div style={{ ...styles.banner, ...(actionState.type === 'error' ? styles.bannerError : styles.bannerSuccess) }}>{actionState.message}</div> : null}
+
+      <div style={styles.metricGrid}>
+        {kpis.map((item) => (
+          <MetricCard key={item.label} label={item.label} value={item.value} hint={item.hint} accent={item.accent} />
+        ))}
       </div>
 
-      {/* Empty State */}
-      <div style={styles.emptyState}>
-        <div style={styles.emptyIcon}>
-          <svg viewBox="0 0 24 24" fill="none" width="64" height="64">
-            <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"
-              stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M9 12l2 2 4-4"
-              stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </div>
+      <div style={styles.topInsightGrid}>
+        <section style={styles.premiumPanel}>
+          <div style={styles.sectionHeader}>
+            <div>
+              <div style={styles.panelEyebrow}>User composition</div>
+              <h2 style={styles.sectionTitle}>Role distribution</h2>
+            </div>
+            <span style={styles.sectionMeta}>{formatCompact(totalUsers)} total accounts</span>
+          </div>
+          {!roleBreakdown.length ? (
+            <div style={styles.emptyState}>User role composition will appear once accounts are created.</div>
+          ) : (
+            <div style={styles.sparkStack}>
+              {roleBreakdown.slice(0, 6).map((item, index) => (
+                <SparkBar
+                  key={item.role}
+                  label={item.role.replaceAll('_', ' ')}
+                  value={item.count}
+                  max={maxRoleCount}
+                  tone={index % 2 === 0 ? '#f4c14f' : '#9fd2ff'}
+                />
+              ))}
+            </div>
+          )}
+        </section>
 
-        <h2 style={styles.emptyTitle}>Platform Management Ready</h2>
-        <p style={styles.emptyDescription}>
-          Your admin workspace is ready. Manage users, monitor platform activity,
-          and ensure smooth operations across the CivilBridge ecosystem.
-        </p>
+        <section style={styles.premiumPanel}>
+          <div style={styles.sectionHeader}>
+            <div>
+              <div style={styles.panelEyebrow}>Revenue pulse</div>
+              <h2 style={styles.sectionTitle}>Provider mix</h2>
+            </div>
+            <span style={styles.sectionMeta}>{providerBars.length ? 'confirmed only' : 'awaiting payments'}</span>
+          </div>
+          {!providerBars.length ? (
+            <div style={styles.emptyState}>Provider revenue bars will appear once confirmed payments land.</div>
+          ) : (
+            <div style={styles.sparkStack}>
+              {providerBars.map((item, index) => (
+                <div key={item.provider} style={styles.providerRow}>
+                  <div style={styles.providerTop}>
+                    <span style={styles.sparkLabel}>{item.provider}</span>
+                    <strong style={styles.providerValue}>{formatMoney(item.total)}</strong>
+                  </div>
+                  <div style={styles.sparkTrack}>
+                    <div style={{ ...styles.sparkFill, width: `${percentOf(item.total, maxProviderValue)}%`, background: `linear-gradient(90deg, ${index % 2 === 0 ? '#8a6cff' : '#f4c14f'}, rgba(255,255,255,0.96))` }} />
+                  </div>
+                  <span style={styles.providerMeta}>{formatCompact(item.txCount)} confirmed transactions</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
 
-        <div style={styles.emptyActions}>
-          <button style={styles.primaryButton}>
-            <div style={styles.buttonIcon}>👥</div>
-            <div style={styles.buttonText}>User Management</div>
-          </button>
-
-          <button style={styles.secondaryButton}>
-            <div style={styles.buttonIcon}>📊</div>
-            <div style={styles.buttonText}>View Analytics</div>
-          </button>
-
-          <button style={styles.secondaryButton}>
-            <div style={styles.buttonIcon}>⚙️</div>
-            <div style={styles.buttonText}>System Settings</div>
-          </button>
-        </div>
+        <section style={styles.spotlightPanel}>
+          <div style={styles.sectionHeader}>
+            <div>
+              <div style={styles.panelEyebrow}>Live operating notes</div>
+              <h2 style={styles.sectionTitle}>Admin spotlight</h2>
+            </div>
+          </div>
+          <div style={styles.spotlightMetric}>
+            <span style={styles.spotlightLabel}>Verification queue</span>
+            <strong style={styles.spotlightValue}>{verificationQueue.length ? `${verificationQueue.length} waiting` : 'Clear'}</strong>
+          </div>
+          <div style={styles.spotlightMetric}>
+            <span style={styles.spotlightLabel}>Dominant project type</span>
+            <strong style={styles.spotlightValue}>{projectTypes[0]?.type?.replaceAll('_', ' ') || 'No projects yet'}</strong>
+          </div>
+          <div style={styles.spotlightMetric}>
+            <span style={styles.spotlightLabel}>Most common project stage</span>
+            <strong style={styles.spotlightValue}>{projectStatuses[0]?.status?.replaceAll('_', ' ') || 'No status mix yet'}</strong>
+          </div>
+        </section>
       </div>
 
-      {/* Admin Features */}
-      <div style={styles.featuresSection}>
-        <h3 style={styles.sectionTitle}>Admin Tools</h3>
-        <div style={styles.featuresGrid}>
-          <div style={styles.featureItem}>
-            <div style={styles.featureIcon}>👥</div>
-            <div style={styles.featureContent}>
-              <h4 style={styles.featureTitle}>User Management</h4>
-              <p style={styles.featureDescription}>Manage user accounts, roles, and permissions</p>
+      <div style={styles.bottomGrid}>
+        <section style={styles.premiumPanel}>
+          <div style={styles.sectionHeader}>
+            <div>
+              <div style={styles.panelEyebrow}>Credential review</div>
+              <h2 style={styles.sectionTitle}>Expert verification workflow</h2>
             </div>
+            <span style={styles.sectionMeta}>{verificationQueue.length} in queue</span>
           </div>
+          {!verificationQueue.length ? (
+            <div style={styles.emptyState}>No experts are waiting for verification right now.</div>
+          ) : (
+            <div style={styles.stack}>
+              {verificationQueue.map((provider) => (
+                <div key={provider.id} style={styles.queueCard}>
+                  <div style={styles.queueHeader}>
+                    <div>
+                      <div style={styles.rowTitle}>{provider.user?.fullName || 'Expert'}</div>
+                      <div style={styles.rowMeta}>
+                        {provider.user?.profile?.profession || provider.providerType} | {provider.region?.name || 'No region'} | {provider.user?.email || 'No email'}
+                      </div>
+                    </div>
+                    <span style={styles.statusBadge}>{provider.verificationStatus}</span>
+                  </div>
+                  <div style={styles.detailGrid}>
+                    <div><span style={styles.detailLabel}>Company</span><strong>{provider.user?.profile?.companyName || 'Independent'}</strong></div>
+                    <div><span style={styles.detailLabel}>License</span><strong>{provider.user?.profile?.licenseNumber || 'Not provided'}</strong></div>
+                    <div>
+                      <span style={styles.detailLabel}>Verification document</span>
+                      {provider.verificationDocument?.url ? (
+                        <a href={`${API_BASE_URL}${provider.verificationDocument.url}`} target="_blank" rel="noreferrer" style={styles.linkButton}>
+                          Open document
+                        </a>
+                      ) : (
+                        <strong>Not uploaded</strong>
+                      )}
+                    </div>
+                    <div>
+                      <span style={styles.detailLabel}>Submitted</span>
+                      <strong>{provider.verificationDocument?.createdAt ? new Date(provider.verificationDocument.createdAt).toLocaleString() : 'No file date'}</strong>
+                    </div>
+                  </div>
+                  <textarea
+                    rows={3}
+                    value={notesByUser[provider.user?.id] || ''}
+                    onChange={(event) => setNotesByUser((current) => ({ ...current, [provider.user?.id]: event.target.value }))}
+                    placeholder="Add approval notes or the exact corrections required before approval."
+                    style={styles.textarea}
+                  />
+                  <div style={styles.actionRow}>
+                    <button type="button" onClick={() => handleVerification(provider.user?.id, 'reject')} style={styles.dangerButton} disabled={Boolean(actionState.loading)}>
+                      {actionState.loading === `reject-${provider.user?.id}` ? 'Updating...' : 'Reject'}
+                    </button>
+                    <button type="button" onClick={() => handleVerification(provider.user?.id, 'approve')} style={styles.primaryButton} disabled={Boolean(actionState.loading)}>
+                      {actionState.loading === `approve-${provider.user?.id}` ? 'Updating...' : 'Approve'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
 
-          <div style={styles.featureItem}>
-            <div style={styles.featureIcon}>📋</div>
-            <div style={styles.featureContent}>
-              <h4 style={styles.featureTitle}>Project Approvals</h4>
-              <p style={styles.featureDescription}>Review and approve project submissions</p>
+        <section style={styles.premiumPanel}>
+          <div style={styles.sectionHeader}>
+            <div>
+              <div style={styles.panelEyebrow}>Market intelligence</div>
+              <h2 style={styles.sectionTitle}>Cost benchmark editor</h2>
             </div>
+            <span style={styles.sectionMeta}>{benchmarks.length} saved rows</span>
           </div>
+          <form onSubmit={handleBenchmarkSubmit} style={styles.formGrid}>
+            <input value={benchmarkForm.province} onChange={(event) => setBenchmarkForm((current) => ({ ...current, province: event.target.value }))} placeholder="Province" style={styles.input} />
+            <input value={benchmarkForm.district} onChange={(event) => setBenchmarkForm((current) => ({ ...current, district: event.target.value }))} placeholder="District" style={styles.input} />
+            <input value={benchmarkForm.buildingType} onChange={(event) => setBenchmarkForm((current) => ({ ...current, buildingType: event.target.value }))} placeholder="Building type" style={styles.input} />
+            <input type="number" min="0" value={benchmarkForm.minCostPerM2} onChange={(event) => setBenchmarkForm((current) => ({ ...current, minCostPerM2: event.target.value }))} placeholder="Min cost per sqm" style={styles.input} />
+            <input type="number" min="0" value={benchmarkForm.maxCostPerM2} onChange={(event) => setBenchmarkForm((current) => ({ ...current, maxCostPerM2: event.target.value }))} placeholder="Max cost per sqm" style={styles.input} />
+            <input value={benchmarkForm.currency} onChange={(event) => setBenchmarkForm((current) => ({ ...current, currency: event.target.value }))} placeholder="Currency" style={styles.input} />
+            <textarea rows={3} value={benchmarkForm.notes} onChange={(event) => setBenchmarkForm((current) => ({ ...current, notes: event.target.value }))} placeholder="Notes for this benchmark entry" style={{ ...styles.textarea, gridColumn: '1 / -1' }} />
+            <div style={styles.formFooter}>
+              <div style={styles.formFootnote}>Keep regional pricing current so estimations stay trustworthy.</div>
+              <button type="submit" style={styles.primaryButton} disabled={actionState.loading === 'benchmark'}>
+                {actionState.loading === 'benchmark' ? 'Saving...' : 'Save Benchmark'}
+              </button>
+            </div>
+          </form>
 
-          <div style={styles.featureItem}>
-            <div style={styles.featureIcon}>📊</div>
-            <div style={styles.featureContent}>
-              <h4 style={styles.featureTitle}>Platform Analytics</h4>
-              <p style={styles.featureDescription}>Monitor platform usage and performance</p>
+          {!benchmarks.length ? (
+            <div style={styles.emptyState}>No cost benchmarks have been saved yet.</div>
+          ) : (
+            <div style={styles.tableWrap}>
+              <table style={styles.table}>
+                <thead>
+                  <tr>
+                    <th style={styles.th}>Province</th>
+                    <th style={styles.th}>District</th>
+                    <th style={styles.th}>Building type</th>
+                    <th style={styles.th}>Range</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {benchmarks.slice(0, 10).map((item) => (
+                    <tr key={item.id}>
+                      <td style={styles.td}>{item.province}</td>
+                      <td style={styles.td}>{item.district || 'All districts'}</td>
+                      <td style={styles.td}>{item.buildingType}</td>
+                      <td style={styles.td}>{formatMoney(item.minCostPerM2, item.currency)} - {formatMoney(item.maxCostPerM2, item.currency)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          </div>
+          )}
 
-          <div style={styles.featureItem}>
-            <div style={styles.featureIcon}>🔒</div>
-            <div style={styles.featureContent}>
-              <h4 style={styles.featureTitle}>Security & Compliance</h4>
-              <p style={styles.featureDescription}>Ensure platform security and compliance</p>
+          <div style={styles.projectTypeWrap}>
+            <div style={styles.sectionMiniTitle}>Project type mix</div>
+            {!projectTypes.length ? (
+              <div style={styles.microEmpty}>Project-type bars will appear once live projects exist.</div>
+            ) : (
+              <div style={styles.sparkStack}>
+                {projectTypes.map((item, index) => (
+                  <SparkBar
+                    key={item.type}
+                    label={item.type.replaceAll('_', ' ')}
+                    value={item.count}
+                    max={maxProjectTypeCount}
+                    tone={index % 2 === 0 ? '#64b5ff' : '#f4c14f'}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
+
+      {/* ── Plan Approval Queue ── */}
+      <div style={styles.commandGrid}>
+        <section style={styles.sectionCard}>
+          <div style={styles.sectionHeader}>
+            <div>
+              <div style={styles.panelEyebrow}>Content review</div>
+              <h2 style={styles.sectionTitle}>Plan approval queue</h2>
+            </div>
+            <button type="button" onClick={() => navigate('/plans?status=PENDING')} style={styles.inlineButton}>View all</button>
+          </div>
+          {!planRequests.length ? (
+            <div style={styles.emptyState}>No pending plan submissions at the moment.</div>
+          ) : (
+            <div style={styles.stack}>
+              {planRequests.slice(0, 8).map((req) => (
+                <div key={req.id} style={styles.queueRow}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={styles.queueTitle}>{req.plan?.title || 'Plan'}</div>
+                    <div style={styles.queueMeta}>
+                      {req.plan?.category} · Requested by {req.requester?.fullName || req.requester?.email || 'user'} · {String(req.requestType).replace(/_/g, ' ')}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                    <button
+                      type="button"
+                      style={styles.approveBtn}
+                      disabled={Boolean(actionState.loading)}
+                      onClick={async () => {
+                        try {
+                          setActionState({ loading: `plan-approve-${req.plan?.id}`, message: '', type: '' });
+                          await adminOperationsService.approvePlan(req.plan?.id, { status: 'APPROVED' });
+                          await adminOperationsService.updatePlanRequestStatus(req.id, { status: 'ACCEPTED' });
+                          setPlanRequests((prev) => prev.filter((r) => r.id !== req.id));
+                          setActionState({ loading: '', message: 'Plan approved and published.', type: 'success' });
+                        } catch (err) {
+                          setActionState({ loading: '', message: err.message || 'Failed to approve plan.', type: 'error' });
+                        }
+                      }}
+                    >
+                      {actionState.loading === `plan-approve-${req.plan?.id}` ? '…' : 'Approve'}
+                    </button>
+                    <button
+                      type="button"
+                      style={styles.rejectBtn}
+                      disabled={Boolean(actionState.loading)}
+                      onClick={async () => {
+                        try {
+                          setActionState({ loading: `plan-reject-${req.plan?.id}`, message: '', type: '' });
+                          await adminOperationsService.approvePlan(req.plan?.id, { status: 'REJECTED' });
+                          await adminOperationsService.updatePlanRequestStatus(req.id, { status: 'REJECTED' });
+                          setPlanRequests((prev) => prev.filter((r) => r.id !== req.id));
+                          setActionState({ loading: '', message: 'Plan rejected.', type: 'error' });
+                        } catch (err) {
+                          setActionState({ loading: '', message: err.message || 'Failed to reject plan.', type: 'error' });
+                        }
+                      }}
+                    >
+                      {actionState.loading === `plan-reject-${req.plan?.id}` ? '…' : 'Reject'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* ── Lead Requests (property / land inquiries) ── */}
+        <section style={styles.sectionCard}>
+          <div style={styles.sectionHeader}>
+            <div>
+              <div style={styles.panelEyebrow}>Marketplace inquiries</div>
+              <h2 style={styles.sectionTitle}>Property &amp; land requests</h2>
             </div>
           </div>
-        </div>
+          {!leadRequests.length ? (
+            <div style={styles.emptyState}>No property or land inquiries are pending.</div>
+          ) : (
+            <div style={styles.stack}>
+              {leadRequests.slice(0, 8).map((req) => (
+                <div key={req.id} style={styles.queueRow}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={styles.queueTitle}>{req.listing?.title || 'Listing'}</div>
+                    <div style={styles.queueMeta}>
+                      {req.listing?.listingType} · {String(req.requestType).replace(/_/g, ' ')} · {req.requester?.fullName || req.name || 'Guest'} · {req.status}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                    <button
+                      type="button"
+                      style={styles.approveBtn}
+                      disabled={Boolean(actionState.loading)}
+                      onClick={async () => {
+                        try {
+                          setActionState({ loading: `lead-contact-${req.id}`, message: '', type: '' });
+                          await adminOperationsService.updateLeadRequestStatus(req.id, { status: 'CONTACTED' });
+                          setLeadRequests((prev) => prev.map((r) => r.id === req.id ? { ...r, status: 'CONTACTED' } : r));
+                          setActionState({ loading: '', message: 'Marked as contacted.', type: 'success' });
+                        } catch (err) {
+                          setActionState({ loading: '', message: err.message || 'Failed to update.', type: 'error' });
+                        }
+                      }}
+                    >
+                      {actionState.loading === `lead-contact-${req.id}` ? '…' : 'Mark contacted'}
+                    </button>
+                    <button
+                      type="button"
+                      style={styles.rejectBtn}
+                      disabled={Boolean(actionState.loading)}
+                      onClick={async () => {
+                        try {
+                          setActionState({ loading: `lead-close-${req.id}`, message: '', type: '' });
+                          await adminOperationsService.updateLeadRequestStatus(req.id, { status: 'CLOSED' });
+                          setLeadRequests((prev) => prev.filter((r) => r.id !== req.id));
+                          setActionState({ loading: '', message: 'Request closed.', type: 'error' });
+                        } catch (err) {
+                          setActionState({ loading: '', message: err.message || 'Failed to close.', type: 'error' });
+                        }
+                      }}
+                    >
+                      {actionState.loading === `lead-close-${req.id}` ? '…' : 'Close'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
     </div>
   );
 }
 
 const styles = {
-  dashboard: {
-    maxWidth: '1200px',
-    margin: '0 auto',
-    padding: '0 24px'
+  page: { display: 'grid', gap: 24 },
+  heroShell: {
+    display: 'grid',
+    gridTemplateColumns: '1.35fr 0.9fr',
+    gap: 18,
+    padding: 22,
+    borderRadius: 28,
+    border: '1px solid rgba(255,255,255,0.08)',
+    background: 'linear-gradient(135deg, rgba(17,24,39,0.96), rgba(11,17,32,0.92) 56%, rgba(62,42,12,0.72))',
+    boxShadow: '0 30px 60px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06)',
+    overflow: 'hidden',
+    position: 'relative',
   },
-  header: {
-    textAlign: 'center',
-    marginBottom: 64
+  heroMain: { display: 'grid', gap: 14, alignContent: 'space-between', minHeight: 240, position: 'relative', zIndex: 1 },
+  heroAside: { display: 'grid', gap: 12, alignContent: 'stretch', position: 'relative', zIndex: 1 },
+  heroEyebrow: { fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.18em', color: '#f4c14f' },
+  heroTitle: { margin: 0, fontSize: 'clamp(28px, 4vw, 44px)', lineHeight: 1.05, color: '#f8fafc', maxWidth: 760 },
+  heroText: { margin: 0, maxWidth: 720, color: 'rgba(226,232,240,0.76)', lineHeight: 1.75, fontSize: 15 },
+  heroActions: { display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 8 },
+  pulseCard: {
+    borderRadius: 22,
+    padding: 18,
+    background: 'linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))',
+    border: '1px solid rgba(255,255,255,0.08)',
+    display: 'grid',
+    gap: 8,
+    minHeight: 92,
   },
-  title: {
-    margin: '0 0 16px',
-    fontSize: 32,
-    fontWeight: 800,
-    color: '#ffffff',
-    letterSpacing: '-0.5px'
+  skeletonPulseCard: {
+    minHeight: 92,
+    borderRadius: 22,
+    background: 'linear-gradient(90deg, rgba(255,255,255,0.04), rgba(255,255,255,0.09), rgba(255,255,255,0.04))',
   },
-  subtitle: {
-    margin: 0,
-    fontSize: 18,
-    color: '#a0a0a0',
-    lineHeight: 1.5
+  pulseLabel: { fontSize: 12, color: 'rgba(226,232,240,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 },
+  pulseValue: { fontSize: 26, color: '#f8fafc', fontWeight: 800 },
+  pulseHint: { fontSize: 13, color: 'rgba(226,232,240,0.72)', lineHeight: 1.5 },
+  banner: { padding: '12px 14px', borderRadius: 16, border: '1px solid transparent', fontWeight: 600 },
+  bannerSuccess: { background: 'rgba(34,197,94,0.08)', borderColor: 'rgba(34,197,94,0.24)', color: '#7ee787' },
+  bannerError: { background: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.24)', color: '#fca5a5' },
+  metricGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 },
+  metricCard: {
+    borderRadius: 22,
+    border: '1px solid rgba(255,255,255,0.08)',
+    padding: 20,
+    display: 'grid',
+    gap: 10,
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
   },
-
-  // Empty State
-  emptyState: {
-    textAlign: 'center',
-    padding: '80px 40px',
-    background: '#0a0a0a',
-    border: '1px solid #1a1a1a',
-    borderRadius: 16,
-    marginBottom: 64
+  metricLabel: { fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(226,232,240,0.68)' },
+  metricValue: { fontSize: 28, fontWeight: 800, color: '#f8fafc' },
+  metricHint: { color: 'rgba(226,232,240,0.68)', lineHeight: 1.5, fontSize: 13 },
+  topInsightGrid: { display: 'grid', gridTemplateColumns: '1.05fr 1.05fr 0.7fr', gap: 18, alignItems: 'start' },
+  bottomGrid: { display: 'grid', gridTemplateColumns: '1.08fr 0.92fr', gap: 18, alignItems: 'start' },
+  premiumPanel: {
+    borderRadius: 26,
+    border: '1px solid rgba(255,255,255,0.08)',
+    background: 'linear-gradient(180deg, rgba(15,23,42,0.94), rgba(15,23,42,0.72))',
+    padding: 20,
+    display: 'grid',
+    gap: 18,
+    boxShadow: '0 18px 36px rgba(0,0,0,0.24)',
   },
-  emptyIcon: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 120,
-    height: 120,
-    background: '#000000',
-    border: '2px solid #1a1a1a',
-    borderRadius: '50%',
-    marginBottom: 32,
-    color: '#ef4444'
-  },
-  emptyTitle: {
-    margin: '0 0 16px',
-    fontSize: 28,
-    fontWeight: 700,
-    color: '#ffffff'
-  },
-  emptyDescription: {
-    margin: '0 0 40px',
-    fontSize: 16,
-    color: '#a0a0a0',
-    lineHeight: 1.6,
-    maxWidth: '600px',
-    marginLeft: 'auto',
-    marginRight: 'auto'
-  },
-  emptyActions: {
-    display: 'flex',
+  spotlightPanel: {
+    borderRadius: 26,
+    border: '1px solid rgba(255,255,255,0.08)',
+    background: 'linear-gradient(180deg, rgba(54,39,14,0.86), rgba(16,20,31,0.9))',
+    padding: 20,
+    display: 'grid',
     gap: 16,
-    justifyContent: 'center',
-    flexWrap: 'wrap'
+    minHeight: '100%',
   },
-  primaryButton: {
-    display: 'flex',
-    alignItems: 'center',
+  commandGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 20, alignItems: 'start' },
+  sectionCard: { border: '1px solid rgba(255,255,255,0.08)', borderRadius: 24, padding: 20, background: 'linear-gradient(180deg, rgba(17,24,39,0.92), rgba(11,17,32,0.82))', display: 'grid', gap: 16, boxShadow: '0 18px 36px rgba(0,0,0,0.22)' },
+  inlineButton: { border: 'none', background: 'transparent', color: '#fcd34d', cursor: 'pointer', fontWeight: 700, fontSize: 13 },
+  sectionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' },
+  panelEyebrow: { fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.16em', color: '#f4c14f', marginBottom: 6 },
+  sectionTitle: { margin: 0, color: '#f8fafc', fontSize: 22, lineHeight: 1.2 },
+  sectionMeta: { fontSize: 12, fontWeight: 700, color: 'rgba(226,232,240,0.62)', textTransform: 'uppercase', letterSpacing: '0.08em' },
+  sparkStack: { display: 'grid', gap: 14 },
+  sparkRow: { display: 'grid', gap: 8 },
+  sparkLabelRow: { display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' },
+  sparkLabel: { color: '#e2e8f0', fontSize: 13, fontWeight: 600 },
+  sparkValue: { color: '#f8fafc', fontSize: 13 },
+  sparkTrack: { height: 10, borderRadius: 999, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' },
+  sparkFill: { height: '100%', borderRadius: 999 },
+  providerRow: { display: 'grid', gap: 8 },
+  providerTop: { display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' },
+  providerValue: { color: '#f8fafc', fontSize: 13 },
+  providerMeta: { color: 'rgba(226,232,240,0.56)', fontSize: 12 },
+  spotlightMetric: { padding: '14px 0', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'grid', gap: 6 },
+  spotlightLabel: { color: 'rgba(226,232,240,0.6)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 },
+  spotlightValue: { color: '#fff7e2', fontSize: 22, lineHeight: 1.25 },
+  stack: { display: 'grid', gap: 14 },
+  queueCard: {
+    display: 'grid',
     gap: 12,
-    background: '#ef4444',
-    border: 'none',
-    borderRadius: 12,
-    padding: '16px 32px',
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: 600,
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: 18,
+    padding: 16,
+    background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015))',
+  },
+  queueHeader: { display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' },
+  rowTitle: { color: '#f8fafc', fontWeight: 700, marginBottom: 6 },
+  rowMeta: { color: 'rgba(226,232,240,0.66)', fontSize: 13, lineHeight: 1.6 },
+  statusBadge: { alignSelf: 'flex-start', padding: '6px 10px', borderRadius: 999, background: 'rgba(244,193,79,0.16)', color: '#f4c14f', fontSize: 12, fontWeight: 800 },
+  detailGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 },
+  detailLabel: { display: 'block', color: 'rgba(226,232,240,0.56)', fontSize: 12, marginBottom: 6 },
+  linkButton: { color: '#9fd2ff', fontWeight: 700, textDecoration: 'none' },
+  textarea: {
+    width: '100%',
+    padding: '12px 14px',
+    borderRadius: 14,
+    border: '1px solid rgba(255,255,255,0.1)',
+    background: 'rgba(10,15,24,0.72)',
+    color: '#f8fafc',
+    resize: 'vertical',
+    fontFamily: 'inherit',
+  },
+  actionRow: { display: 'flex', justifyContent: 'flex-end', gap: 10, flexWrap: 'wrap' },
+  formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 },
+  input: {
+    padding: '12px 14px',
+    borderRadius: 14,
+    border: '1px solid rgba(255,255,255,0.1)',
+    background: 'rgba(10,15,24,0.72)',
+    color: '#f8fafc',
+  },
+  formFooter: { display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap', gridColumn: '1 / -1' },
+  formFootnote: { color: 'rgba(226,232,240,0.6)', fontSize: 13, lineHeight: 1.5 },
+  tableWrap: { overflowX: 'auto' },
+  table: { width: '100%', borderCollapse: 'collapse' },
+  th: { textAlign: 'left', padding: '10px 12px', color: 'rgba(226,232,240,0.55)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.12em', borderBottom: '1px solid rgba(255,255,255,0.08)' },
+  td: { padding: '12px', color: '#f8fafc', borderBottom: '1px solid rgba(255,255,255,0.05)' },
+  projectTypeWrap: { display: 'grid', gap: 14, paddingTop: 6 },
+  sectionMiniTitle: { color: '#f8fafc', fontSize: 15, fontWeight: 700 },
+  microEmpty: { color: 'rgba(226,232,240,0.56)', fontSize: 13, lineHeight: 1.6 },
+  emptyState: {
+    minHeight: 140,
+    display: 'grid',
+    placeItems: 'center',
+    textAlign: 'center',
+    color: 'rgba(226,232,240,0.6)',
+    border: '1px dashed rgba(255,255,255,0.1)',
+    borderRadius: 18,
+    padding: 20,
+    lineHeight: 1.6,
+  },
+  skeletonCard: { height: 132, borderRadius: 22, background: 'linear-gradient(90deg, rgba(255,255,255,0.04), rgba(255,255,255,0.1), rgba(255,255,255,0.04))' },
+  stateCard: {
+    minHeight: 280,
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: 24,
+    background: 'linear-gradient(180deg, rgba(15,23,42,0.94), rgba(15,23,42,0.72))',
+    display: 'grid',
+    placeItems: 'center',
+    textAlign: 'center',
+    padding: 24,
+    gap: 12,
+  },
+  stateText: { margin: 0, color: 'rgba(226,232,240,0.66)', lineHeight: 1.6, maxWidth: 540 },
+  primaryButton: {
+    minHeight: 42,
+    padding: '0 16px',
+    borderRadius: 14,
+    border: '1px solid rgba(244,193,79,0.32)',
+    background: 'linear-gradient(135deg, #f4c14f, #d9a31a)',
+    color: '#10151d',
     cursor: 'pointer',
-    transition: 'all 0.2s ease',
-    boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)'
+    fontWeight: 800,
   },
   secondaryButton: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 12,
-    background: 'transparent',
-    border: '2px solid #1a1a1a',
-    borderRadius: 12,
-    padding: '16px 32px',
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: 600,
+    minHeight: 42,
+    padding: '0 16px',
+    borderRadius: 14,
+    border: '1px solid rgba(255,255,255,0.12)',
+    background: 'rgba(255,255,255,0.02)',
+    color: '#f8fafc',
     cursor: 'pointer',
-    transition: 'all 0.2s ease'
-  },
-  buttonIcon: {
-    fontSize: 20
-  },
-  buttonText: {
-    fontSize: 16
-  },
-
-  // Features Section
-  featuresSection: {
-    marginBottom: 32
-  },
-  sectionTitle: {
-    margin: '0 0 32px',
-    fontSize: 24,
     fontWeight: 700,
-    color: '#ffffff',
-    textAlign: 'center'
   },
-  featuresGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-    gap: 20
+  dangerButton: {
+    minHeight: 42,
+    padding: '0 16px',
+    borderRadius: 14,
+    border: '1px solid rgba(248,113,113,0.28)',
+    background: 'rgba(239,68,68,0.08)',
+    color: '#fca5a5',
+    cursor: 'pointer',
+    fontWeight: 700,
   },
-  featureItem: {
-    display: 'flex',
-    gap: 16,
-    padding: 20,
-    background: '#0a0a0a',
-    border: '1px solid #1a1a1a',
-    borderRadius: 12
-  },
-  featureIcon: {
-    fontSize: 24,
-    flexShrink: 0,
-    width: 40,
-    height: 40,
+  queueRow: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
-    background: '#000000',
-    border: '1px solid #1a1a1a',
-    borderRadius: 8
+    gap: 14,
+    padding: '12px 14px',
+    borderRadius: 16,
+    border: '1px solid rgba(255,255,255,0.07)',
+    background: 'rgba(255,255,255,0.02)',
   },
-  featureContent: {
-    flex: 1
+  queueTitle: { color: 'var(--text-color)', fontWeight: 700, fontSize: 14, marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+  queueMeta: { color: 'var(--text-muted)', fontSize: 12, lineHeight: 1.5 },
+  approveBtn: {
+    minHeight: 34,
+    padding: '0 14px',
+    borderRadius: 10,
+    border: '1px solid rgba(34,197,94,0.3)',
+    background: 'rgba(34,197,94,0.1)',
+    color: '#86efac',
+    cursor: 'pointer',
+    fontWeight: 700,
+    fontSize: 13,
+    whiteSpace: 'nowrap',
   },
-  featureTitle: {
-    margin: '0 0 8px',
-    fontSize: 16,
-    fontWeight: 600,
-    color: '#ffffff'
+  rejectBtn: {
+    minHeight: 34,
+    padding: '0 14px',
+    borderRadius: 10,
+    border: '1px solid rgba(239,68,68,0.3)',
+    background: 'rgba(239,68,68,0.08)',
+    color: '#fca5a5',
+    cursor: 'pointer',
+    fontWeight: 700,
+    fontSize: 13,
+    whiteSpace: 'nowrap',
   },
-  featureDescription: {
-    margin: 0,
-    fontSize: 14,
-    color: '#a0a0a0',
-  }
 };

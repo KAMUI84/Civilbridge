@@ -40,7 +40,7 @@ class PerformanceMonitor {
     this.observers.forEach(callback => callback(metric));
   }
 
-  getAverageMetric(name, samples = 10) {
+  getAverageMetric() {
     // Implementation for calculating average metrics
     return 0;
   }
@@ -337,7 +337,7 @@ export const OptimizedImage = ({ src, alt, width, height, ...props }) => {
 // Performance optimization configuration
 export const performanceConfig = {
   // Enable React Strict Mode for development
-  strictMode: process.env.NODE_ENV === 'development',
+  strictMode: Boolean(import.meta.env.DEV),
   
   // Component lazy loading
   lazyLoading: true,

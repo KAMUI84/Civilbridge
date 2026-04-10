@@ -1,7 +1,7 @@
 // Comprehensive Testing Suite
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { describe, it, expect, beforeEach, beforeAll, afterAll } from '@jest/globals';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 
 // Mock API responses
 const mockAPIResponses = {
@@ -42,13 +42,12 @@ const mockAPIResponses = {
 };
 
 // Mock fetch
-global.fetch = jest.fn();
+globalThis.fetch = jest.fn();
 
 // Test utilities
 const createMockFetch = (responses) => {
   return (url, options = {}) => {
     const method = options.method || 'GET';
-    const body = options.body ? JSON.parse(options.body) : null;
     
     // Mock different endpoints
     if (url.includes('/api/auth/login') && method === 'POST') {
@@ -110,7 +109,6 @@ describe('Authentication System', () => {
   });
 
   it('should login successfully with valid credentials', async () => {
-    const mockLogin = jest.fn();
     const TestComponent = () => {
       const [user, setUser] = React.useState(null);
       const [loading, setLoading] = React.useState(false);
@@ -132,7 +130,7 @@ describe('Authentication System', () => {
             setUser(data.user);
             localStorage.setItem('token', data.token);
           }
-        } catch (err) {
+        } catch {
           setError('Login failed');
         } finally {
           setLoading(false);
@@ -186,7 +184,7 @@ describe('Authentication System', () => {
           if (data.success) {
             setMessage('Registration successful');
           }
-        } catch (err) {
+        } catch {
           setMessage('Registration failed');
         } finally {
           setLoading(false);
@@ -237,7 +235,7 @@ describe('Project Management', () => {
             const response = await fetch('/api/projects');
             const data = await response.json();
             setProjects(data);
-          } catch (err) {
+          } catch {
             console.error('Failed to fetch projects');
           } finally {
             setLoading(false);
@@ -290,7 +288,7 @@ describe('Project Management', () => {
           
           const data = await response.json();
           setMessage(`Project created: ${data.name}`);
-        } catch (err) {
+        } catch {
           setMessage('Failed to create project');
         }
       };
@@ -334,7 +332,7 @@ describe('Payment Processing', () => {
             const response = await fetch('/api/payments/transactions');
             const data = await response.json();
             setTransactions(data);
-          } catch (err) {
+          } catch {
             console.error('Failed to fetch transactions');
           } finally {
             setLoading(false);
@@ -382,7 +380,7 @@ describe('Payment Processing', () => {
             const response = await fetch('/api/payments/invoices');
             const data = await response.json();
             setInvoices(data);
-          } catch (err) {
+          } catch {
             console.error('Failed to fetch invoices');
           } finally {
             setLoading(false);
@@ -528,8 +526,8 @@ describe('Error Handling', () => {
         
         try {
           const response = await fetch('/api/data');
-          const data = await response.json();
-        } catch (err) {
+          await response.json();
+        } catch {
           setError('Failed to load data');
         } finally {
           setLoading(false);
@@ -618,7 +616,7 @@ describe('Integration Tests', () => {
           body: JSON.stringify({ name: 'Test Project', type: 'residential' })
         });
         
-        const data = await response.json();
+        await response.json();
         await loadProjects(); // Refresh projects list
       };
 

@@ -488,3 +488,116 @@ select:focus {
   padding-left: var(--spacing-4);
   padding-right: var(--spacing-4);
 }
+
+/* ─── Responsive polish ───────────────────────────────────────────────────── */
+
+/* Horizontally scrollable data tables on mobile */
+.cb-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.cb-table-wrap table {
+  min-width: 600px;
+  width: 100%;
+  border-collapse: collapse;
+}
+.cb-table-wrap th,
+.cb-table-wrap td {
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 13px;
+  white-space: nowrap;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+/* Prevent text overflow on small screens */
+* {
+  box-sizing: border-box;
+}
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Image lazy loading fade-in */
+img[loading="lazy"] {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+img[loading="lazy"].loaded,
+img[loading="lazy"]:not([src=""]) {
+  opacity: 1;
+}
+
+/* Focus-visible ring for accessibility */
+:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ─── Responsive breakpoints ──────────────────────────────────────────────── */
+
+/* 375px — small mobile */
+@media (max-width: 400px) {
+  h1 { font-size: clamp(1.4rem, 6vw, 2rem) !important; }
+  h2 { font-size: clamp(1.1rem, 5vw, 1.5rem) !important; }
+
+  /* Stack two-column grids */
+  [style*="gridTemplateColumns: 1fr 360px"],
+  [style*="gridTemplateColumns: 1fr 380px"] {
+    display: block !important;
+  }
+}
+
+/* 768px — tablet */
+@media (max-width: 800px) {
+  /* Single-column detail layouts */
+  .cb-detail-grid {
+    grid-template-columns: 1fr !important;
+  }
+  /* Narrower padding */
+  [style*="padding: 26px 18px"] {
+    padding: 16px 12px !important;
+  }
+}
+
+/* 1280px — standard desktop: no overrides needed */
+
+/* 1920px — large screens: cap content width */
+@media (min-width: 1920px) {
+  .cb-container,
+  .container {
+    max-width: 1400px;
+  }
+}
+
+/* ─── Form validation states ──────────────────────────────────────────────── */
+.cb-input-error {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 2px rgba(239,68,68,0.15);
+}
+.cb-field-error {
+  font-size: 12px;
+  color: #ef4444;
+  margin-top: 4px;
+  display: block;
+}
+
+/* ─── Utility animations ──────────────────────────────────────────────────── */
+@keyframes animate-fadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fadeIn {
+  animation: animate-fadeIn 0.4s ease both;
+}
+
+@keyframes animate-slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-slideUp {
+  animation: animate-slideUp 0.35s ease both;
+}
+

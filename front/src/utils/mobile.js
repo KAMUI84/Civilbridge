@@ -1,5 +1,5 @@
 // Mobile Responsiveness Enhancement
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 // Mobile detection utility
 export const useMobileDetection = () => {
@@ -82,17 +82,17 @@ export const useTouchGestures = (elementRef, callbacks = {}) => {
 
   const minSwipeDistance = 50;
 
-  const handleTouchStart = (e) => {
+  const handleTouchStart = useCallback((e) => {
     const touch = e.touches[0];
     setTouchStart({ x: touch.clientX, y: touch.clientY });
-  };
+  }, []);
 
-  const handleTouchMove = (e) => {
+  const handleTouchMove = useCallback((e) => {
     const touch = e.touches[0];
     setTouchEnd({ x: touch.clientX, y: touch.clientY });
-  };
+  }, []);
 
-  const handleTouchEnd = () => {
+  const handleTouchEnd = useCallback(() => {
     if (!touchStart.x || !touchEnd.x) return;
 
     const deltaX = touchEnd.x - touchStart.x;
@@ -117,7 +117,7 @@ export const useTouchGestures = (elementRef, callbacks = {}) => {
         }
       }
     }
-  };
+  }, [callbacks, touchEnd, touchStart]);
 
   useEffect(() => {
     const element = elementRef.current;
@@ -132,7 +132,7 @@ export const useTouchGestures = (elementRef, callbacks = {}) => {
       element.removeEventListener('touchmove', handleTouchMove);
       element.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [elementRef, callbacks]);
+  }, [elementRef, handleTouchEnd, handleTouchMove, handleTouchStart]);
 
   return { touchStart, touchEnd };
 };

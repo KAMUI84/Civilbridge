@@ -33,7 +33,7 @@ export default function AiStudio() {
     try {
       const data = await aiService.getMessages(thread.id);
       setMessages(data.messages || []);
-    } catch (e) {
+    } catch {
       setMessages([]);
     } finally {
       setLoading(false);
@@ -71,7 +71,7 @@ export default function AiStudio() {
       }]);
       // Update thread title if it was auto-generated
       await loadThreads();
-    } catch (e) {
+    } catch {
       setMessages(prev => [...prev, {
         role: "assistant",
         content: "⚠️ Failed to get response. Please try again.",

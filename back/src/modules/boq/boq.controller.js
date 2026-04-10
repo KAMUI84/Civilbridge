@@ -1,4 +1,5 @@
 import { pool } from "../../config/db.js";
+import { generateBoqPdfExport } from "./boq.export.service.js";
 
 // ─── GET /api/boq/:estimate_id ────────────────────────────────────────────────
 export const getBOQ = async (req, res) => {
@@ -80,6 +81,26 @@ export const deleteBOQItem = async (req, res) => {
         res.json({ success: true, message: "Item deleted" });
     } catch (err) {
         res.status(500).json({ message: "Failed to delete BOQ item" });
+    }
+};
+
+export const exportProjectBOQPdf = async (req, res) => {
+    try {
+        const result = await generateBoqPdfExport({
+            projectId: req.params.projectId,
+            actor: req.user,
+            approveDocument: req.body?.approveDocument === true,
+            reviewNotes: req.body?.reviewNotes || null,
+        });
+
+        res.json({
+            success: true,
+            document: result.document,
+            signedUrl: result.signedUrl,
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(400).json({ message: err.message || "Failed to export BOQ PDF" });
     }
 };
 

@@ -40,11 +40,27 @@ button {
   cursor: pointer;
 }
 
-/* ── Auth spinner ───── */
+/* ── Animations ───── */
 @keyframes spin {
   to {
     transform: rotate(360deg);
   }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
 }
 
 .auth-spinner {

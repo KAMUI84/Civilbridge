@@ -1,9 +1,10 @@
 import { Router } from "express";
+import { protect } from "../../middlewares/auth.js";
 import { calculateCarbon, getMyCarbonCalculations } from "./carbon.controller.js";
 
 const router = Router();
 
-router.post("/calculate", calculateCarbon);
-router.get("/", getMyCarbonCalculations);
+router.post("/calculate", protect, calculateCarbon);
+router.get("/",           protect, getMyCarbonCalculations);
 
 export default router;

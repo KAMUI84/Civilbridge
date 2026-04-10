@@ -1,95 +1,94 @@
-import React, { useState, useEffect } from 'react';
-import { api } from '../../services/apiClientService';
-import { useAuth } from '../../context/AuthContext';
-import { Button, Card, Badge, Modal, Spinner, Container } from '../../components/ui';
+﻿import React, { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { expertsService } from '../../services/expertsService';
+import { Button, Card, Badge, Container } from '../../components/ui';
+import SEO from '../../components/seo/SEO';
+
+function getInitials(value) {
+  return (value || 'Expert')
+    .split(' ')
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+}
+
+function ExpertCardSkeleton() {
+  return (
+    <div
+      style={{
+        height: 280,
+        borderRadius: 20,
+        background: 'linear-gradient(90deg, rgba(255,255,255,0.04), rgba(255,255,255,0.08), rgba(255,255,255,0.04))',
+      }}
+    />
+  );
+}
 
 export default function Experts() {
-  const { user, isAuthed } = useAuth();
+  const navigate = useNavigate();
   const [experts, setExperts] = useState([]);
-  const [state, setState] = useState({ loading: true, error: "" });
-  const [q, setQ] = useState("");
-  const [role, setRole] = useState("all");
-  const [region, setRegion] = useState("all");
-  const [selected, setSelected] = useState(null);
-  const [req, setReq] = useState({ name: "", phone: "", message: "" });
-  const [showRequestModal, setShowRequestModal] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [state, setState] = useState({ loading: true, error: '' });
+  const [q, setQ] = useState('');
+  const [role, setRole] = useState('all');
+  const [region, setRegion] = useState('all');
+
+  const loadExperts = useCallback(async () => {
+    try {
+      setState({ loading: true, error: '' });
+      const data = await expertsService.getAll({
+        role: role !== 'all' ? role : undefined,
+        region: region !== 'all' ? region : undefined,
+        search: q || undefined,
+      });
+      setExperts(data?.experts || []);
+      setState({ loading: false, error: '' });
+    } catch (error) {
+      setState({ loading: false, error: error.message || 'Failed to load experts.' });
+    }
+  }, [q, region, role]);
 
   useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        setState({ loading: true, error: "" });
-        const query = new URLSearchParams({ role: role !== "all" ? role : undefined, region: region !== "all" ? region : undefined, search: q || undefined }).toString();
-        const data = await api.get(`/api/experts?${query}`);
-        if (!alive) return;
-        setExperts(data?.experts || []);
-        setState({ loading: false, error: "" });
-      } catch (e) {
-        if (!alive) return;
-        setState({ loading: false, error: e.message || "Failed to load experts" });
+    const timer = window.setTimeout(() => {
+      loadExperts();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [loadExperts]);
+
+  // Build JSON-LD for expert directory
+  const expertsJsonLd = experts.length > 0 ? {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "name": "CivilBridge Verified Construction Experts",
+    "itemListElement": experts.slice(0, 10).map((e, i) => ({
+      "@type": "ListItem",
+      "position": i + 1,
+      "item": {
+        "@type": "Person",
+        "name": e.user?.fullName || "Expert",
+        "jobTitle": e.user?.profession || e.providerType,
+        "description": e.bio,
       }
-    })();
-    return () => { alive = false; };
-  }, [role, region, q]);
-
-  const submitRequest = async () => {
-    if (!selected) return;
-    if (!req.name || !req.phone || !req.message) {
-      alert("Fill name, phone and message.");
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      await api.post(`/api/experts/${selected.id}/request`, req);
-      alert("Request sent!");
-      setReq({ name: "", phone: "", message: "" });
-      setSelected(null);
-      setShowRequestModal(false);
-    } catch (err) {
-      alert(err.message || "Failed to send request");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  if (state.loading) {
-    return (
-      <Container>
-        <div style={{ textAlign: 'center', padding: '80px 0' }}>
-          <Spinner size="lg" />
-          <p style={{ marginTop: 16, color: 'var(--color-text-tertiary)' }}>Loading experts...</p>
-        </div>
-      </Container>
-    );
-  }
-
-  if (state.error) {
-    return (
-      <Container>
-        <div style={{ textAlign: 'center', padding: '80px 0' }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
-          <h2 style={{ color: 'var(--color-error)', marginBottom: 8 }}>Error</h2>
-          <p style={{ color: 'var(--color-text-secondary)' }}>{state.error}</p>
-        </div>
-      </Container>
-    );
-  }
+    }))
+  } : undefined;
 
   return (
     <Container>
+      <SEO
+        title="Verified Construction Experts"
+        description="Connect with Rwanda's top architects, engineers, contractors, and suppliers. Book appointments with verified construction professionals."
+        jsonLd={expertsJsonLd}
+      />
       <div className="animate-fadeIn">
         <header style={{ textAlign: 'center', marginBottom: 48 }}>
           <h1 style={{ fontSize: '2.5rem', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: 12 }}>
             Verified Construction Experts
           </h1>
           <p style={{ fontSize: '1.125rem', color: 'var(--color-text-secondary)', maxWidth: 600, margin: '0 auto' }}>
-            Connect with Rwanda's top architects, engineers, contractors, and suppliers
+            Explore real expert profiles, verified credentials, live availability, and completed reviews before you book.
           </p>
         </header>
 
-        {/* Filters */}
         <Card padding="lg" style={{ marginBottom: 32 }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center' }}>
             <div style={{ flex: 1, minWidth: 200 }}>
@@ -97,7 +96,7 @@ export default function Experts() {
                 type="text"
                 placeholder="Search by name, location, or specialty..."
                 value={q}
-                onChange={(e) => setQ(e.target.value)}
+                onChange={(event) => setQ(event.target.value)}
                 style={{
                   width: '100%',
                   padding: '12px 16px',
@@ -111,7 +110,7 @@ export default function Experts() {
             </div>
             <select
               value={role}
-              onChange={(e) => setRole(e.target.value)}
+              onChange={(event) => setRole(event.target.value)}
               style={{
                 padding: '12px 16px',
                 border: '1px solid var(--color-border)',
@@ -123,15 +122,15 @@ export default function Experts() {
               }}
             >
               <option value="all">All roles</option>
-              <option>Structural Engineer</option>
-              <option>Architect</option>
-              <option>Contractor</option>
-              <option>Supplier</option>
-              <option>Surveyor</option>
+              <option value="ENGINEER">Engineer</option>
+              <option value="ARCHITECT">Architect</option>
+              <option value="CONTRACTOR">Contractor</option>
+              <option value="SUPPLIER">Supplier</option>
+              <option value="SURVEYOR">Surveyor</option>
             </select>
             <select
               value={region}
-              onChange={(e) => setRegion(e.target.value)}
+              onChange={(event) => setRegion(event.target.value)}
               style={{
                 padding: '12px 16px',
                 border: '1px solid var(--color-border)',
@@ -143,29 +142,34 @@ export default function Experts() {
               }}
             >
               <option value="all">All regions</option>
-              <option>Kigali</option>
-              <option>Eastern Province</option>
-              <option>Southern Province</option>
-              <option>Northern Province</option>
-              <option>Western Province</option>
+              <option value="Kigali">Kigali</option>
+              <option value="Eastern Province">Eastern Province</option>
+              <option value="Southern Province">Southern Province</option>
+              <option value="Northern Province">Northern Province</option>
+              <option value="Western Province">Western Province</option>
             </select>
-            <Button
-              variant="secondary"
-              onClick={() => { setRole("all"); setRegion("all"); setQ(""); }}
-            >
+            <Button variant="secondary" onClick={() => { setRole('all'); setRegion('all'); setQ(''); }}>
               Clear
             </Button>
           </div>
         </Card>
 
-        {/* Experts Grid */}
-        {experts.length === 0 ? (
+        {state.loading ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 24 }}>
+            {Array.from({ length: 6 }).map((_, index) => <ExpertCardSkeleton key={index} />)}
+          </div>
+        ) : state.error ? (
           <div style={{ textAlign: 'center', padding: '80px 0' }}>
-            <div style={{ fontSize: 64, marginBottom: 16 }}>🔍</div>
+            <h2 style={{ color: 'var(--color-error)', marginBottom: 8 }}>Error</h2>
+            <p style={{ color: 'var(--color-text-secondary)', marginBottom: 16 }}>{state.error}</p>
+            <Button onClick={loadExperts}>Retry</Button>
+          </div>
+        ) : experts.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '80px 0' }}>
             <h3 style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 8 }}>
               No experts found
             </h3>
-            <p style={{ color: 'var(--color-text-secondary)' }}>Try adjusting your filters or search terms</p>
+            <p style={{ color: 'var(--color-text-secondary)' }}>Try adjusting your filters or search terms.</p>
           </div>
         ) : (
           <div style={{
@@ -179,81 +183,86 @@ export default function Experts() {
                 hover
                 className="animate-slideUp"
                 style={{ animationDelay: `${idx * 50}ms` }}
-                onClick={() => setSelected(expert)}
+                onClick={() => navigate(`/experts/${expert.id}`)}
               >
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 16 }}>
-                  <img
-                    src={expert.user.avatarUrl || '/placeholder-avatar.jpg'}
-                    alt={expert.user.fullName}
-                    style={{
-                      width: 64,
-                      height: 64,
-                      borderRadius: '50%',
-                      objectFit: 'cover',
-                      border: '3px solid var(--color-border)',
-                    }}
-                  />
+                  {expert.user?.avatarUrl ? (
+                    <img
+                      src={expert.user.avatarUrl}
+                      alt={expert.user?.fullName || 'Expert'}
+                      style={{
+                        width: 64,
+                        height: 64,
+                        borderRadius: '50%',
+                        objectFit: 'cover',
+                        border: '3px solid var(--color-border)',
+                      }}
+                    />
+                  ) : (
+                    <div
+                      aria-hidden="true"
+                      style={{
+                        width: 64,
+                        height: 64,
+                        borderRadius: '50%',
+                        border: '3px solid var(--color-border)',
+                        background: 'linear-gradient(135deg, var(--color-brand-600), var(--color-brand-400))',
+                        color: '#fff',
+                        display: 'grid',
+                        placeItems: 'center',
+                        fontWeight: 800,
+                      }}
+                    >
+                      {getInitials(expert.user?.fullName)}
+                    </div>
+                  )}
                   <div style={{ flex: 1 }}>
                     <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 4 }}>
-                      {expert.user.fullName}
+                      {expert.user?.fullName}
                     </h3>
                     <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', marginBottom: 8 }}>
-                      {expert.title || expert.user.profession} • {expert.region || expert.user.region}
+                      {expert.headline || expert.user?.profession} | {expert.region?.name || 'Rwanda'}
                     </p>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      <Badge variant="brand" size="sm">{expert.user.profession}</Badge>
-                      {expert.verifiedAt && (
-                        <Badge variant="success" size="sm">✓ Verified</Badge>
-                      )}
-                      <Badge variant="default" size="sm">
-                        {expert.ratingCount || 0} reviews
-                      </Badge>
-                      <Badge variant="default" size="sm">
-                        ⭐ {expert.ratingAvg?.toFixed(1) || "—"}
-                      </Badge>
+                      <Badge variant="brand" size="sm">{expert.user?.profession || expert.providerType || 'Expert'}</Badge>
+                      {expert.verifiedAt && <Badge variant="success" size="sm">Verified</Badge>}
+                      <Badge variant="default" size="sm">{expert.reviewCount || 0} reviews</Badge>
+                      <Badge variant="default" size="sm">{Number(expert.avgRating || 0).toFixed(1)} rating</Badge>
                     </div>
                   </div>
                 </div>
 
-                {expert.bio && (
+                {expert.user?.bio ? (
                   <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', marginBottom: 16, lineHeight: 1.5 }}>
-                    {expert.bio.length > 150 ? `${expert.bio.substring(0, 150)}...` : expert.bio}
+                    {expert.user.bio.length > 150 ? `${expert.user.bio.substring(0, 150)}...` : expert.user.bio}
                   </p>
-                )}
+                ) : null}
 
-                {expert.skills && expert.skills.length > 0 && (
+                {expert.specialties?.length ? (
                   <div style={{ marginBottom: 16 }}>
                     <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 8 }}>
                       Expertise
                     </h4>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      {expert.skills.slice(0, 3).map(skill => (
-                        <Badge key={skill} variant="default" size="sm">
-                          {skill}
-                        </Badge>
+                      {expert.specialties.slice(0, 3).map((skill) => (
+                        <Badge key={skill} variant="default" size="sm">{skill}</Badge>
                       ))}
-                      {expert.skills.length > 3 && (
-                        <Badge variant="default" size="sm">
-                          +{expert.skills.length - 3} more
-                        </Badge>
-                      )}
                     </div>
                   </div>
-                )}
+                ) : null}
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ fontSize: '0.875rem', color: 'var(--color-text-tertiary)' }}>
-                    Available for projects
+                    View profile, reviews, and calendar
                   </div>
                   <Button
                     size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelected(expert);
-                      setShowRequestModal(true);
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      navigate(`/experts/${expert.id}`);
                     }}
                   >
-                    Contact
+                    Open Profile
                   </Button>
                 </div>
               </Card>
@@ -261,85 +270,6 @@ export default function Experts() {
           </div>
         )}
       </div>
-
-      {/* Request Modal */}
-      <Modal
-        isOpen={showRequestModal}
-        onClose={() => setShowRequestModal(false)}
-        title={`Contact ${selected?.user.fullName}`}
-        size="md"
-      >
-        <form onSubmit={submitRequest}>
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: 8, color: 'var(--color-text-primary)' }}>
-              Your Name *
-            </label>
-            <input
-              required
-              value={req.name}
-              onChange={(e) => setReq(prev => ({ ...prev, name: e.target.value }))}
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                border: '1px solid var(--color-border)',
-                borderRadius: '8px',
-                fontSize: '0.875rem',
-              }}
-              placeholder="John Doe"
-            />
-          </div>
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: 8, color: 'var(--color-text-primary)' }}>
-              Phone Number *
-            </label>
-            <input
-              required
-              value={req.phone}
-              onChange={(e) => setReq(prev => ({ ...prev, phone: e.target.value }))}
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                border: '1px solid var(--color-border)',
-                borderRadius: '8px',
-                fontSize: '0.875rem',
-              }}
-              placeholder="+250 788 123 456"
-            />
-          </div>
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: 8, color: 'var(--color-text-primary)' }}>
-              Message *
-            </label>
-            <textarea
-              required
-              value={req.message}
-              onChange={(e) => setReq(prev => ({ ...prev, message: e.target.value }))}
-              rows={4}
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                border: '1px solid var(--color-border)',
-                borderRadius: '8px',
-                fontSize: '0.875rem',
-                resize: 'vertical',
-              }}
-              placeholder="Describe your project needs..."
-            />
-          </div>
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-            <Button
-              variant="ghost"
-              type="button"
-              onClick={() => setShowRequestModal(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={submitting}>
-              {submitting ? <Spinner size="sm" color="white" /> : 'Send Request'}
-            </Button>
-          </div>
-        </form>
-      </Modal>
     </Container>
   );
 }

@@ -25,4 +25,8 @@ export const aiService = {
     // Budget analysis
     analyzeBudget: (data) => api.post("/api/budget/analyze", data),
     getStandardPlans: () => api.get("/api/budget/plans"),
+    analyzePlan: (formData) => api.postForm("/api/ai/analyze-plan", formData),
+    generatePlan: (data) => api.post("/api/ai/generate-plan", data),
+    estimateProject: (data) => api.post("/api/ai/estimate", data),
+    getProviders: () => api.get("/api/ai/providers"),
 };

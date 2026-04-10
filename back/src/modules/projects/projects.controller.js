@@ -1,15 +1,27 @@
 import prisma from "../../config/prisma.js";
 import { protectOwnership } from "../../utils/ownership.js";
+import { notify } from "../realtime/notify.js";
+import { emailService } from "../../services/email.service.js";
 
 // Protected: get user's projects
 export async function getUserProjects(req, res) {
   try {
     const projects = await prisma.project.findMany({
-      where: { ownerId: BigInt(req.user.id) },
+      where: {
+        OR: [
+          { userId: BigInt(req.user.id) },
+          { members: { some: { userId: BigInt(req.user.id) } } },
+        ],
+      },
       include: {
-        members: { select: { id: true } },
-        milestones: { select: { id: true } },
-        documents: { select: { id: true } },
+        region: { select: { id: true, name: true } },
+        _count: {
+          select: {
+            members: true,
+            documents: true,
+            progressLogs: true,
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -63,27 +75,40 @@ export async function createProject(req, res) {
 export async function getProjectById(req, res) {
   try {
     const projectId = BigInt(req.params.id);
-    await protectOwnership(req.user, projectId, "project");
+    await protectOwnership(req.user, projectId, "project", { allowMembers: true });
 
     const project = await prisma.project.findUnique({
       where: { id: projectId },
       include: {
-        owner: { select: { fullName: true, email: true } },
+        user: { select: { id: true, fullName: true, email: true } },
         members: {
           include: {
-            user: { select: { fullName: true, email: true, profession: true, avatarUrl: true } },
+            user: {
+              select: {
+                id: true,
+                fullName: true,
+                email: true,
+                role: true,
+                profile: { select: { profession: true, avatarUrl: true } },
+              },
+            },
           },
         },
-        milestones: { orderBy: { sortOrder: 'asc' } },
         documents: { orderBy: { createdAt: 'desc' } },
-        permits: { orderBy: { createdAt: 'desc' } },
-        progress: { orderBy: { createdAt: 'desc' } },
+        progressLogs: { orderBy: { createdAt: 'desc' } },
+        region: { select: { id: true, name: true, currency: true } },
       },
     });
 
     if (!project) return res.status(404).json({ message: "Project not found" });
 
-    res.json(project);
+    res.json({
+      ...project,
+      owner: project.user,
+      progress: project.progressLogs,
+      permits: [],
+      milestones: project.progressLogs,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Failed to fetch project" });
@@ -143,13 +168,74 @@ export async function addProjectMember(req, res) {
     const projectId = BigInt(req.params.id);
     await protectOwnership(req.user, projectId, "project");
 
-    const { userId, role = "VIEWER" } = req.body;
+    const { userId, role = "VIEWER", memberRole = role || "VIEWER" } = req.body;
+    const memberUserId = BigInt(userId);
+    const normalizedMemberRole = String(memberRole || "VIEWER").toUpperCase();
 
     await prisma.projectMember.upsert({
-      where: { projectId_userId: { projectId, userId: BigInt(userId) } },
-      update: { role },
-      create: { projectId, userId: BigInt(userId), role },
+      where: { projectId_userId: { projectId, userId: memberUserId } },
+      update: { memberRole: normalizedMemberRole },
+      create: { projectId, userId: memberUserId, memberRole: normalizedMemberRole },
     });
+
+    // Emit engineer:assigned when an engineer role is added
+    if (normalizedMemberRole === "ENGINEER") {
+      const [project, engineer] = await Promise.all([
+        prisma.project.findUnique({ where: { id: projectId }, select: { projectName: true, userId: true } }),
+        prisma.user.findUnique({ where: { id: memberUserId }, select: { fullName: true } }),
+      ]);
+
+      const now = new Date().toISOString();
+      const eventPayload = {
+        projectId:    projectId.toString(),
+        projectName:  project?.projectName ?? "",
+        engineerId:   memberUserId.toString(),
+        engineerName: engineer?.fullName ?? "",
+        assignedAt:   now,
+      };
+
+      // Notify the assigned engineer
+      await notify({
+        userId:      memberUserId.toString(),
+        type:        "ENGINEER_ASSIGNED",
+        title:       `You have been assigned to "${project?.projectName ?? "a project"}"`,
+        body:        "You have been assigned as the engineer on this project.",
+        actionUrl:   `/projects/${projectId}`,
+        payloadJson: eventPayload,
+        event:       "engineer:assigned",
+        eventPayload,
+      });
+
+      // Notify the project owner (if different from assignee)
+      if (project?.userId && project.userId !== memberUserId) {
+        await notify({
+          userId:      project.userId.toString(),
+          type:        "ENGINEER_ASSIGNED",
+          title:       `Engineer assigned to "${project?.projectName ?? "your project"}"`,
+          body:        `${engineer?.fullName ?? "An engineer"} has been assigned to your project.`,
+          actionUrl:   `/projects/${projectId}`,
+          payloadJson: eventPayload,
+          event:       "engineer:assigned",
+          eventPayload,
+        });
+      }
+
+      const engineerWithEmail = await prisma.user.findUnique({
+        where: { id: memberUserId },
+        select: { fullName: true, email: true },
+      });
+
+      if (engineerWithEmail?.email) {
+        await emailService.sendProjectAssignedEmail({
+          to: engineerWithEmail.email,
+          professionalName: engineerWithEmail.fullName || "there",
+          projectName: project?.projectName ?? "CivilBridge project",
+          clientName: "CivilBridge Client",
+          role: normalizedMemberRole,
+          projectUrl: `${process.env.APP_BASE_URL || process.env.FRONTEND_URL || "http://localhost:5175"}/projects/${projectId}`,
+        });
+      }
+    }
 
     res.status(201).json({ message: "Member added" });
   } catch (err) {
@@ -162,16 +248,20 @@ export async function addProjectMember(req, res) {
 export async function uploadDocuments(req, res) {
   try {
     const projectId = BigInt(req.params.id);
-    await protectOwnership(req.user, projectId, "project");
+    await protectOwnership(req.user, projectId, "project", { allowMembers: true });
 
     if (!req.files?.length) return res.status(400).json({ message: "No documents uploaded" });
 
     await prisma.projectDocument.createMany({
-      data: req.files.map((file, idx) => ({
+      data: req.files.map((file) => ({
         projectId,
-        fileName: file.originalname,
-        fileUrl: `/uploads/projects/${file.filename}`,
-        uploadedBy: BigInt(req.user.id),
+        userId: BigInt(req.user.id),
+        docType: file.mimetype === "application/pdf" ? "OTHER" : "IMAGE",
+        fileUrl: `/uploads/${file.filename}`,
+        storageKey: file.filename,
+        originalName: file.originalname,
+        mimeType: file.mimetype,
+        fileSizeBytes: BigInt(file.size || 0),
       })),
     });
 
@@ -186,7 +276,7 @@ export async function uploadDocuments(req, res) {
 export async function deleteDocument(req, res) {
   try {
     const docId = BigInt(req.params.docId);
-    const doc = await prisma.projectDocument.findUnique({ where: { id: docId }, select: { projectId: true, uploadedBy: true } });
+    const doc = await prisma.projectDocument.findUnique({ where: { id: docId }, select: { projectId: true } });
     if (!doc) return res.status(404).json({ message: "Document not found" });
     await protectOwnership(req.user, doc.projectId, "project");
 

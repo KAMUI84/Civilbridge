@@ -1,299 +1,411 @@
-// Dashboard Configuration based on user roles
+import { getRoleDashboardKey } from '../../../utils/roles';
+
+const defaultNavigation = {
+  expert: [
+    { id: 'overview', label: 'Overview', shortLabel: 'OV', path: '/dashboard' },
+    { id: 'projects', label: 'Projects', shortLabel: 'PJ', path: '/dashboard/projects' },
+    { id: 'uploads', label: 'Uploads', shortLabel: 'UP', path: '/uploads' },
+    { id: 'messages', label: 'Messages', shortLabel: 'MS', path: '/dashboard/messages' },
+    { id: 'files', label: 'Files', shortLabel: 'FL', path: '/dashboard/files' },
+    { id: 'engineer-system', label: 'Expert Network', shortLabel: 'EN', path: '/dashboard/engineer-system' },
+    { id: 'profile', label: 'Profile', shortLabel: 'PR', path: '/dashboard/profile' },
+  ],
+  client: [
+    { id: 'overview', label: 'Overview', shortLabel: 'OV', path: '/dashboard' },
+    { id: 'projects', label: 'Projects', shortLabel: 'PJ', path: '/dashboard/projects' },
+    { id: 'messages', label: 'Messages', shortLabel: 'MS', path: '/dashboard/messages' },
+    { id: 'payments', label: 'Payments', shortLabel: 'PM', path: '/dashboard/payments' },
+    { id: 'files', label: 'Files', shortLabel: 'FL', path: '/dashboard/files' },
+    { id: 'profile', label: 'Profile', shortLabel: 'PR', path: '/dashboard/profile' },
+  ],
+};
+
 export const getDashboardConfig = (userRole) => {
+  const normalizedRole = String(userRole || '').toUpperCase();
+  const dashboardRole = getRoleDashboardKey(userRole);
+
   const themes = {
-    ADMIN: {
-       background: '#000000', cardBg: '#0a0a0a', border: '#1a1a1a', text: '#ffffff', textMuted: '#a0a0a0', primary: '#3b82f6'
-    },
     SUPER_ADMIN: {
-       background: '#000000', cardBg: '#0a0a0a', border: '#1a1a1a', text: '#ffffff', textMuted: '#a0a0a0', primary: '#3b82f6'
+      background: '#05070d',
+      backgroundAccent: 'radial-gradient(circle at top right, rgba(244,193,79,0.12), transparent 32%), radial-gradient(circle at top left, rgba(138,108,255,0.12), transparent 28%)',
+      cardBg: '#0d1320',
+      border: 'rgba(255,255,255,0.08)',
+      text: '#f8fafc',
+      textMuted: 'rgba(226,232,240,0.62)',
+      primary: '#f4c14f',
+      primaryGlow: 'rgba(244,193,79,0.3)',
+      accent: '#8a6cff',
+      accentSoft: 'rgba(138,108,255,0.18)',
+      surface: 'linear-gradient(180deg, rgba(17,24,39,0.92), rgba(10,14,24,0.92))',
+      sidebar: 'linear-gradient(180deg, rgba(9,12,20,0.98), rgba(8,11,18,0.94))',
+      topbar: 'rgba(7, 11, 18, 0.92)',
+      highlight: '#fff0c8',
+    },
+    ADMIN: {
+      background: '#06080f',
+      backgroundAccent: 'radial-gradient(circle at top right, rgba(244,193,79,0.1), transparent 30%), radial-gradient(circle at top left, rgba(100,181,255,0.1), transparent 24%)',
+      cardBg: '#0d1421',
+      border: 'rgba(255,255,255,0.08)',
+      text: '#f8fafc',
+      textMuted: 'rgba(226,232,240,0.62)',
+      primary: '#f4c14f',
+      primaryGlow: 'rgba(244,193,79,0.28)',
+      accent: '#64b5ff',
+      accentSoft: 'rgba(100,181,255,0.18)',
+      surface: 'linear-gradient(180deg, rgba(16,24,39,0.92), rgba(10,14,22,0.92))',
+      sidebar: 'linear-gradient(180deg, rgba(8,12,20,0.98), rgba(7,10,16,0.94))',
+      topbar: 'rgba(7, 11, 18, 0.92)',
+      highlight: '#fff2d6',
     },
     ENGINEER: {
-       background: '#000000', cardBg: '#0a0a0a', border: '#1a1a1a', text: '#ffffff', textMuted: '#a0a0a0', primary: '#3b82f6'
-    },
-    CLIENT: {
-       background: '#000000', cardBg: '#0a0a0a', border: '#1a1a1a', text: '#ffffff', textMuted: '#a0a0a0', primary: '#3b82f6'
-    },
-    STUDENT: {
-       background: '#000000', cardBg: '#0a0a0a', border: '#1a1a1a', text: '#ffffff', textMuted: '#a0a0a0', primary: '#3b82f6'
-    },
-    VIEWER: {
-       background: '#000000', cardBg: '#0a0a0a', border: '#1a1a1a', text: '#ffffff', textMuted: '#a0a0a0', primary: '#3b82f6'
+      background: '#061018',
+      backgroundAccent: 'radial-gradient(circle at top right, rgba(34,211,238,0.12), transparent 34%), radial-gradient(circle at top left, rgba(132,204,22,0.09), transparent 26%)',
+      cardBg: '#091723',
+      border: 'rgba(255,255,255,0.08)',
+      text: '#eff6ff',
+      textMuted: 'rgba(191,219,254,0.62)',
+      primary: '#22d3ee',
+      primaryGlow: 'rgba(34,211,238,0.28)',
+      accent: '#84cc16',
+      accentSoft: 'rgba(132,204,22,0.16)',
+      surface: 'linear-gradient(180deg, rgba(8,18,30,0.92), rgba(8,15,24,0.92))',
+      sidebar: 'linear-gradient(180deg, rgba(7,15,24,0.98), rgba(8,13,21,0.94))',
+      topbar: 'rgba(7, 15, 24, 0.9)',
+      highlight: '#ccfbf1',
     },
     PROFESSIONAL: {
-       background: '#000000', cardBg: '#0a0a0a', border: '#1a1a1a', text: '#ffffff', textMuted: '#a0a0a0', primary: '#3b82f6'
+      background: '#061018',
+      backgroundAccent: 'radial-gradient(circle at top right, rgba(34,211,238,0.12), transparent 34%), radial-gradient(circle at top left, rgba(132,204,22,0.09), transparent 26%)',
+      cardBg: '#091723',
+      border: 'rgba(255,255,255,0.08)',
+      text: '#eff6ff',
+      textMuted: 'rgba(191,219,254,0.62)',
+      primary: '#22d3ee',
+      primaryGlow: 'rgba(34,211,238,0.28)',
+      accent: '#84cc16',
+      accentSoft: 'rgba(132,204,22,0.16)',
+      surface: 'linear-gradient(180deg, rgba(8,18,30,0.92), rgba(8,15,24,0.92))',
+      sidebar: 'linear-gradient(180deg, rgba(7,15,24,0.98), rgba(8,13,21,0.94))',
+      topbar: 'rgba(7, 15, 24, 0.9)',
+      highlight: '#ccfbf1',
+    },
+    HOME_BUILDER: {
+      background: '#0a1114',
+      backgroundAccent: 'radial-gradient(circle at top right, rgba(16,185,129,0.12), transparent 34%), radial-gradient(circle at top left, rgba(251,191,36,0.08), transparent 24%)',
+      cardBg: '#101a1d',
+      border: 'rgba(255,255,255,0.08)',
+      text: '#f4fdf8',
+      textMuted: 'rgba(209,250,229,0.58)',
+      primary: '#10b981',
+      primaryGlow: 'rgba(16,185,129,0.28)',
+      accent: '#fbbf24',
+      accentSoft: 'rgba(251,191,36,0.16)',
+      surface: 'linear-gradient(180deg, rgba(15,24,28,0.92), rgba(10,17,20,0.92))',
+      sidebar: 'linear-gradient(180deg, rgba(10,18,21,0.98), rgba(9,14,17,0.94))',
+      topbar: 'rgba(10, 18, 21, 0.9)',
+      highlight: '#ecfccb',
+    },
+    CLIENT: {
+      background: '#0a1114',
+      backgroundAccent: 'radial-gradient(circle at top right, rgba(16,185,129,0.12), transparent 34%), radial-gradient(circle at top left, rgba(251,191,36,0.08), transparent 24%)',
+      cardBg: '#101a1d',
+      border: 'rgba(255,255,255,0.08)',
+      text: '#f4fdf8',
+      textMuted: 'rgba(209,250,229,0.58)',
+      primary: '#10b981',
+      primaryGlow: 'rgba(16,185,129,0.28)',
+      accent: '#fbbf24',
+      accentSoft: 'rgba(251,191,36,0.16)',
+      surface: 'linear-gradient(180deg, rgba(15,24,28,0.92), rgba(10,17,20,0.92))',
+      sidebar: 'linear-gradient(180deg, rgba(10,18,21,0.98), rgba(9,14,17,0.94))',
+      topbar: 'rgba(10, 18, 21, 0.9)',
+      highlight: '#ecfccb',
+    },
+    STUDENT: {
+      background: '#070b15',
+      backgroundAccent: 'radial-gradient(circle at top right, rgba(96,165,250,0.12), transparent 32%)',
+      cardBg: '#0c1322',
+      border: 'rgba(255,255,255,0.08)',
+      text: '#f8fafc',
+      textMuted: 'rgba(191,219,254,0.6)',
+      primary: '#60a5fa',
+      primaryGlow: 'rgba(96,165,250,0.22)',
+      accent: '#38bdf8',
+      accentSoft: 'rgba(56,189,248,0.16)',
+      surface: 'linear-gradient(180deg, rgba(15,23,42,0.92), rgba(9,14,24,0.92))',
+      sidebar: 'linear-gradient(180deg, rgba(8,13,24,0.98), rgba(7,11,20,0.94))',
+      topbar: 'rgba(8, 13, 24, 0.9)',
+      highlight: '#dbeafe',
+    },
+    VIEWER: {
+      background: '#070b15',
+      backgroundAccent: 'radial-gradient(circle at top right, rgba(148,163,184,0.1), transparent 32%)',
+      cardBg: '#0c1322',
+      border: 'rgba(255,255,255,0.08)',
+      text: '#f8fafc',
+      textMuted: 'rgba(203,213,225,0.58)',
+      primary: '#94a3b8',
+      primaryGlow: 'rgba(148,163,184,0.22)',
+      accent: '#60a5fa',
+      accentSoft: 'rgba(96,165,250,0.16)',
+      surface: 'linear-gradient(180deg, rgba(15,23,42,0.92), rgba(9,14,24,0.92))',
+      sidebar: 'linear-gradient(180deg, rgba(8,13,24,0.98), rgba(7,11,20,0.94))',
+      topbar: 'rgba(8, 13, 24, 0.9)',
+      highlight: '#e2e8f0',
+    },
+    ARCHITECT: {
+      background: '#061119',
+      backgroundAccent: 'radial-gradient(circle at top right, rgba(14,165,233,0.12), transparent 32%), radial-gradient(circle at top left, rgba(250,204,21,0.08), transparent 24%)',
+      cardBg: '#0b1520',
+      border: 'rgba(255,255,255,0.08)',
+      text: '#f0f9ff',
+      textMuted: 'rgba(186,230,253,0.6)',
+      primary: '#0ea5e9',
+      primaryGlow: 'rgba(14,165,233,0.26)',
+      accent: '#facc15',
+      accentSoft: 'rgba(250,204,21,0.16)',
+      surface: 'linear-gradient(180deg, rgba(10,18,28,0.92), rgba(8,14,22,0.92))',
+      sidebar: 'linear-gradient(180deg, rgba(8,13,21,0.98), rgba(7,11,18,0.94))',
+      topbar: 'rgba(8, 13, 21, 0.9)',
+      highlight: '#e0f2fe',
+    },
+    CONTRACTOR: {
+      background: '#120b08',
+      backgroundAccent: 'radial-gradient(circle at top right, rgba(249,115,22,0.12), transparent 32%), radial-gradient(circle at top left, rgba(251,191,36,0.08), transparent 24%)',
+      cardBg: '#1a120e',
+      border: 'rgba(255,255,255,0.08)',
+      text: '#fff7ed',
+      textMuted: 'rgba(254,215,170,0.6)',
+      primary: '#f97316',
+      primaryGlow: 'rgba(249,115,22,0.26)',
+      accent: '#fbbf24',
+      accentSoft: 'rgba(251,191,36,0.16)',
+      surface: 'linear-gradient(180deg, rgba(24,16,13,0.92), rgba(17,12,10,0.92))',
+      sidebar: 'linear-gradient(180deg, rgba(16,11,9,0.98), rgba(13,9,8,0.94))',
+      topbar: 'rgba(16, 11, 9, 0.9)',
+      highlight: '#ffedd5',
+    },
+    SUPPLIER: {
+      background: '#081210',
+      backgroundAccent: 'radial-gradient(circle at top right, rgba(20,184,166,0.12), transparent 32%), radial-gradient(circle at top left, rgba(56,189,248,0.08), transparent 24%)',
+      cardBg: '#0d1816',
+      border: 'rgba(255,255,255,0.08)',
+      text: '#f0fdfa',
+      textMuted: 'rgba(153,246,228,0.58)',
+      primary: '#14b8a6',
+      primaryGlow: 'rgba(20,184,166,0.26)',
+      accent: '#38bdf8',
+      accentSoft: 'rgba(56,189,248,0.16)',
+      surface: 'linear-gradient(180deg, rgba(12,22,19,0.92), rgba(9,16,14,0.92))',
+      sidebar: 'linear-gradient(180deg, rgba(9,16,14,0.98), rgba(8,13,12,0.94))',
+      topbar: 'rgba(9, 16, 14, 0.9)',
+      highlight: '#ccfbf1',
     },
     AUDITOR: {
-       background: '#000000', cardBg: '#0a0a0a', border: '#1a1a1a', text: '#ffffff', textMuted: '#a0a0a0', primary: '#3b82f6'
+      background: '#070b15',
+      backgroundAccent: 'radial-gradient(circle at top right, rgba(148,163,184,0.11), transparent 32%), radial-gradient(circle at top left, rgba(96,165,250,0.08), transparent 24%)',
+      cardBg: '#0c1322',
+      border: 'rgba(255,255,255,0.08)',
+      text: '#f8fafc',
+      textMuted: 'rgba(203,213,225,0.58)',
+      primary: '#cbd5e1',
+      primaryGlow: 'rgba(203,213,225,0.22)',
+      accent: '#60a5fa',
+      accentSoft: 'rgba(96,165,250,0.16)',
+      surface: 'linear-gradient(180deg, rgba(15,23,42,0.92), rgba(9,14,24,0.92))',
+      sidebar: 'linear-gradient(180deg, rgba(8,13,24,0.98), rgba(7,11,20,0.94))',
+      topbar: 'rgba(8, 13, 24, 0.9)',
+      highlight: '#e2e8f0',
     },
     FINANCE: {
-       background: '#000000', cardBg: '#0a0a0a', border: '#1a1a1a', text: '#ffffff', textMuted: '#a0a0a0', primary: '#3b82f6'
-    }
+      background: '#08100f',
+      backgroundAccent: 'radial-gradient(circle at top right, rgba(16,185,129,0.12), transparent 32%), radial-gradient(circle at top left, rgba(244,193,79,0.08), transparent 24%)',
+      cardBg: '#0d1716',
+      border: 'rgba(255,255,255,0.08)',
+      text: '#f0fdf4',
+      textMuted: 'rgba(187,247,208,0.58)',
+      primary: '#10b981',
+      primaryGlow: 'rgba(16,185,129,0.26)',
+      accent: '#f4c14f',
+      accentSoft: 'rgba(244,193,79,0.16)',
+      surface: 'linear-gradient(180deg, rgba(11,23,21,0.92), rgba(9,16,15,0.92))',
+      sidebar: 'linear-gradient(180deg, rgba(9,16,15,0.98), rgba(7,13,12,0.94))',
+      topbar: 'rgba(9, 16, 15, 0.9)',
+      highlight: '#dcfce7',
+    },
   };
 
-  const activeTheme = themes[userRole?.toUpperCase()] || themes.CLIENT;
+  const activeTheme = themes[normalizedRole] || themes[dashboardRole] || themes.CLIENT;
 
   const baseConfig = {
     theme: {
       primary: activeTheme.primary,
-      secondary: '#6366f1',
+      secondary: '#475569',
       success: '#10b981',
       warning: '#f59e0b',
       danger: '#ef4444',
-      info: '#06b6d4',
-      ...activeTheme
+      info: '#38bdf8',
+      ...activeTheme,
     },
     layout: {
-      sidebarWidth: 240,
-      rightPanelWidth: 320,
-      topBarHeight: 64
-    }
+      sidebarWidth: 248,
+      rightPanelWidth: 380,
+      topBarHeight: 76,
+    },
   };
 
   const roleConfigs = {
     SUPER_ADMIN: {
+      workspaceLabel: 'Executive Control',
+      workspaceDescription: 'System-wide revenue, trust, users, and operational pressure.',
+      quickAction: { label: 'Open analytics', path: '/dashboard/analytics' },
       navigation: [
-        { id: 'overview', label: 'Dashboard Overview', icon: '📊', path: '/dashboard' },
-        { id: 'users', label: 'User Management', icon: '👥', path: '/dashboard/users' },
-        { id: 'projects', label: 'All Projects', icon: '🏗️', path: '/dashboard/projects' },
-        { id: 'analytics', label: 'Analytics', icon: '📈', path: '/dashboard/analytics' },
-        { id: 'payments', label: 'Payments & Revenue', icon: '💰', path: '/dashboard/payments' },
-        { id: 'settings', label: 'System Settings', icon: '⚙️', path: '/dashboard/settings' },
-        { id: 'logs', label: 'Logs & Security', icon: '🔒', path: '/dashboard/logs' }
+        { id: 'overview', label: 'Overview', shortLabel: 'OV', path: '/dashboard' },
+        { id: 'users', label: 'Users', shortLabel: 'US', path: '/dashboard/users' },
+        { id: 'projects', label: 'Projects', shortLabel: 'PJ', path: '/dashboard/projects' },
+        { id: 'uploads', label: 'Catalog', shortLabel: 'CT', path: '/uploads' },
+        { id: 'analytics', label: 'Analytics', shortLabel: 'AN', path: '/dashboard/analytics' },
+        { id: 'payments', label: 'Payments', shortLabel: 'PM', path: '/dashboard/payments' },
+        { id: 'logs', label: 'Logs', shortLabel: 'LG', path: '/dashboard/logs' },
+        { id: 'settings', label: 'Settings', shortLabel: 'ST', path: '/dashboard/settings' },
       ],
-      widgets: [
-        'kpiCards',
-        'revenueChart',
-        'userGrowthChart',
-        'activityFeed',
-        'systemHealth',
-        'recentAlerts'
-      ],
-      permissions: [
-        'manage_users',
-        'view_all_projects',
-        'system_settings',
-        'view_analytics',
-        'manage_transactions',
-        'view_logs'
-      ],
-      rightPanel: {
-        aiAssistant: true,
-        activityFeed: true,
-        quickActions: true,
-        notifications: true
-      }
+      permissions: ['manage_users', 'view_all_projects', 'system_settings', 'view_analytics', 'manage_transactions', 'view_logs'],
+      rightPanel: { notifications: true },
     },
-
     ADMIN: {
+      workspaceLabel: 'Admin Command',
+      workspaceDescription: 'Moderation, verification, benchmarks, and platform operations.',
+      quickAction: { label: 'Open users', path: '/dashboard/users' },
       navigation: [
-        { id: 'overview', label: 'Dashboard', icon: '📊', path: '/dashboard' },
-        { id: 'users', label: 'Users', icon: '👥', path: '/dashboard/users' },
-        { id: 'projects', label: 'Projects', icon: '🏗️', path: '/dashboard/projects' },
-        { id: 'requests', label: 'Requests & Approvals', icon: '✅', path: '/dashboard/requests' },
-        { id: 'reports', label: 'Reports', icon: '📋', path: '/dashboard/reports' }
+        { id: 'overview', label: 'Overview', shortLabel: 'OV', path: '/dashboard' },
+        { id: 'users', label: 'Users', shortLabel: 'US', path: '/dashboard/users' },
+        { id: 'projects', label: 'Projects', shortLabel: 'PJ', path: '/dashboard/projects' },
+        { id: 'uploads', label: 'Catalog', shortLabel: 'CT', path: '/uploads' },
+        { id: 'analytics', label: 'Analytics', shortLabel: 'AN', path: '/dashboard/analytics' },
+        { id: 'payments', label: 'Payments', shortLabel: 'PM', path: '/dashboard/payments' },
+        { id: 'files', label: 'Files', shortLabel: 'FL', path: '/dashboard/files' },
       ],
-      widgets: [
-        'pendingApprovals',
-        'activeUsers',
-        'projectStats',
-        'recentActivity',
-        'issuesReported'
-      ],
-      permissions: [
-        'manage_users',
-        'view_all_projects',
-        'approve_requests',
-        'moderate_content',
-        'view_reports'
-      ],
-      rightPanel: {
-        aiAssistant: true,
-        activityFeed: true,
-        quickActions: true,
-        notifications: true
-      }
+      permissions: ['manage_users', 'view_all_projects', 'approve_requests', 'moderate_content', 'view_reports'],
+      rightPanel: { notifications: true },
     },
-
     ENGINEER: {
-      navigation: [
-        { id: 'overview', label: 'My Dashboard', icon: '📊', path: '/dashboard' },
-        { id: 'projects', label: 'My Projects', icon: '🏗️', path: '/dashboard/projects' },
-        { id: 'tasks', label: 'Tasks & Jobs', icon: '✅', path: '/dashboard/tasks' },
-        { id: 'messages', label: 'Messages', icon: '💬', path: '/dashboard/messages' },
-        { id: 'files', label: 'Files & Uploads', icon: '📁', path: '/dashboard/files' },
-        { id: 'profile', label: 'Profile', icon: '👤', path: '/dashboard/profile' }
-      ],
-      widgets: [
-        'assignedProjects',
-        'deadlineTracker',
-        'progressBars',
-        'taskKanban',
-        'recentFiles'
-      ],
-      permissions: [
-        'create_project',
-        'edit_own_project',
-        'view_own_project',
-        'upload_files',
-        'communicate_clients'
-      ],
-      rightPanel: {
-        aiAssistant: true,
-        activityFeed: false,
-        quickActions: true,
-        notifications: true
-      }
+      workspaceLabel: 'Engineer Workspace',
+      workspaceDescription: 'Reviews, project progress, assigned work, and client delivery.',
+      quickAction: { label: 'Review files', path: '/dashboard/files' },
+      navigation: defaultNavigation.expert,
+      permissions: ['create_project', 'edit_own_project', 'view_own_project', 'upload_files', 'communicate_clients'],
+      rightPanel: { notifications: true },
     },
-
+    PROFESSIONAL: {
+      workspaceLabel: 'Expert Workspace',
+      workspaceDescription: 'Assignments, coordination, and delivery across live projects.',
+      quickAction: { label: 'Open projects', path: '/dashboard/projects' },
+      navigation: defaultNavigation.expert,
+      permissions: ['create_project', 'edit_own_project', 'view_own_project', 'upload_files', 'communicate_clients'],
+      rightPanel: { notifications: true },
+    },
+    ARCHITECT: {
+      workspaceLabel: 'Architect Workspace',
+      workspaceDescription: 'Design review, plans, and coordination for active work.',
+      quickAction: { label: 'Open files', path: '/dashboard/files' },
+      navigation: defaultNavigation.expert,
+      permissions: ['create_project', 'edit_own_project', 'view_own_project', 'upload_files', 'communicate_clients'],
+      rightPanel: { notifications: true },
+    },
+    CONTRACTOR: {
+      workspaceLabel: 'Contractor Workspace',
+      workspaceDescription: 'Delivery, execution, and field updates tied to live projects.',
+      quickAction: { label: 'Open projects', path: '/dashboard/projects' },
+      navigation: defaultNavigation.expert,
+      permissions: ['create_project', 'edit_own_project', 'view_own_project', 'upload_files', 'communicate_clients'],
+      rightPanel: { notifications: true },
+    },
+    SUPPLIER: {
+      workspaceLabel: 'Supplier Workspace',
+      workspaceDescription: 'Requests, files, and coordination from actual demand only.',
+      quickAction: { label: 'Open messages', path: '/dashboard/messages' },
+      navigation: defaultNavigation.expert,
+      permissions: ['create_project', 'edit_own_project', 'view_own_project', 'upload_files', 'communicate_clients'],
+      rightPanel: { notifications: true },
+    },
+    HOME_BUILDER: {
+      workspaceLabel: 'Project Home',
+      workspaceDescription: 'Your live projects, approvals, payments, and construction progress.',
+      quickAction: { label: 'Open projects', path: '/dashboard/projects' },
+      navigation: defaultNavigation.client,
+      permissions: ['create_project', 'edit_own_project', 'view_own_project', 'communicate_clients', 'view_payment_history'],
+      rightPanel: { notifications: true },
+    },
     CLIENT: {
-      navigation: [
-        { id: 'overview', label: 'Dashboard', icon: '📊', path: '/dashboard' },
-        { id: 'projects', label: 'My Projects', icon: '🏗️', path: '/dashboard/projects' },
-        { id: 'requests', label: 'Requests', icon: '📝', path: '/dashboard/requests' },
-        { id: 'messages', label: 'Messages', icon: '💬', path: '/dashboard/messages' },
-        { id: 'payments', label: 'Payments', icon: '💰', path: '/dashboard/payments' },
-        { id: 'reviews', label: 'Reviews', icon: '⭐', path: '/dashboard/reviews' }
-      ],
-      widgets: [
-        'activeProjects',
-        'projectProgress',
-        'notifications',
-        'quickRequest',
-        'paymentStatus'
-      ],
-      permissions: [
-        'create_project',
-        'edit_own_project',
-        'view_own_project',
-        'communicate_clients',
-        'view_payment_history'
-      ],
-      rightPanel: {
-        aiAssistant: false,
-        activityFeed: false,
-        quickActions: true,
-        notifications: true
-      }
+      workspaceLabel: 'Client Workspace',
+      workspaceDescription: 'Your live projects, approvals, payments, and construction progress.',
+      quickAction: { label: 'Open payments', path: '/dashboard/payments' },
+      navigation: defaultNavigation.client,
+      permissions: ['create_project', 'edit_own_project', 'view_own_project', 'communicate_clients', 'view_payment_history'],
+      rightPanel: { notifications: true },
     },
-
     STUDENT: {
+      workspaceLabel: 'Learning Workspace',
+      workspaceDescription: 'A clean space that grows only as you start working.',
+      quickAction: { label: 'Open projects', path: '/dashboard/projects' },
       navigation: [
-        { id: 'overview', label: 'Dashboard', icon: '📊', path: '/dashboard' },
-        { id: 'projects', label: 'Projects & Resources', icon: '📚', path: '/dashboard/projects' }
+        { id: 'overview', label: 'Overview', shortLabel: 'OV', path: '/dashboard' },
+        { id: 'projects', label: 'Projects', shortLabel: 'PJ', path: '/dashboard/projects' },
       ],
-      widgets: [
-        'learningProgress',
-        'savedResources'
-      ],
-      permissions: [
-        'browse_public',
-        'login_access',
-        'view_study_materials'
-      ],
-      rightPanel: {
-        aiAssistant: true,
-        activityFeed: false,
-        quickActions: false,
-        notifications: true
-      }
+      permissions: ['browse_public', 'login_access', 'view_study_materials'],
+      rightPanel: { notifications: true },
     },
-
     VIEWER: {
+      workspaceLabel: 'Workspace',
+      workspaceDescription: 'A simple environment focused on real access only.',
+      quickAction: { label: 'Open projects', path: '/dashboard/projects' },
       navigation: [
-        { id: 'overview', label: 'Dashboard', icon: '📊', path: '/dashboard' },
-        { id: 'projects', label: 'Projects', icon: '🏗️', path: '/dashboard/projects' }
+        { id: 'overview', label: 'Overview', shortLabel: 'OV', path: '/dashboard' },
+        { id: 'projects', label: 'Projects', shortLabel: 'PJ', path: '/dashboard/projects' },
       ],
-      widgets: [
-        'publicProjects',
-        'basicStats'
-      ],
-      permissions: [
-        'browse_public',
-        'login_access'
-      ],
-      rightPanel: {
-        aiAssistant: false,
-        activityFeed: false,
-        quickActions: false,
-        notifications: false
-      }
+      permissions: ['browse_public', 'login_access'],
+      rightPanel: { notifications: false },
     },
-
     AUDITOR: {
+      workspaceLabel: 'Audit Workspace',
+      workspaceDescription: 'Oversight, logs, analytics, and review signals.',
+      quickAction: { label: 'Open logs', path: '/dashboard/logs' },
       navigation: [
-        { id: 'overview', label: 'Dashboard', icon: '📊', path: '/dashboard' },
-        { id: 'projects', label: 'All Projects', icon: '🏗️', path: '/dashboard/projects' },
-        { id: 'reports', label: 'Audit Reports', icon: '📋', path: '/dashboard/reports' },
-        { id: 'compliance', label: 'Compliance', icon: '✅', path: '/dashboard/compliance' }
+        { id: 'overview', label: 'Overview', shortLabel: 'OV', path: '/dashboard' },
+        { id: 'projects', label: 'Projects', shortLabel: 'PJ', path: '/dashboard/projects' },
+        { id: 'analytics', label: 'Analytics', shortLabel: 'AN', path: '/dashboard/analytics' },
+        { id: 'logs', label: 'Logs', shortLabel: 'LG', path: '/dashboard/logs' },
       ],
-      widgets: [
-        'projectAudit',
-        'complianceStatus',
-        'riskAssessment',
-        'auditLogs'
-      ],
-      permissions: [
-        'view_any_project',
-        'view_reports',
-        'view_analytics',
-        'view_logs'
-      ],
-      rightPanel: {
-        aiAssistant: false,
-        activityFeed: false,
-        quickActions: false,
-        notifications: true
-      }
+      permissions: ['view_any_project', 'view_reports', 'view_analytics', 'view_logs'],
+      rightPanel: { notifications: true },
     },
-
     FINANCE: {
+      workspaceLabel: 'Finance Workspace',
+      workspaceDescription: 'Revenue, transactions, and payment movement from live activity.',
+      quickAction: { label: 'Open payments', path: '/dashboard/payments' },
       navigation: [
-        { id: 'overview', label: 'Dashboard', icon: '📊', path: '/dashboard' },
-        { id: 'transactions', label: 'Transactions', icon: '💰', path: '/dashboard/transactions' },
-        { id: 'reports', label: 'Financial Reports', icon: '📋', path: '/dashboard/reports' },
-        { id: 'invoices', label: 'Invoices', icon: '🧾', path: '/dashboard/invoices' }
+        { id: 'overview', label: 'Overview', shortLabel: 'OV', path: '/dashboard' },
+        { id: 'payments', label: 'Payments', shortLabel: 'PM', path: '/dashboard/payments' },
+        { id: 'analytics', label: 'Analytics', shortLabel: 'AN', path: '/dashboard/analytics' },
+        { id: 'files', label: 'Files', shortLabel: 'FL', path: '/dashboard/files' },
       ],
-      widgets: [
-        'revenueOverview',
-        'transactionStats',
-        'paymentMethods',
-        'financialReports'
-      ],
-      permissions: [
-        'manage_transactions',
-        'view_payment_history',
-        'generate_reports',
-        'view_analytics'
-      ],
-      rightPanel: {
-        aiAssistant: false,
-        activityFeed: false,
-        quickActions: true,
-        notifications: true
-      }
-    }
+      permissions: ['manage_transactions', 'view_payment_history', 'generate_reports', 'view_analytics'],
+      rightPanel: { notifications: true },
+    },
   };
 
   return {
     ...baseConfig,
-    ...roleConfigs[userRole?.toUpperCase()] || roleConfigs.CLIENT
+    ...(roleConfigs[normalizedRole] || roleConfigs[dashboardRole] || roleConfigs.CLIENT),
   };
 };
 
-// Helper function to check if user has permission
 export const hasPermission = (userRole, permission) => {
   const config = getDashboardConfig(userRole);
   return config.permissions.includes(permission);
 };
 
-// Helper function to get navigation items for role
 export const getNavigationItems = (userRole) => {
   const config = getDashboardConfig(userRole);
   return config.navigation;
-};
-
-// Helper function to get widgets for role
-export const getWidgets = (userRole) => {
-  const config = getDashboardConfig(userRole);
-  return config.widgets;
 };

@@ -155,9 +155,6 @@ export default function DashboardLayout() {
   const { pathname } = useLocation();
   const meta = ROLE_META[role] ?? ROLE_META.CLIENT;
 
-  // Admins go to their own layout
-  if (role === "ADMIN") return <Navigate to="/admin" replace />;
-
   const visibleNav = NAV_ITEMS.filter((item) => item.roles.includes(role));
 
   return (

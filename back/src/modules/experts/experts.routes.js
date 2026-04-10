@@ -3,13 +3,14 @@ import { protect } from "../../middlewares/auth.js";
 import { uploadSingle } from "../../middlewares/upload.js";
 import {
   getExperts, getExpertById, applyAsExpert, updateExpertProfile,
-  createReview, updateReview, deleteReview,
+  createReview, updateReview, deleteReview, getReviewEligibilityHandler,
 } from "./experts.controller.js";
 
 const router = Router();
 
 router.get("/", getExperts);
 router.get("/:id", getExpertById);
+router.get("/:id/review-eligibility", protect, getReviewEligibilityHandler);
 router.post("/apply", protect, uploadSingle("verificationDoc"), applyAsExpert);
 router.put("/profile", protect, uploadSingle("avatar"), updateExpertProfile);
 router.post("/:id/reviews", protect, createReview);

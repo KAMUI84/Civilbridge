@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useGoogleLogin } from '@react-oauth/google';
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../context/useAuth";
 import { api } from "../../services/apiClientService";
 import civilbridge from "/civilbridge.png";
+import SEO from "../../components/seo/SEO";
 
 const STEP_DETAILS = 1;
 const STEP_OTP = 2;
 
 export default function Register() {
   const navigate = useNavigate();
-  const { register, googleLogin } = useAuth();
+  const { googleLogin } = useAuth();
   const [step, setStep] = useState(STEP_DETAILS);
   const [fullName, setFullName] = useState("");
   const [emailOrPhone, setEmailOrPhone] = useState("");
@@ -22,7 +23,6 @@ export default function Register() {
   // Resend OTP state
   const [resendLoading, setResendLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
-  const [lastOtpTime, setLastOtpTime] = useState(null);
   
   // Terms & Conditions state
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -67,7 +67,6 @@ export default function Register() {
         
         // Start countdown for resend (60 seconds)
         setCountdown(60);
-        setLastOtpTime(Date.now());
       } else {
         throw new Error("Failed to send OTP");
       }
@@ -102,8 +101,6 @@ export default function Register() {
       if (data.success) {
         // Restart countdown
         setCountdown(60);
-        setLastOtpTime(Date.now());
-        
         // Clear any previous OTP input
         setOtp("");
       } else {
@@ -178,6 +175,7 @@ export default function Register() {
 
   return (
     <div style={S.page}>
+      <SEO title="Create Account" description="Create your CivilBridge account." noindex />
       <div style={S.left}>
         <div style={S.formWrap}>
           <div style={S.logoRow}>
@@ -192,7 +190,9 @@ export default function Register() {
           {step === STEP_DETAILS ? (
             <>
               <h1 style={S.heading}>Create an account</h1>
-              <p style={S.subtext}>Join CivilBridge to unlock your platform access</p>
+              <p style={S.subtext}>
+                Choose how you want to create your account. Google is quickest; email/phone uses a verification code to prevent spam.
+              </p>
               <button type="button" onClick={handleGoogleClick} style={S.googleBtn} disabled={loading}>Sign up with Google</button>
               <div style={S.divider}><div style={S.divLine} /><span style={S.divText}>OR</span><div style={S.divLine} /></div>
               {err && <div style={S.error}>{err}</div>}

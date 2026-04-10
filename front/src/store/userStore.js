@@ -13,7 +13,7 @@ export function getUser() {
   }
 }
 
-export function setAuth({ token, user }) {
+export function setAuth({ user }) {
   // Token is stored server-side in an httpOnly cookie; keep only user profile.
   localStorage.setItem(USER_KEY, JSON.stringify(user));
   window.dispatchEvent(new Event("cb_auth_changed"));

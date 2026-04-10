@@ -1,29 +1,34 @@
-import React, { useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useLocation } from "react-router-dom";
 
+const MotionDiv = motion.div;
+
+const variants = {
+  initial: { opacity: 0, y: 14 },
+  animate: { opacity: 1, y: 0 },
+  exit:    { opacity: 0, y: -8 },
+};
+
+/**
+ * Wraps page content with a fade-slide animation.
+ * Uses the pathname as key so navigating between routes triggers re-animation.
+ */
 const PageTransition = ({ children }) => {
-  const containerRef = useRef();
-
-  useEffect(() => {
-    // Simple fade-in animation without GSAP
-    const container = containerRef.current;
-    if (container) {
-      container.style.opacity = "0";
-      container.style.transform = "translateY(20px)";
-      
-      const timer = setTimeout(() => {
-        container.style.transition = "all 0.6s ease";
-        container.style.opacity = "1";
-        container.style.transform = "translateY(0)";
-      }, 100);
-      
-      return () => clearTimeout(timer);
-    }
-  }, []);
-
+  const location = useLocation();
   return (
-    <div ref={containerRef} style={{ width: "100%", height: "100%" }}>
-      {children}
-    </div>
+    <AnimatePresence mode="wait" initial={false}>
+      <MotionDiv
+        key={location.pathname}
+        variants={variants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        transition={{ duration: 0.25, ease: "easeOut" }}
+        style={{ width: "100%", minHeight: "100%" }}
+      >
+        {children}
+      </MotionDiv>
+    </AnimatePresence>
   );
 };
 

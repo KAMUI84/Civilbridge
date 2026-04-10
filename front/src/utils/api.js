@@ -1,5 +1,3 @@
-import { getToken } from "../store/authStore";
-
 const BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000";
 
 export async function api(path, options = {}) {

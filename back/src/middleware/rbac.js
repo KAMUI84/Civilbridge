@@ -1,79 +1,64 @@
-// RBAC Middleware - Role-Based Access Control
 import prisma from "../config/prisma.js";
+import { ADMIN_ROLES } from "../constants/roles.js";
 
-// Permission matrix for each role
+const BASIC_PERMISSIONS = ["BROWSE_PUBLIC", "LOGIN_ACCESS"];
+const COLLABORATION_PERMISSIONS = ["COMMUNICATE_CLIENTS", "UPLOAD_FILES"];
+const OWN_PROJECT_PERMISSIONS = [
+  "CREATE_PROJECT",
+  "EDIT_OWN_PROJECT",
+  "DELETE_OWN_PROJECT",
+  "VIEW_OWN_PROJECT",
+];
+
 const ROLE_PERMISSIONS = {
   SUPER_ADMIN: [
-    // User Management
-    'MANAGE_USERS', 'ASSIGN_ROLES',
-    // Project Management
-    'CREATE_PROJECT', 'EDIT_OWN_PROJECT', 'EDIT_ANY_PROJECT', 
-    'DELETE_OWN_PROJECT', 'DELETE_ANY_PROJECT', 'VIEW_OWN_PROJECT', 'VIEW_ANY_PROJECT',
-    // Content Management
-    'APPROVE_REQUESTS', 'MODERATE_CONTENT',
-    // Analytics & Reports
-    'VIEW_ANALYTICS', 'VIEW_REPORTS', 'GENERATE_REPORTS',
-    // System Management
-    'SYSTEM_SETTINGS', 'MANAGE_API_KEYS', 'VIEW_LOGS',
-    // Financial
-    'MANAGE_TRANSACTIONS', 'VIEW_PAYMENT_HISTORY',
-    // Communication
-    'COMMUNICATE_CLIENTS', 'UPLOAD_FILES',
-    // Basic Operations
-    'BROWSE_PUBLIC', 'LOGIN_ACCESS'
+    "MANAGE_USERS",
+    "ASSIGN_ROLES",
+    "CREATE_PROJECT",
+    "EDIT_OWN_PROJECT",
+    "EDIT_ANY_PROJECT",
+    "DELETE_OWN_PROJECT",
+    "DELETE_ANY_PROJECT",
+    "VIEW_OWN_PROJECT",
+    "VIEW_ANY_PROJECT",
+    "APPROVE_REQUESTS",
+    "MODERATE_CONTENT",
+    "VIEW_ANALYTICS",
+    "VIEW_REPORTS",
+    "GENERATE_REPORTS",
+    "SYSTEM_SETTINGS",
+    "MANAGE_API_KEYS",
+    "VIEW_LOGS",
+    "MANAGE_TRANSACTIONS",
+    "VIEW_PAYMENT_HISTORY",
+    ...COLLABORATION_PERMISSIONS,
+    ...BASIC_PERMISSIONS,
   ],
-  
   ADMIN: [
-    // User Management (except Super Admin)
-    'MANAGE_USERS',
-    // Project Management
-    'CREATE_PROJECT', 'EDIT_ANY_PROJECT', 'DELETE_ANY_PROJECT', 'VIEW_ANY_PROJECT',
-    // Content Management
-    'APPROVE_REQUESTS', 'MODERATE_CONTENT',
-    // Analytics & Reports
-    'VIEW_ANALYTICS', 'VIEW_REPORTS',
-    // Communication
-    'COMMUNICATE_CLIENTS', 'UPLOAD_FILES',
-    // Basic Operations
-    'BROWSE_PUBLIC', 'LOGIN_ACCESS'
+    "MANAGE_USERS",
+    "ASSIGN_ROLES",
+    "CREATE_PROJECT",
+    "EDIT_ANY_PROJECT",
+    "DELETE_ANY_PROJECT",
+    "VIEW_ANY_PROJECT",
+    "APPROVE_REQUESTS",
+    "MODERATE_CONTENT",
+    "VIEW_ANALYTICS",
+    "VIEW_REPORTS",
+    ...COLLABORATION_PERMISSIONS,
+    ...BASIC_PERMISSIONS,
   ],
-  
-  ENGINEER: [
-    // Project Management (own projects)
-    'CREATE_PROJECT', 'EDIT_OWN_PROJECT', 'DELETE_OWN_PROJECT', 'VIEW_OWN_PROJECT',
-    // Communication
-    'COMMUNICATE_CLIENTS', 'UPLOAD_FILES',
-    // Basic Operations
-    'BROWSE_PUBLIC', 'LOGIN_ACCESS'
-  ],
-  
-  CLIENT: [
-    // Project Management (own projects)
-    'CREATE_PROJECT', 'EDIT_OWN_PROJECT', 'DELETE_OWN_PROJECT', 'VIEW_OWN_PROJECT',
-    // Communication
-    'COMMUNICATE_CLIENTS', 'UPLOAD_FILES',
-    // Basic Operations
-    'BROWSE_PUBLIC', 'LOGIN_ACCESS'
-  ],
-  
-  VIEWER: [
-    // Basic Operations only
-    'BROWSE_PUBLIC', 'LOGIN_ACCESS'
-  ],
-  
-  AUDITOR: [
-    // Read-only access to most things
-    'VIEW_ANY_PROJECT', 'VIEW_REPORTS', 'VIEW_ANALYTICS', 'VIEW_LOGS',
-    // Basic Operations
-    'BROWSE_PUBLIC', 'LOGIN_ACCESS'
-  ],
-  
-  FINANCE: [
-    // Financial permissions
-    'MANAGE_TRANSACTIONS', 'VIEW_PAYMENT_HISTORY', 'GENERATE_REPORTS',
-    // Basic Operations
-    'BROWSE_PUBLIC', 'LOGIN_ACCESS'
-  ]
+  PROFESSIONAL: [...OWN_PROJECT_PERMISSIONS, ...COLLABORATION_PERMISSIONS, ...BASIC_PERMISSIONS],
+  ENGINEER: [...OWN_PROJECT_PERMISSIONS, ...COLLABORATION_PERMISSIONS, ...BASIC_PERMISSIONS],
+  ARCHITECT: [...OWN_PROJECT_PERMISSIONS, ...COLLABORATION_PERMISSIONS, ...BASIC_PERMISSIONS],
+  CONTRACTOR: [...OWN_PROJECT_PERMISSIONS, ...COLLABORATION_PERMISSIONS, ...BASIC_PERMISSIONS],
+  SUPPLIER: ["VIEW_OWN_PROJECT", ...COLLABORATION_PERMISSIONS, ...BASIC_PERMISSIONS],
+  CLIENT: [...OWN_PROJECT_PERMISSIONS, ...COLLABORATION_PERMISSIONS, "VIEW_PAYMENT_HISTORY", ...BASIC_PERMISSIONS],
+  HOME_BUILDER: [...OWN_PROJECT_PERMISSIONS, ...COLLABORATION_PERMISSIONS, "VIEW_PAYMENT_HISTORY", ...BASIC_PERMISSIONS],
+  VIEWER: [...BASIC_PERMISSIONS],
+  AUDITOR: ["VIEW_ANY_PROJECT", "VIEW_REPORTS", "VIEW_ANALYTICS", "VIEW_LOGS", ...BASIC_PERMISSIONS],
+  FINANCE: ["MANAGE_TRANSACTIONS", "VIEW_PAYMENT_HISTORY", "GENERATE_REPORTS", "VIEW_ANALYTICS", ...BASIC_PERMISSIONS],
+  STUDENT: [...BASIC_PERMISSIONS],
 };
 
 /**
@@ -81,7 +66,6 @@ const ROLE_PERMISSIONS = {
  */
 export async function hasPermission(userId, permission) {
   try {
-    // Get user with role
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { role: true, isActive: true }
@@ -91,7 +75,6 @@ export async function hasPermission(userId, permission) {
       return false;
     }
     
-    // Check if role has permission
     const rolePermissions = ROLE_PERMISSIONS[user.role] || [];
     return rolePermissions.includes(permission);
     
@@ -114,78 +97,81 @@ export async function hasAnyPermission(userId, permissions) {
 }
 
 /**
- * Middleware to require specific permission
+ * Middleware to require specific permission.
+ * SUPER_ADMIN short-circuits immediately — no DB query needed.
  */
 export const requirePermission = (permission) => {
   return async (req, res, next) => {
     try {
-      // Get user from JWT token or session
       const userId = req.user?.id;
-      
+
       if (!userId) {
-        return res.status(401).json({ 
-          success: false, 
-          message: 'Authentication required' 
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication required',
         });
       }
-      
-      // Check permission
+
+      if (req.user?.role === 'SUPER_ADMIN') return next();
+
       const authorized = await hasPermission(userId, permission);
-      
+
       if (!authorized) {
-        return res.status(403).json({ 
-          success: false, 
+        return res.status(403).json({
+          success: false,
           message: 'Insufficient permissions',
-          required: permission 
+          required: permission,
         });
       }
-      
-      // Add user info to request for downstream use
+
       req.user = { ...req.user, permission };
       next();
-      
+
     } catch (error) {
       console.error('Permission middleware error:', error);
-      res.status(500).json({ 
-        success: false, 
-        message: 'Permission check failed' 
+      res.status(500).json({
+        success: false,
+        message: 'Permission check failed',
       });
     }
   };
 };
 
 /**
- * Middleware to require any of multiple permissions
+ * Middleware to require any of multiple permissions.
+ * SUPER_ADMIN short-circuits immediately.
  */
 export const requireAnyPermission = (permissions) => {
   return async (req, res, next) => {
     try {
       const userId = req.user?.id;
-      
+
       if (!userId) {
-        return res.status(401).json({ 
-          success: false, 
-          message: 'Authentication required' 
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication required',
         });
       }
-      
+
+      if (req.user?.role === 'SUPER_ADMIN') return next();
+
       const authorized = await hasAnyPermission(userId, permissions);
-      
+
       if (!authorized) {
-        return res.status(403).json({ 
-          success: false, 
+        return res.status(403).json({
+          success: false,
           message: 'Insufficient permissions',
-          required: permissions 
+          required: permissions,
         });
       }
-      
+
       next();
-      
+
     } catch (error) {
       console.error('Permission middleware error:', error);
-      res.status(500).json({ 
-        success: false, 
-        message: 'Permission check failed' 
+      res.status(500).json({
+        success: false,
+        message: 'Permission check failed',
       });
     }
   };
@@ -197,8 +183,8 @@ export const requireAnyPermission = (permissions) => {
 export const requireOwnershipOrAdmin = (resourceIdParam = 'id', resourceType = 'project') => {
   return async (req, res, next) => {
     try {
-      const userId = req.user?.id;
-      const resourceId = parseInt(req.params[resourceIdParam]);
+      const userId = Number(req.user?.id);
+      const resourceId = Number(req.params[resourceIdParam]);
       
       if (!userId) {
         return res.status(401).json({ 
@@ -207,11 +193,8 @@ export const requireOwnershipOrAdmin = (resourceIdParam = 'id', resourceType = '
         });
       }
       
-      // Check if user is admin or super admin
-      const isAdmin = await hasAnyPermission(userId, ['MANAGE_USERS', 'EDIT_ANY_PROJECT']);
-      
-      if (isAdmin) {
-        return next(); // Admins can access any resource
+      if (ADMIN_ROLES.includes(req.user?.role)) {
+        return next();
       }
       
       // Check ownership based on resource type
@@ -221,9 +204,9 @@ export const requireOwnershipOrAdmin = (resourceIdParam = 'id', resourceType = '
         case 'project':
           const project = await prisma.project.findUnique({
             where: { id: resourceId },
-            select: { creatorId: true }
+            select: { userId: true }
           });
-          isOwner = project?.creatorId === userId;
+          isOwner = Number(project?.userId) === userId;
           break;
           
         case 'user':
@@ -288,7 +271,8 @@ export async function initializeRolePermissions() {
     // Clear existing permissions
     await prisma.rolePermission.deleteMany({});
     
-    // Insert all role permissions
+    let createdMappings = 0;
+
     for (const [role, permissions] of Object.entries(ROLE_PERMISSIONS)) {
       for (const permission of permissions) {
         let permRec = await prisma.permission.findUnique({ where: { name: permission } });
@@ -298,6 +282,7 @@ export async function initializeRolePermissions() {
         await prisma.rolePermission.create({
           data: { role, permissionId: permRec.id }
         });
+        createdMappings += 1;
       }
     }
     

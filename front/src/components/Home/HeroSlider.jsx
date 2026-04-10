@@ -13,7 +13,7 @@ const SLIDES = [
       { label: "How it Works", to: "/#how-it-works", variant: "ghost" },
     ],
     image: "https://images.unsplash.com/photo-1541888946425-d81bb840317e?q=85&w=2400&auto=format&fit=crop",
-    stat: { value: "18K+", label: "Projects completed" },
+    stat: { value: "Live", label: "marketplace and planning workspace" },
   },
   {
     badge: "AI-Powered Planning",
@@ -25,7 +25,7 @@ const SLIDES = [
       { label: "Learn More", to: "/intelligence", variant: "ghost" },
     ],
     image: "https://images.unsplash.com/photo-1677442135722-5f1a1d2f0688?q=85&w=2400&auto=format&fit=crop",
-    stat: { value: "98%", label: "Accuracy rate" },
+    stat: { value: "Ready", label: "for user-driven planning" },
   },
   {
     badge: "Expert Network",
@@ -37,7 +37,7 @@ const SLIDES = [
       { label: "Join Network", to: "/register", variant: "ghost" },
     ],
     image: "https://images.unsplash.com/photo-1581094794329-c8112a89af12?q=85&w=2400&auto=format&fit=crop",
-    stat: { value: "2,400+", label: "Verified experts" },
+    stat: { value: "Verified", label: "expert review workflow" },
   },
   {
     badge: "Blueprint Library",
@@ -49,7 +49,7 @@ const SLIDES = [
       { label: "Upload Plans", to: "/uploads", variant: "ghost" },
     ],
     image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=85&w=2400&auto=format&fit=crop",
-    stat: { value: "500+", label: "Premium plans" },
+    stat: { value: "Current", label: "library and plan workflow" },
   },
   {
     badge: "Cost Control",
@@ -58,10 +58,10 @@ const SLIDES = [
     desc: "Estimate project cost, materials, and timeline — transparently, accurately, and instantly.",
     ctas: [
       { label: "Get an Estimate", to: "/estimator", variant: "primary" },
-      { label: "See sample", to: "/estimator", variant: "ghost" },
+      { label: "Open estimator", to: "/estimator", variant: "ghost" },
     ],
-    image: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=85&w=2400&auto=format&fit=cropimport",
-    stat: { value: "97%", label: "Client satisfaction" },
+    image: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=85&w=2400&auto=format&fit=crop",
+    stat: { value: "Real", label: "inputs from your project" },
   },
 ];
 
@@ -339,7 +339,6 @@ export default function HeroSlider() {
 
   useEffect(() => {
     clearInterval(progressRef.current);
-    setProgress(0);
 
     const tick = 50;
     progressRef.current = setInterval(() => {

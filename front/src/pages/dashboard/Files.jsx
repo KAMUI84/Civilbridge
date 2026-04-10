@@ -1,217 +1,245 @@
-// File Upload System with Drag & Drop
-import React, { useState, useCallback } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import documentsService from '../../services/documentsService';
+import { projectsService } from '../../services/projectsService';
 
 export default function Files() {
-  const { dashboardConfig } = useOutletContext();
   const [files, setFiles] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [selectedProjectId, setSelectedProjectId] = useState('');
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [typeFilter, setTypeFilter] = useState('ALL');
+  const [state, setState] = useState({ loading: true, error: '' });
+  const [uploadMessage, setUploadMessage] = useState('');
 
-  // Mock files data
-  const mockFiles = [
-    { id: 1, name: 'Bridge_Design_Plan.pdf', size: '2.4 MB', type: 'PDF', uploadedBy: 'Sarah Wilson', uploadedAt: '2024-03-19', project: 'Bridge Design Project' },
-    { id: 2, name: 'Construction_Schedule.xlsx', size: '1.1 MB', type: 'Excel', uploadedBy: 'Mike Johnson', uploadedAt: '2024-03-18', project: 'Road Construction' },
-    { id: 3, name: 'Site_Photos.zip', size: '15.7 MB', type: 'ZIP', uploadedBy: 'David Chen', uploadedAt: '2024-03-17', project: 'Infrastructure Audit' },
-    { id: 4, name: 'Technical_Specifications.docx', size: '856 KB', type: 'Word', uploadedBy: 'John Doe', uploadedAt: '2024-03-16', project: 'Bridge Design Project' }
-  ];
+  const loadFiles = useCallback(async () => {
+    try {
+      setState({ loading: true, error: '' });
+      const [documentsResponse, projectsResponse] = await Promise.all([
+        documentsService.list(selectedProjectId ? { project_id: selectedProjectId } : {}),
+        projectsService.getUserProjects().catch(() => ({ projects: [] })),
+      ]);
+      setFiles(documentsResponse?.documents || []);
+      setProjects(projectsResponse?.projects || projectsResponse || []);
+      setState({ loading: false, error: '' });
+    } catch (error) {
+      setState({ loading: false, error: error.message || 'Failed to load files.' });
+    }
+  }, [selectedProjectId]);
 
-  React.useEffect(() => {
-    setFiles(mockFiles);
-  }, []);
+  useEffect(() => {
+    loadFiles();
+  }, [loadFiles]);
 
-  // Drag and drop handlers
-  const handleDrag = useCallback((e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
+  const handleDrag = useCallback((event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.type === 'dragenter' || event.type === 'dragover') {
       setDragActive(true);
-    } else if (e.type === 'dragleave') {
+    } else if (event.type === 'dragleave') {
       setDragActive(false);
     }
   }, []);
 
-  const handleDrop = useCallback((e) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const uploadFiles = useCallback(async (fileList) => {
+    if (!selectedProjectId) {
+      setUploadMessage('Select a project before uploading documents.');
+      return;
+    }
+
+    try {
+      setUploading(true);
+      setUploadMessage('');
+      await documentsService.uploadToProject(selectedProjectId, fileList);
+      setUploadMessage('Files uploaded successfully.');
+      await loadFiles();
+    } catch (error) {
+      setUploadMessage(error.message || 'Failed to upload files.');
+    } finally {
+      setUploading(false);
+    }
+  }, [loadFiles, selectedProjectId]);
+
+  const handleDrop = useCallback((event) => {
+    event.preventDefault();
+    event.stopPropagation();
     setDragActive(false);
 
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFiles(e.dataTransfer.files);
+    if (event.dataTransfer.files && event.dataTransfer.files[0]) {
+      uploadFiles(event.dataTransfer.files);
     }
-  }, []);
+  }, [uploadFiles]);
 
-  const handleFiles = (fileList) => {
-    const newFiles = Array.from(fileList).map(file => ({
-      id: Date.now() + Math.random(),
-      name: file.name,
-      size: formatFileSize(file.size),
-      type: file.type.split('/')[1]?.toUpperCase() || 'FILE',
-      uploadedBy: 'Current User',
-      uploadedAt: new Date().toISOString().split('T')[0],
-      project: 'Unassigned'
-    }));
-
-    setFiles([...newFiles, ...files]);
-  };
-
-  const formatFileSize = (bytes) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const handleFileSelect = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      handleFiles(e.target.files);
+  const handleFileSelect = (event) => {
+    if (event.target.files && event.target.files[0]) {
+      uploadFiles(event.target.files);
     }
   };
 
-  const filteredFiles = files.filter(file =>
-    file.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    file.project.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleDownload = async (documentId) => {
+    try {
+      const response = await documentsService.download(documentId);
+      if (response?.url) {
+        window.open(response.url, '_blank', 'noopener,noreferrer');
+      }
+    } catch (error) {
+      setUploadMessage(error.message || 'Failed to download file.');
+    }
+  };
+
+  const filteredFiles = useMemo(() => {
+    return files.filter((file) => {
+      const matchesSearch =
+        String(file.originalName || file.fileUrl || '')
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        String(file.project?.projectName || '')
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase());
+      const matchesType = typeFilter === 'ALL' || String(file.docType || '').toUpperCase() === typeFilter;
+      return matchesSearch && matchesType;
+    });
+  }, [files, searchTerm, typeFilter]);
 
   const getFileIcon = (type) => {
     const icons = {
-      'PDF': '📄',
-      'EXCEL': '📊',
-      'WORD': '📝',
-      'ZIP': '📦',
-      'IMAGE': '🖼️',
-      'VIDEO': '🎥',
-      'AUDIO': '🎵'
+      BOQ_PDF: 'PDF',
+      PLAN_UPLOAD: 'PLN',
+      FEASIBILITY_PDF: 'FSB',
+      ESTIMATE_PDF: 'EST',
+      IMAGE: 'IMG',
+      OTHER: 'DOC',
     };
-    return icons[type] || '📄';
+    return icons[type] || 'FILE';
   };
 
   return (
     <div style={styles.container}>
-      {/* Header */}
       <div style={styles.header}>
         <h1 style={styles.title}>File Management</h1>
         <p style={styles.subtitle}>Upload, organize, and share project files</p>
       </div>
 
-      {/* Upload Area */}
       <div style={styles.uploadSection}>
         <div
-          style={{
-            ...styles.uploadArea,
-            ...(dragActive ? styles.uploadAreaActive : {})
-          }}
+          style={{ ...styles.uploadArea, ...(dragActive ? styles.uploadAreaActive : {}) }}
           onDragEnter={handleDrag}
           onDragLeave={handleDrag}
           onDragOver={handleDrag}
           onDrop={handleDrop}
         >
           <div style={styles.uploadContent}>
-            <div style={styles.uploadIcon}>📁</div>
-            <h3 style={styles.uploadTitle}>
-              {dragActive ? 'Drop files here' : 'Drag & Drop files here'}
-            </h3>
-            <p style={styles.uploadSubtitle}>or click to browse</p>
-            <input
-              type="file"
-              multiple
-              onChange={handleFileSelect}
-              style={styles.fileInput}
-            />
-            <button style={styles.browseButton}>
-              Choose Files
+            <div style={styles.uploadIcon}>FILE</div>
+            <h3 style={styles.uploadTitle}>{dragActive ? 'Drop files here' : 'Drag & Drop files here'}</h3>
+            <p style={styles.uploadSubtitle}>Upload to the selected project using the real document endpoint.</p>
+            <select
+              value={selectedProjectId}
+              onChange={(event) => setSelectedProjectId(event.target.value)}
+              style={styles.filterSelect}
+            >
+              <option value="">Select project</option>
+              {projects.map((project) => (
+                <option key={project.id} value={project.id}>{project.projectName || project.title || `Project ${project.id}`}</option>
+              ))}
+            </select>
+            <input type="file" multiple onChange={handleFileSelect} style={styles.fileInput} />
+            <button style={styles.browseButton} disabled={uploading}>
+              {uploading ? 'Uploading...' : 'Choose Files'}
             </button>
+            {uploadMessage ? <p style={styles.uploadMessage}>{uploadMessage}</p> : null}
           </div>
         </div>
       </div>
 
-      {/* Search and Filter */}
       <div style={styles.searchSection}>
         <input
           type="text"
           placeholder="Search files..."
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(event) => setSearchTerm(event.target.value)}
           style={styles.searchInput}
         />
-        <select style={styles.filterSelect}>
-          <option>All Files</option>
-          <option>PDF</option>
-          <option>Images</option>
-          <option>Documents</option>
-          <option>Archives</option>
+        <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)} style={styles.filterSelect}>
+          <option value="ALL">All Files</option>
+          <option value="BOQ_PDF">BOQ PDF</option>
+          <option value="PLAN_UPLOAD">Plan Uploads</option>
+          <option value="FEASIBILITY_PDF">Feasibility</option>
+          <option value="ESTIMATE_PDF">Estimate</option>
+          <option value="IMAGE">Images</option>
+          <option value="OTHER">Other</option>
         </select>
       </div>
 
-      {/* Files Grid */}
-      <div style={styles.filesGrid}>
-        {filteredFiles.map(file => (
-          <div key={file.id} style={styles.fileCard}>
-            <div style={styles.fileHeader}>
-              <div style={styles.fileIcon}>
-                {getFileIcon(file.type)}
-              </div>
-              <div style={styles.fileActions}>
-                <button style={styles.fileAction}>👁️</button>
-                <button style={styles.fileAction}>⬇️</button>
-                <button style={styles.fileAction}>🗑️</button>
-              </div>
-            </div>
-            
-            <div style={styles.fileInfo}>
-              <h4 style={styles.fileName}>{file.name}</h4>
-              <div style={styles.fileMeta}>
-                <span style={styles.fileSize}>{file.size}</span>
-                <span style={styles.fileType}>{file.type}</span>
-              </div>
-              <div style={styles.fileDetails}>
-                <div style={styles.fileDetail}>
-                  <span style={styles.detailLabel}>Uploaded by:</span>
-                  <span style={styles.detailValue}>{file.uploadedBy}</span>
-                </div>
-                <div style={styles.fileDetail}>
-                  <span style={styles.detailLabel}>Project:</span>
-                  <span style={styles.detailValue}>{file.project}</span>
-                </div>
-                <div style={styles.fileDetail}>
-                  <span style={styles.detailLabel}>Date:</span>
-                  <span style={styles.detailValue}>{file.uploadedAt}</span>
+      {state.loading ? (
+        <div style={styles.filesGrid}>
+          {Array.from({ length: 6 }).map((_, index) => <div key={index} style={styles.fileSkeleton} />)}
+        </div>
+      ) : state.error ? (
+        <div style={styles.stateBlock}>
+          <p style={styles.stateText}>{state.error}</p>
+          <button style={styles.browseButton} onClick={loadFiles}>Retry</button>
+        </div>
+      ) : filteredFiles.length === 0 ? (
+        <div style={styles.stateBlock}>
+          <p style={styles.stateText}>No files found for the current filters or project selection.</p>
+        </div>
+      ) : (
+        <div style={styles.filesGrid}>
+          {filteredFiles.map((file) => (
+            <div key={file.id} style={styles.fileCard}>
+              <div style={styles.fileHeader}>
+                <div style={styles.fileIcon}>{getFileIcon(file.docType)}</div>
+                <div style={styles.fileActions}>
+                  <button style={styles.fileAction} onClick={() => setSelectedFile(file)}>View</button>
+                  <button style={styles.fileAction} onClick={() => handleDownload(file.id)}>Down</button>
                 </div>
               </div>
-            </div>
-          </div>
-        ))}
-      </div>
 
-      {/* File Preview Modal */}
+              <div style={styles.fileInfo}>
+                <h4 style={styles.fileName}>{file.originalName || 'Untitled document'}</h4>
+                <div style={styles.fileMeta}>
+                  <span style={styles.fileSize}>{file.mimeType || 'application/octet-stream'}</span>
+                  <span style={styles.fileType}>{file.docType || 'OTHER'}</span>
+                </div>
+                <div style={styles.fileDetails}>
+                  <div style={styles.fileDetail}>
+                    <span style={styles.detailLabel}>Project:</span>
+                    <span style={styles.detailValue}>{file.project?.projectName || 'Unknown project'}</span>
+                  </div>
+                  <div style={styles.fileDetail}>
+                    <span style={styles.detailLabel}>Version:</span>
+                    <span style={styles.detailValue}>{file.version || 1}</span>
+                  </div>
+                  <div style={styles.fileDetail}>
+                    <span style={styles.detailLabel}>Date:</span>
+                    <span style={styles.detailValue}>{new Date(file.createdAt).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {selectedFile && (
         <div style={styles.modalOverlay}>
           <div style={styles.modal}>
             <div style={styles.modalHeader}>
               <h3 style={styles.modalTitle}>File Preview</h3>
-              <button
-                onClick={() => setSelectedFile(null)}
-                style={styles.closeButton}
-              >
-                ×
-              </button>
+              <button onClick={() => setSelectedFile(null)} style={styles.closeButton}>X</button>
             </div>
             <div style={styles.modalContent}>
               <div style={styles.previewArea}>
-                <div style={styles.previewIcon}>
-                  {getFileIcon(selectedFile.type)}
-                </div>
-                <h4 style={styles.previewTitle}>{selectedFile.name}</h4>
+                <div style={styles.previewIcon}>{getFileIcon(selectedFile.docType)}</div>
+                <h4 style={styles.previewTitle}>{selectedFile.originalName}</h4>
                 <p style={styles.previewInfo}>
-                  Size: {selectedFile.size} | Type: {selectedFile.type}
+                  Type: {selectedFile.docType} � Project: {selectedFile.project?.projectName || 'Unknown'}
                 </p>
                 <div style={styles.previewActions}>
-                  <button style={styles.previewButton}>Download</button>
-                  <button style={styles.previewButton}>Share</button>
-                  <button style={styles.previewButtonDanger}>Delete</button>
+                  <button style={styles.previewButton} onClick={() => handleDownload(selectedFile.id)}>Download</button>
+                  <button style={styles.previewButton} onClick={() => setSelectedFile(null)}>Close</button>
                 </div>
               </div>
             </div>
@@ -228,6 +256,7 @@ const styles = {
     margin: '0 auto',
     padding: '24px'
   },
+  header: { marginBottom: 24 },
   title: {
     margin: '0 0 8px',
     fontSize: '28px',
@@ -235,19 +264,228 @@ const styles = {
     color: 'var(--text-color)'
   },
   subtitle: {
-    margin: '0 0 32px',
+    margin: 0,
     fontSize: '16px',
     color: 'var(--text-muted)'
   },
-  placeholder: {
+  uploadSection: { marginBottom: 24 },
+  uploadArea: {
+    border: '1px dashed #262626',
+    borderRadius: 16,
+    background: 'var(--card-bg)',
+    padding: 24
+  },
+  uploadAreaActive: {
+    borderColor: '#00f2ff',
+    background: 'rgba(0,242,255,0.05)'
+  },
+  uploadContent: {
+    display: 'grid',
+    justifyItems: 'center',
+    gap: 12,
+    textAlign: 'center'
+  },
+  uploadIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: '50%',
+    background: 'rgba(0,242,255,0.12)',
+    color: '#00f2ff',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    height: '200px',
+    fontWeight: 700
+  },
+  uploadTitle: {
+    margin: 0,
+    color: 'var(--text-color)'
+  },
+  uploadSubtitle: {
+    margin: 0,
+    color: 'var(--text-muted)'
+  },
+  uploadMessage: {
+    margin: 0,
+    color: 'var(--text-muted)'
+  },
+  fileInput: { display: 'none' },
+  browseButton: {
+    border: 'none',
+    borderRadius: 10,
+    background: 'linear-gradient(135deg, #00f2ff, #6366f1)',
+    color: '#07111f',
+    fontWeight: 700,
+    padding: '12px 18px',
+    cursor: 'pointer'
+  },
+  searchSection: {
+    display: 'flex',
+    gap: 12,
+    marginBottom: 24
+  },
+  searchInput: {
+    flex: 1,
+    padding: '12px 14px',
+    borderRadius: 10,
+    border: '1px solid #262626',
+    background: 'rgba(255,255,255,0.03)',
+    color: 'var(--text-color)'
+  },
+  filterSelect: {
+    minWidth: 180,
+    padding: '12px 14px',
+    borderRadius: 10,
+    border: '1px solid #262626',
+    background: 'rgba(255,255,255,0.03)',
+    color: 'var(--text-color)'
+  },
+  filesGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+    gap: 20
+  },
+  fileCard: {
     background: 'var(--card-bg)',
     border: '1px solid #1a1a1a',
-    borderRadius: '12px',
-    fontSize: '18px',
-    color: 'var(--text-muted)'
+    borderRadius: 12,
+    padding: 20
+  },
+  fileSkeleton: {
+    height: 220,
+    borderRadius: 12,
+    background: 'linear-gradient(90deg, rgba(255,255,255,0.04), rgba(255,255,255,0.08), rgba(255,255,255,0.04))'
+  },
+  fileHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16
+  },
+  fileIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    background: 'rgba(0,242,255,0.12)',
+    color: '#00f2ff',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontWeight: 700
+  },
+  fileActions: {
+    display: 'flex',
+    gap: 8
+  },
+  fileAction: {
+    border: '1px solid #262626',
+    background: 'transparent',
+    borderRadius: 8,
+    color: 'var(--text-color)',
+    padding: '8px 10px',
+    cursor: 'pointer'
+  },
+  fileInfo: { display: 'grid', gap: 10 },
+  fileName: {
+    margin: 0,
+    color: 'var(--text-color)'
+  },
+  fileMeta: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: 12,
+    color: 'var(--text-muted)',
+    fontSize: 12
+  },
+  fileDetails: {
+    display: 'grid',
+    gap: 8
+  },
+  fileDetail: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: 12,
+    fontSize: 13
+  },
+  detailLabel: { color: 'var(--text-muted)' },
+  detailValue: { color: 'var(--text-color)' },
+  stateBlock: {
+    minHeight: 220,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    textAlign: 'center',
+    background: 'var(--card-bg)',
+    border: '1px solid #1a1a1a',
+    borderRadius: 12,
+    padding: 24
+  },
+  stateText: {
+    color: 'var(--text-muted)',
+    margin: 0
+  },
+  modalOverlay: {
+    position: 'fixed',
+    inset: 0,
+    background: 'rgba(0,0,0,0.7)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000
+  },
+  modal: {
+    width: '100%',
+    maxWidth: 560,
+    background: 'var(--card-bg)',
+    border: '1px solid #1a1a1a',
+    borderRadius: 12,
+    padding: 24
+  },
+  modalHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16
+  },
+  modalTitle: { margin: 0, color: 'var(--text-color)' },
+  closeButton: {
+    border: 'none',
+    background: 'transparent',
+    color: 'var(--text-color)',
+    cursor: 'pointer'
+  },
+  modalContent: {},
+  previewArea: {
+    textAlign: 'center',
+    display: 'grid',
+    gap: 12
+  },
+  previewIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: '50%',
+    background: 'rgba(0,242,255,0.12)',
+    color: '#00f2ff',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontWeight: 700,
+    margin: '0 auto'
+  },
+  previewTitle: { margin: 0, color: 'var(--text-color)' },
+  previewInfo: { margin: 0, color: 'var(--text-muted)' },
+  previewActions: {
+    display: 'flex',
+    justifyContent: 'center',
+    gap: 12
+  },
+  previewButton: {
+    border: '1px solid #262626',
+    background: 'transparent',
+    color: 'var(--text-color)',
+    borderRadius: 8,
+    padding: '10px 14px',
+    cursor: 'pointer'
   }
 };

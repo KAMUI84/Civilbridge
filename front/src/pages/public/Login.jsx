@@ -1,12 +1,13 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
+import { Link } from "react-router-dom";
+import { useAuth } from "../../context/useAuth";
 import GoogleButton from "../../components/auth/GoogleButton";
 import civilbridge from "/civilbridge.png";
+import SEO from "../../components/seo/SEO";
 
 export default function Login() {
-  const nav = useNavigate();
   const { login, googleLogin } = useAuth();
+  const [authMethod, setAuthMethod] = useState("choice");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
@@ -19,9 +20,7 @@ export default function Login() {
 
     try {
       if (!email || !password) throw new Error("Enter email and password.");
-
       await login({ email, password });
-      // Navigation is handled by the AuthContext
     } catch (error) {
       setErr(error?.message || "Login failed");
     } finally {
@@ -35,7 +34,6 @@ export default function Login() {
 
     try {
       await googleLogin(credential);
-      // Navigation is handled by the AuthContext
     } catch (error) {
       setErr(error?.message || "Google login failed");
     } finally {
@@ -45,6 +43,7 @@ export default function Login() {
 
   return (
     <div style={S.page}>
+      <SEO title="Sign In" description="Sign in to your CivilBridge account." noindex />
       <div style={S.left}>
         <div style={S.formWrap}>
           <div style={S.logoRow}>
@@ -57,35 +56,64 @@ export default function Login() {
           </div>
 
           <h1 style={S.heading}>Welcome back</h1>
-          <p style={S.subtext}>Enter your credentials to access your account</p>
+          <p style={S.subtext}>
+            Choose your preferred sign-in method. Google is fastest; email works on any device.
+          </p>
 
-          <GoogleButton onCredential={handleGoogleLogin} />
-
-          <div style={S.divider}><div style={S.divLine} /><span style={S.divText}>OR</span><div style={S.divLine} /></div>
-          
           {err && <div style={S.error}>{err}</div>}
 
-          <form onSubmit={onSubmit} style={S.form}>
-            <label style={S.label}>Email
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" style={S.input} required autoComplete="email" />
-            </label>
-            <label style={S.label}>Password
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" style={S.input} required autoComplete="current-password" />
-            </label>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', marginTop: -6, marginBottom: 8 }}>
-              <div style={S.forgotPassword}>Forgot password?</div>
+          {authMethod === "choice" && (
+            <div style={S.methodGrid}>
+              <button type="button" style={S.methodBtn} onClick={() => setAuthMethod("google")}>
+                Continue with Google
+              </button>
+              <button type="button" style={S.methodBtn} onClick={() => setAuthMethod("email")}>
+                Sign in with email
+              </button>
             </div>
+          )}
 
-            <button type="submit" disabled={loading} style={{ ...S.submitBtn, opacity: loading ? 0.6 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}>
-              {loading ? 'Signing in…' : 'Sign in'}
-            </button>
-          </form>
+          {authMethod === "google" && (
+            <>
+              <div style={S.onboardingHint}>
+                Tip: Google sign-in helps prevent fake accounts and keeps your access secure.
+              </div>
+              <GoogleButton onCredential={handleGoogleLogin} />
+              <div style={S.switchRow}>
+                <button type="button" style={S.switchBtn} onClick={() => setAuthMethod("email")}>Use email instead</button>
+              </div>
+            </>
+          )}
+
+          {authMethod === "email" && (
+            <>
+              <div style={S.onboardingHint}>Sign in with your registered email and password.</div>
+              <form onSubmit={onSubmit} style={S.form}>
+                <label style={S.label}>Email
+                  <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" style={S.input} required autoComplete="email" />
+                </label>
+                <label style={S.label}>Password
+                  <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" style={S.input} required autoComplete="current-password" />
+                </label>
+
+                <div style={{ display: "flex", justifyContent: "flex-start", alignItems: "center", marginTop: -6, marginBottom: 8 }}>
+                  <Link to="/forgot-password" style={S.forgotPassword}>Forgot password?</Link>
+                </div>
+
+                <button type="submit" disabled={loading} style={{ ...S.submitBtn, opacity: loading ? 0.6 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}>
+                  {loading ? 'Signing in…' : 'Sign in'}
+                </button>
+              </form>
+              <div style={S.switchRow}>
+                <button type="button" style={S.switchBtn} onClick={() => setAuthMethod("google")}>Use Google instead</button>
+              </div>
+            </>
+          )}
 
           <p style={S.footer}>Don't have an account? <Link to="/register" style={S.footerLink}>Sign up</Link></p>
         </div>
       </div>
-      
+
       <div style={S.right}>
         <div style={S.brandOverlay} />
         <div style={S.brandContent}>
@@ -106,6 +134,11 @@ const S = {
   logoText: { fontSize: 16, fontWeight: 700, color: '#1a1a1a' },
   heading: { margin: '0 0 6px', fontSize: 28, fontWeight: 700, color: '#1a1a1a' },
   subtext: { margin: '0 0 28px', fontSize: 14, color: '#6b7280' },
+  methodGrid: { display: 'grid', gap: 14, marginBottom: 20 },
+  methodBtn: { width: '100%', minHeight: 48, borderRadius: 10, border: '1px solid #d1d5db', background: '#fff', color: '#111827', fontSize: 14, fontWeight: 700, cursor: 'pointer', transition: 'border-color 0.2s ease, transform 0.2s ease', boxShadow: '0 8px 20px rgba(15,23,42,.05)' },
+  onboardingHint: { marginBottom: 18, padding: '12px 14px', borderRadius: 10, background: '#f8fafc', color: '#475569', fontSize: 13, lineHeight: 1.5 },
+  switchRow: { marginTop: 18, display: 'flex', justifyContent: 'center' },
+  switchBtn: { border: 'none', background: 'transparent', color: accent, fontWeight: 700, cursor: 'pointer', fontSize: 13, textDecoration: 'underline' },
   divider: { display: 'flex', alignItems: 'center', gap: 12, margin: '22px 0' },
   divLine: { flex: 1, height: 1, background: '#e5e7eb' },
   divText: { fontSize: 11, fontWeight: 700, color: '#9ca3af' },
@@ -114,7 +147,7 @@ const S = {
   label: { display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, fontWeight: 600, color: '#1a1a1a' },
   input: { width: '100%', height: 44, padding: '0 14px', background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: 8, color: '#1a1a1a', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.2s ease' },
   submitBtn: { width: '100%', height: 44, background: accent, color: '#ffffff', borderRadius: 8, fontWeight: 600, cursor: 'pointer', marginTop: 4, border: 'none', transition: 'background-color 0.2s ease', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)' },
-  forgotPassword: { color: '#6b7280', fontWeight: 600, fontSize: 12, cursor: 'pointer', outline: 'none', '&:hover': { color: '#1a1a1a' } },
+  forgotPassword: { color: '#6b7280', fontWeight: 600, fontSize: 12, cursor: 'pointer', outline: 'none', textDecoration: 'none' },
   footer: { marginTop: 28, textAlign: 'center', fontSize: 13, color: '#6b7280' },
   footerLink: { color: accent, fontWeight: 600, textDecoration: 'none' },
   right: { position: 'relative', background: '#f8fafc', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' },

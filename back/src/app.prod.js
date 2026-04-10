@@ -6,10 +6,12 @@ import { rateLimit } from "express-rate-limit";
 import compression from "compression";
 import morgan from "morgan";
 import { createLogger, format, transports } from "winston";
-import Sentry from "@sentry/node";
+import * as Sentry from "@sentry/node";
 import { protect, requireRole } from "./middlewares/auth.js";
 import { csrfGuard } from "./middlewares/csrf.js";
 import prisma from "./config/prisma.js";
+import emailService from "./services/emailService.js";
+import { buildRuntimeReport, getHealthStatusCode } from "./config/runtime.js";
 
 // Patch BigInt serialization for Prisma
 BigInt.prototype.toJSON = function () {
@@ -70,6 +72,8 @@ import reviewsRoutes from "./modules/reviews/reviews.routes.js";
 import profilesRoutes from "./modules/profiles/profiles.routes.js";
 import roiRoutes from "./modules/roi/roi.routes.js";
 import carbonRoutes from "./modules/carbon/carbon.routes.js";
+import paymentsRoutes from "./modules/payments/payments.routes.js";
+import appointmentsRoutes from "./modules/appointments/appointments.routes.js";
 
 // ─── AI & Budget Routes ───────────────────────────────────────────────────────
 import aiRoutes from "./modules/ai/ai.routes.js";
@@ -187,27 +191,32 @@ if (process.env.CDN_URL) {
 // ─── Health Check (Enhanced) ───────────────────────────────────────────────────
 app.get("/health", async (req, res) => {
   try {
+    const runtime = await buildRuntimeReport({
+      prisma,
+      emailStatus: emailService.getStatus(),
+    });
+
     const health = {
-      status: "healthy",
+      status: runtime.status,
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
       environment: process.env.NODE_ENV,
       version: process.env.npm_package_version || "1.0.0",
       memory: process.memoryUsage(),
       cpu: process.cpuUsage(),
+      summary: runtime.summary,
+      core: runtime.modules.core,
     };
 
-    // Check database connectivity
-    try {
-      const { prisma } = await import("./config/prisma.js");
-      await prisma.$queryRaw`SELECT 1`;
-      health.database = "connected";
-    } catch (error) {
-      health.database = "disconnected";
-      health.status = "unhealthy";
+    if (runtime.blockers.length) {
+      health.blockers = runtime.blockers;
     }
 
-    const statusCode = health.status === "healthy" ? 200 : 503;
+    if (runtime.warnings.length) {
+      health.warnings = runtime.warnings;
+    }
+
+    const statusCode = getHealthStatusCode(health.status);
     res.status(statusCode).json(health);
   } catch (error) {
     logger.error("Health check failed:", error);
@@ -240,6 +249,7 @@ app.use("/api/listings", listingsRoutes);
 app.use("/api/experts", expertsRoutes);
 app.use("/api/catalog", catalogRoutes);
 app.use("/api/permits", permitsRoutes);
+app.use("/api/payments", paymentsRoutes);
 
 // ─── Current User ──────────────────────────────────────────────────────────
 app.get("/api/me", protect, async (req, res) => {
@@ -277,12 +287,13 @@ app.use("/api/roi", protect, csrfGuard, roiRoutes);
 app.use("/api/carbon", protect, csrfGuard, carbonRoutes);
 app.use("/api/uploads", protect, csrfGuard, uploadsRoutes);
 app.use("/api/budget", protect, csrfGuard, budgetAnalysisRoutes);
+app.use("/api/appointments", protect, csrfGuard, appointmentsRoutes);
 
 // AI routes handle auth internally (guest chat is public, threads require auth)
 app.use("/api/ai", aiRoutes);
 
 // ─── Admin Routes (auth + admin role enforced inside routes) ──────────────────
-app.use("/api/admin", protect, requireRole(["ADMIN"]), adminRoutes);
+app.use("/api/admin", protect, requireRole(["ADMIN", "SUPER_ADMIN"]), adminRoutes);
 
 // ─── Root Endpoint ───────────────────────────────────────────────────────────
 app.get("/", (req, res) => {
@@ -291,6 +302,34 @@ app.get("/", (req, res) => {
     environment: process.env.NODE_ENV,
     timestamp: new Date().toISOString(),
   });
+});
+
+app.get("/api/email-status", (req, res) => {
+  try {
+    const emailStatus = emailService.getStatus();
+    res.json({ status: "Email service operational", ...emailStatus, timestamp: new Date().toISOString() });
+  } catch (error) {
+    res.status(500).json({ status: "Email service error", error: error.message, timestamp: new Date().toISOString() });
+  }
+});
+
+app.get("/api/runtime-status", protect, requireRole(["SUPER_ADMIN"]), async (req, res) => {
+  try {
+    const runtime = await buildRuntimeReport({
+      prisma,
+      emailStatus: emailService.getStatus(),
+    });
+
+    res.status(getHealthStatusCode(runtime.status)).json(runtime);
+  } catch (error) {
+    logger.error("Runtime status failed:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Failed to build runtime status",
+      error: error.message,
+      timestamp: new Date().toISOString(),
+    });
+  }
 });
 
 // ─── 404 Handler ──────────────────────────────────────────────────────────────

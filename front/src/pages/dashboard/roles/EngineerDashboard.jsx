@@ -1,475 +1,555 @@
-// Professional Engineer Dashboard - Work Hub
-import React from 'react';
-import { useOutletContext } from 'react-router-dom';
+﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { documentsService } from '../../../services/documentsService';
+import messagesService from '../../../services/messagesService';
+import { plansService } from '../../../services/plansService';
+import { progressService } from '../../../services/progressService';
+import { projectsService } from '../../../services/projectsService';
+import { useAuthStore } from '../../../store/authStore';
 
-export default function ProfessionalDashboard() {
-  const { dashboardConfig } = useOutletContext();
+function formatDate(value) {
+  if (!value) return 'Not scheduled';
+  return new Date(value).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
 
-  const assignedProjects = [
-    { id: 1, title: 'Bridge Design A', client: 'John Doe', progress: 75, deadline: '2024-04-15', status: 'in-progress' },
-    { id: 2, title: 'Road Construction B', client: 'ABC Corp', progress: 45, deadline: '2024-05-01', status: 'in-progress' },
-    { id: 3, title: 'Infrastructure Audit', client: 'City Council', progress: 90, deadline: '2024-03-30', status: 'review' }
-  ];
+export default function EngineerDashboard() {
+  const navigate = useNavigate();
+  const user = useAuthStore((state) => state.user);
+  const [projects, setProjects] = useState([]);
+  const [reviewQueue, setReviewQueue] = useState([]);
+  const [threads, setThreads] = useState([]);
+  const [myPlans, setMyPlans] = useState([]);
+  const [state, setState] = useState({ loading: true, error: '' });
+  const [selectedProjectId, setSelectedProjectId] = useState('');
+  const [progressForm, setProgressForm] = useState({ phase: 'OTHER', planned_date: '', progressPercent: '0', description: '', cost_estimate: '' });
+  const [actionState, setActionState] = useState({ loading: '', message: '', type: '' });
+  const [reviewNotes, setReviewNotes] = useState({});
+  const [planForm, setPlanForm] = useState({ title: '', category: 'RESIDENTIAL', style: '', bedrooms: '', floors: '1', builtAreaM2: '', estimatedCostMin: '', estimatedCostMax: '', tier: 'FREE', description: '' });
+  const [planFiles, setPlanFiles] = useState([]);
+  const [planFormState, setPlanFormState] = useState({ loading: false, message: '', type: '' });
+  const planFileInputRef = useRef(null);
 
-  const kanbanTasks = {
-    todo: [
-      { id: 1, title: 'Review blueprints', project: 'Bridge Design A', priority: 'high' },
-      { id: 2, title: 'Site inspection', project: 'Road Construction B', priority: 'medium' }
-    ],
-    inProgress: [
-      { id: 3, title: 'Structural analysis', project: 'Bridge Design A', priority: 'high' },
-      { id: 4, title: 'Material procurement', project: 'Road Construction B', priority: 'low' }
-    ],
-    completed: [
-      { id: 5, title: 'Initial survey', project: 'Infrastructure Audit', priority: 'medium' }
-    ]
-  };
+  const loadDashboard = useCallback(async () => {
+    try {
+      setState({ loading: true, error: '' });
+      const [projectsResponse, documentsResponse, threadsResponse, myPlansResponse] = await Promise.all([
+        projectsService.getUserProjects(),
+        documentsService.list({ review_status: 'PENDING' }),
+        messagesService.listThreads({ limit: 8 }),
+        plansService.getMine(),
+      ]);
+      const nextProjects = Array.isArray(projectsResponse) ? projectsResponse : [];
+      setProjects(nextProjects);
+      setSelectedProjectId((current) => current || nextProjects[0]?.id || '');
+      setReviewQueue(documentsResponse?.documents || []);
+      setThreads(threadsResponse?.data || []);
+      setMyPlans(Array.isArray(myPlansResponse) ? myPlansResponse : []);
+      setState({ loading: false, error: '' });
+    } catch (error) {
+      setState({ loading: false, error: error.message || 'Failed to load engineer workspace.' });
+    }
+  }, []);
 
-  const upcomingDeadlines = [
-    { project: 'Infrastructure Audit', deadline: '2024-03-30', daysLeft: 11 },
-    { project: 'Bridge Design A', deadline: '2024-04-15', daysLeft: 27 },
-    { project: 'Road Construction B', deadline: '2024-05-01', daysLeft: 43 }
-  ];
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      loadDashboard();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [loadDashboard]);
+
+  const handleReview = useCallback(async (documentId, reviewStatus) => {
+    try {
+      setActionState({ loading: `${reviewStatus}-${documentId}`, message: '', type: '' });
+      await documentsService.review(documentId, { reviewStatus, reviewNotes: reviewNotes[documentId] || null });
+      setReviewQueue((current) => current.filter((document) => String(document.id) !== String(documentId)));
+      setActionState({ loading: '', message: `Document ${reviewStatus.toLowerCase()} successfully.`, type: 'success' });
+    } catch (error) {
+      setActionState({ loading: '', message: error.message || 'Failed to update review status.', type: 'error' });
+    }
+  }, [reviewNotes]);
+
+  const handleProgressSubmit = useCallback(async (event) => {
+    event.preventDefault();
+    if (!selectedProjectId) return;
+
+    try {
+      setActionState({ loading: `progress-${selectedProjectId}`, message: '', type: '' });
+      await progressService.createMilestone(selectedProjectId, {
+        phase: progressForm.phase,
+        planned_date: progressForm.planned_date,
+        progressPercent: Number(progressForm.progressPercent),
+        description: progressForm.description,
+        cost_estimate: Number(progressForm.cost_estimate || 0),
+      });
+      setProgressForm({ phase: 'OTHER', planned_date: '', progressPercent: '0', description: '', cost_estimate: '' });
+      setActionState({ loading: '', message: 'Progress update saved successfully.', type: 'success' });
+    } catch (error) {
+      setActionState({ loading: '', message: error.message || 'Failed to save progress update.', type: 'error' });
+    }
+  }, [progressForm, selectedProjectId]);
+
+  const handlePlanSubmit = useCallback(async (event) => {
+    event.preventDefault();
+    if (!planForm.title || !planForm.builtAreaM2) {
+      setPlanFormState({ loading: false, message: 'Title and built area are required.', type: 'error' });
+      return;
+    }
+    try {
+      setPlanFormState({ loading: true, message: '', type: '' });
+      await plansService.create({ ...planForm, assets: planFiles });
+      setPlanForm({ title: '', category: 'RESIDENTIAL', style: '', bedrooms: '', floors: '1', builtAreaM2: '', estimatedCostMin: '', estimatedCostMax: '', tier: 'FREE', description: '' });
+      setPlanFiles([]);
+      if (planFileInputRef.current) planFileInputRef.current.value = '';
+      const refreshed = await plansService.getMine();
+      setMyPlans(Array.isArray(refreshed) ? refreshed : []);
+      setPlanFormState({ loading: false, message: 'Plan submitted for admin review.', type: 'success' });
+    } catch (err) {
+      setPlanFormState({ loading: false, message: err.message || 'Failed to submit plan.', type: 'error' });
+    }
+  }, [planForm, planFiles]);
+
+  const activeProjects = useMemo(() => projects.filter((project) => !['COMPLETED', 'CANCELLED'].includes(String(project.status || '').toUpperCase())), [projects]);
+  const selectedProject = useMemo(
+    () => projects.find((project) => String(project.id) === String(selectedProjectId)) || activeProjects[0] || null,
+    [activeProjects, projects, selectedProjectId],
+  );
+  const assignedMembers = Number(selectedProject?._count?.members || 0);
+  const hasWorkspaceData = projects.length > 0 || reviewQueue.length > 0 || threads.length > 0;
+
+  if (state.loading) {
+    return (
+      <div style={styles.page}>
+        <div style={styles.headerBlock}>
+          <h1 style={styles.title}>Engineer Workspace</h1>
+          <p style={styles.subtitle}>Review queue, assigned projects, progress, and client communication.</p>
+        </div>
+        <div style={styles.kpiGrid}>{Array.from({ length: 4 }).map((_, index) => <div key={index} style={styles.skeletonCard} />)}</div>
+      </div>
+    );
+  }
+
+  if (state.error) {
+    return (
+      <div style={styles.page}>
+        <div style={styles.stateCard}>
+          <h3 style={styles.sectionTitle}>Could not load engineer workspace</h3>
+          <p style={styles.stateText}>{state.error}</p>
+          <button type="button" onClick={loadDashboard} style={styles.primaryButton}>Retry</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div style={styles.dashboard}>
-      {/* Header */}
-      <div style={styles.header}>
-        <h1 style={styles.title}>Work Hub</h1>
-        <p style={styles.subtitle}>Manage your projects and tasks efficiently</p>
-      </div>
-
-      {/* Projects Overview */}
-      <div style={styles.projectsSection}>
-        <h3 style={styles.sectionTitle}>My Projects</h3>
-        <div style={styles.projectsGrid}>
-          {assignedProjects.map(project => (
-            <div key={project.id} style={styles.projectCard}>
-              <div style={styles.projectHeader}>
-                <h4 style={styles.projectTitle}>{project.title}</h4>
-                <span style={{
-                  ...styles.statusBadge,
-                  ...(project.status === 'in-progress' && styles.statusInProgress),
-                  ...(project.status === 'review' && styles.statusReview)
-                }}>
-                  {project.status.replace('-', ' ')}
-                </span>
-              </div>
-              <div style={styles.projectMeta}>
-                <span style={styles.clientName}>👤 {project.client}</span>
-                <span style={styles.deadline}>📅 {project.deadline}</span>
-              </div>
-              <div style={styles.progressSection}>
-                <div style={styles.progressLabel}>Progress: {project.progress}%</div>
-                <div style={styles.progressBar}>
-                  <div style={{ ...styles.progressFill, width: `${project.progress}%` }} />
-                </div>
-              </div>
-              <div style={styles.projectActions}>
-                <button style={styles.actionButton}>📁 Files</button>
-                <button style={styles.actionButton}>💬 Messages</button>
-                <button style={styles.actionButton}>📊 Report</button>
-              </div>
-            </div>
-          ))}
+    <div style={styles.page}>
+      <section style={styles.heroShell}>
+        <div style={styles.heroMain}>
+          <div style={styles.heroEyebrow}>Engineer Workspace</div>
+          <h1 style={styles.heroTitle}>Technical control for live reviews, progress, and delivery.</h1>
+          <p style={styles.heroText}>
+            This desk stays clean until real assignments arrive. Once work starts, it becomes the place for engineering review, project reporting, and client coordination.
+          </p>
+          <div style={styles.heroActions}>
+            <button type="button" onClick={() => navigate('/dashboard/files')} style={styles.primaryButton}>Open review files</button>
+            <button type="button" onClick={() => navigate('/dashboard/projects')} style={styles.secondaryButton}>Assigned projects</button>
+            <button type="button" onClick={() => navigate('/dashboard/messages')} style={styles.secondaryButton}>Message center</button>
+          </div>
         </div>
-      </div>
+        <div style={styles.heroAside}>
+          <div style={styles.pulseCard}>
+            <span style={styles.pulseLabel}>Selected project</span>
+            <strong style={styles.pulseValue}>{selectedProject?.projectName || selectedProject?.title || 'No assignment yet'}</strong>
+            <span style={styles.pulseHint}>{selectedProject?.status || 'Waiting for work allocation'}</span>
+          </div>
+          <div style={styles.pulseCard}>
+            <span style={styles.pulseLabel}>Review queue</span>
+            <strong style={styles.pulseValue}>{reviewQueue.length}</strong>
+            <span style={styles.pulseHint}>documents waiting for engineering approval</span>
+          </div>
+          <div style={styles.pulseCard}>
+            <span style={styles.pulseLabel}>Team footprint</span>
+            <strong style={styles.pulseValue}>{assignedMembers}</strong>
+            <span style={styles.pulseHint}>members attached to the selected project</span>
+          </div>
+        </div>
+      </section>
 
-      {/* Kanban Board - CRITICAL */}
-      <div style={styles.kanbanSection}>
-        <h3 style={styles.sectionTitle}>Task Board</h3>
-        <div style={styles.kanbanBoard}>
-          <div style={styles.kanbanColumn}>
-            <div style={styles.columnHeader}>
-              <h4 style={styles.columnTitle}>To Do</h4>
-              <span style={styles.columnCount}>{kanbanTasks.todo.length}</span>
-            </div>
-            <div style={styles.taskList}>
-              {kanbanTasks.todo.map(task => (
-                <div key={task.id} style={styles.taskCard}>
-                  <div style={styles.taskHeader}>
-                    <h5 style={styles.taskTitle}>{task.title}</h5>
-                    <span style={{
-                      ...styles.priorityTag,
-                      ...(task.priority === 'high' && styles.priorityHigh),
-                      ...(task.priority === 'medium' && styles.priorityMedium),
-                      ...(task.priority === 'low' && styles.priorityLow)
-                    }}>
-                      {task.priority}
-                    </span>
+      {actionState.message ? (
+        <div style={{ ...styles.banner, ...(actionState.type === 'error' ? styles.bannerError : styles.bannerSuccess) }}>{actionState.message}</div>
+      ) : null}
+
+      {!hasWorkspaceData ? (
+        <div style={styles.freshWorkspaceCard}>
+          <div style={styles.freshWorkspaceEyebrow}>Fresh workspace</div>
+          <h2 style={styles.freshWorkspaceTitle}>No assignments are active yet.</h2>
+          <p style={styles.freshWorkspaceText}>
+            This workspace stays empty until you are connected to real projects, review requests, or client threads. When work starts, your queue and activity will appear here automatically.
+          </p>
+          <div style={styles.freshWorkspaceActions}>
+            <button type="button" onClick={() => navigate('/dashboard/profile')} style={styles.primaryButton}>Complete profile</button>
+            <button type="button" onClick={() => navigate('/dashboard/projects')} style={styles.secondaryButton}>Open projects</button>
+            <button type="button" onClick={() => navigate('/dashboard/files')} style={styles.secondaryButton}>Open files</button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div style={styles.kpiGrid}>
+            <div style={styles.kpiCard}><span style={styles.kpiLabel}>Assigned projects</span><span style={styles.kpiValue}>{activeProjects.length}</span><span style={styles.kpiFootnote}>live assignments on your desk</span></div>
+            <div style={styles.kpiCard}><span style={styles.kpiLabel}>Awaiting review</span><span style={styles.kpiValue}>{reviewQueue.length}</span><span style={styles.kpiFootnote}>documents needing engineering action</span></div>
+            <div style={styles.kpiCard}><span style={styles.kpiLabel}>Communication threads</span><span style={styles.kpiValue}>{threads.length}</span><span style={styles.kpiFootnote}>conversations linked to your work</span></div>
+            <div style={styles.kpiCard}><span style={styles.kpiLabel}>Projects in progress</span><span style={styles.kpiValue}>{projects.filter((project) => String(project.status).toUpperCase() === 'IN_PROGRESS').length}</span><span style={styles.kpiFootnote}>active execution now</span></div>
+          </div>
+
+          <div style={styles.commandGrid}>
+            <section style={styles.sectionCard}>
+              <div style={styles.sectionHeader}>
+                <div>
+                  <div style={styles.panelEyebrow}>Current assignment</div>
+                  <h2 style={styles.sectionTitle}>Project command view</h2>
+                </div>
+                <button type="button" onClick={() => navigate('/dashboard/projects')} style={styles.inlineButton}>Open projects</button>
+              </div>
+              {!selectedProject ? (
+                <div style={styles.emptyState}>No project is selected because there are no active assignments yet.</div>
+              ) : (
+                <div style={styles.stack}>
+                  <div style={styles.focusCard}>
+                    <div style={styles.focusTop}>
+                      <div>
+                        <div style={styles.reviewTitle}>{selectedProject.projectName || selectedProject.title || 'Project'}</div>
+                        <div style={styles.reviewMeta}>{selectedProject.status || 'Draft'} | {selectedProject.region?.name || 'No region yet'}</div>
+                      </div>
+                      <span style={styles.statusBadge}>{selectedProject.projectType || 'PROJECT'}</span>
+                    </div>
+                    <div style={styles.timelineGrid}>
+                      <div><span style={styles.timelineLabel}>Team size</span><strong>{assignedMembers}</strong></div>
+                      <div><span style={styles.timelineLabel}>Messages</span><strong>{threads.length}</strong></div>
+                      <div><span style={styles.timelineLabel}>Pending reviews</span><strong>{reviewQueue.length}</strong></div>
+                      <div><span style={styles.timelineLabel}>Selected phase</span><strong>{progressForm.phase}</strong></div>
+                    </div>
                   </div>
-                  <div style={styles.taskProject}>{task.project}</div>
-                </div>
-              ))}
-            </div>
-          </div>
 
-          <div style={styles.kanbanColumn}>
-            <div style={styles.columnHeader}>
-              <h4 style={styles.columnTitle}>In Progress</h4>
-              <span style={styles.columnCount}>{kanbanTasks.inProgress.length}</span>
-            </div>
-            <div style={styles.taskList}>
-              {kanbanTasks.inProgress.map(task => (
-                <div key={task.id} style={styles.taskCard}>
-                  <div style={styles.taskHeader}>
-                    <h5 style={styles.taskTitle}>{task.title}</h5>
-                    <span style={{
-                      ...styles.priorityTag,
-                      ...(task.priority === 'high' && styles.priorityHigh),
-                      ...(task.priority === 'medium' && styles.priorityMedium),
-                      ...(task.priority === 'low' && styles.priorityLow)
-                    }}>
-                      {task.priority}
-                    </span>
-                  </div>
-                  <div style={styles.taskProject}>{task.project}</div>
+                  {!activeProjects.length ? (
+                    <div style={styles.emptyState}>No active assignments yet.</div>
+                  ) : (
+                    activeProjects.map((project) => (
+                      <button key={project.id} type="button" onClick={() => setSelectedProjectId(project.id)} style={{ ...styles.projectRow, ...(String(project.id) === String(selectedProjectId) ? styles.projectRowActive : {}) }}>
+                        <div>
+                          <div style={styles.reviewTitle}>{project.projectName || project.title || 'Project'}</div>
+                          <div style={styles.reviewMeta}>{project.status || 'Draft'} | {project.region?.name || 'No region'} | {project._count?.members || 0} team members</div>
+                        </div>
+                        <span style={styles.phaseBadge}>{String(project.id) === String(selectedProjectId) ? 'Selected' : 'Open'}</span>
+                      </button>
+                    ))
+                  )}
                 </div>
-              ))}
-            </div>
-          </div>
+              )}
+            </section>
 
-          <div style={styles.kanbanColumn}>
-            <div style={styles.columnHeader}>
-              <h4 style={styles.columnTitle}>Completed</h4>
-              <span style={styles.columnCount}>{kanbanTasks.completed.length}</span>
-            </div>
-            <div style={styles.taskList}>
-              {kanbanTasks.completed.map(task => (
-                <div key={task.id} style={styles.taskCard}>
-                  <div style={styles.taskHeader}>
-                    <h5 style={styles.taskTitle}>{task.title}</h5>
-                    <span style={{
-                      ...styles.priorityTag,
-                      ...(task.priority === 'high' && styles.priorityHigh),
-                      ...(task.priority === 'medium' && styles.priorityMedium),
-                      ...(task.priority === 'low' && styles.priorityLow)
-                    }}>
-                      {task.priority}
-                    </span>
-                  </div>
-                  <div style={styles.taskProject}>{task.project}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Deadlines & Quick Actions */}
-      <div style={styles.bottomSection}>
-        <div style={styles.deadlinesPanel}>
-          <h3 style={styles.sectionTitle}>Upcoming Deadlines</h3>
-          <div style={styles.deadlinesList}>
-            {upcomingDeadlines.map((deadline, index) => (
-              <div key={index} style={styles.deadlineItem}>
-                <div style={styles.deadlineContent}>
-                  <div style={styles.deadlineProject}>{deadline.project}</div>
-                  <div style={styles.deadlineDate}>{deadline.deadline}</div>
-                </div>
-                <div style={{
-                  ...styles.daysLeft,
-                  ...(deadline.daysLeft <= 14 && styles.daysLeftUrgent)
-                }}>
-                  {deadline.daysLeft} days
+            <section style={styles.sectionCard}>
+              <div style={styles.sectionHeader}>
+                <div>
+                  <div style={styles.panelEyebrow}>Field reporting</div>
+                  <h2 style={styles.sectionTitle}>Progress update</h2>
                 </div>
               </div>
-            ))}
+              {!projects.length ? (
+                <div style={styles.emptyState}>Projects assigned to you will appear here once membership is configured.</div>
+              ) : (
+                <form onSubmit={handleProgressSubmit} style={styles.formGrid}>
+                  <label style={styles.fieldLabel}>
+                    <span>Project</span>
+                    <select value={selectedProjectId} onChange={(event) => setSelectedProjectId(event.target.value)} style={styles.select}>
+                      {projects.map((project) => <option key={project.id} value={project.id}>{project.projectName || project.title || 'Project'}</option>)}
+                    </select>
+                  </label>
+                  <label style={styles.fieldLabel}>
+                    <span>Phase</span>
+                    <select value={progressForm.phase} onChange={(event) => setProgressForm((current) => ({ ...current, phase: event.target.value }))} style={styles.select}>
+                      {['FOUNDATION', 'STRUCTURE', 'ROOFING', 'FINISHES', 'PLUMBING', 'ELECTRICAL', 'OTHER'].map((phase) => <option key={phase} value={phase}>{phase}</option>)}
+                    </select>
+                  </label>
+                  <label style={styles.fieldLabel}>
+                    <span>Planned date</span>
+                    <input type="datetime-local" value={progressForm.planned_date} onChange={(event) => setProgressForm((current) => ({ ...current, planned_date: event.target.value }))} style={styles.input} />
+                  </label>
+                  <label style={styles.fieldLabel}>
+                    <span>Progress percent</span>
+                    <input type="number" min="0" max="100" value={progressForm.progressPercent} onChange={(event) => setProgressForm((current) => ({ ...current, progressPercent: event.target.value }))} style={styles.input} />
+                  </label>
+                  <label style={styles.fieldLabel}>
+                    <span>Cost update</span>
+                    <input type="number" min="0" value={progressForm.cost_estimate} onChange={(event) => setProgressForm((current) => ({ ...current, cost_estimate: event.target.value }))} style={styles.input} placeholder="Amount spent" />
+                  </label>
+                  <label style={{ ...styles.fieldLabel, gridColumn: '1 / -1' }}>
+                    <span>Report notes</span>
+                    <textarea rows={4} value={progressForm.description} onChange={(event) => setProgressForm((current) => ({ ...current, description: event.target.value }))} style={styles.textarea} placeholder="Describe what changed, risks observed, and what the client should know." />
+                  </label>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <button type="submit" style={styles.primaryButton} disabled={actionState.loading === `progress-${selectedProjectId}`}>
+                      {actionState.loading === `progress-${selectedProjectId}` ? 'Saving...' : 'Save Progress Update'}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </section>
           </div>
-        </div>
 
-        <div style={styles.quickActionsPanel}>
-          <h3 style={styles.sectionTitle}>Quick Actions</h3>
-          <div style={styles.quickActionsGrid}>
-            <button style={styles.quickActionButton}>
-              <div style={styles.actionIcon}>📁</div>
-              <div style={styles.actionLabel}>Upload File</div>
-            </button>
-            <button style={styles.quickActionButton}>
-              <div style={styles.actionIcon}>📝</div>
-              <div style={styles.actionLabel}>Update Progress</div>
-            </button>
-            <button style={styles.quickActionButton}>
-              <div style={styles.actionIcon}>💬</div>
-              <div style={styles.actionLabel}>Send Message</div>
-            </button>
-            <button style={styles.quickActionButton}>
-              <div style={styles.actionIcon}>📊</div>
-              <div style={styles.actionLabel}>Generate Report</div>
-            </button>
+          <div style={styles.commandGrid}>
+            <section style={styles.sectionCard}>
+              <div style={styles.sectionHeader}>
+                <div>
+                  <div style={styles.panelEyebrow}>Quality gate</div>
+                  <h2 style={styles.sectionTitle}>Review queue</h2>
+                </div>
+                <button type="button" onClick={() => navigate('/dashboard/files')} style={styles.inlineButton}>Open files</button>
+              </div>
+              {!reviewQueue.length ? (
+                <div style={styles.emptyState}>No AI-generated plans or BOQs are waiting for review.</div>
+              ) : (
+                <div style={styles.stack}>
+                  {reviewQueue.map((document) => (
+                    <div key={document.id} style={styles.reviewCard}>
+                      <div style={styles.reviewTopRow}>
+                        <div>
+                          <div style={styles.reviewTitle}>{document.originalName || 'Project document'}</div>
+                          <div style={styles.reviewMeta}>{document.project?.projectName || 'Project'} | {document.docType || 'DOCUMENT'} | {formatDate(document.createdAt)}</div>
+                        </div>
+                        <span style={styles.statusBadge}>{document.reviewStatus || 'PENDING'}</span>
+                      </div>
+                      <textarea
+                        rows={3}
+                        value={reviewNotes[document.id] || ''}
+                        onChange={(event) => setReviewNotes((current) => ({ ...current, [document.id]: event.target.value }))}
+                        placeholder="Add approval notes, required edits, or engineering comments."
+                        style={styles.textarea}
+                      />
+                      <div style={styles.actionRow}>
+                        <button type="button" onClick={() => handleReview(document.id, 'PENDING')} style={styles.secondaryButton} disabled={Boolean(actionState.loading)}>
+                          Save Note
+                        </button>
+                        <button type="button" onClick={() => handleReview(document.id, 'REJECTED')} style={styles.dangerButton} disabled={Boolean(actionState.loading)}>
+                          {actionState.loading === `REJECTED-${document.id}` ? 'Updating...' : 'Reject'}
+                        </button>
+                        <button type="button" onClick={() => handleReview(document.id, 'APPROVED')} style={styles.primaryButton} disabled={Boolean(actionState.loading)}>
+                          {actionState.loading === `APPROVED-${document.id}` ? 'Updating...' : 'Approve'}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <section style={styles.sectionCard}>
+              <div style={styles.sectionHeader}>
+                <div>
+                  <div style={styles.panelEyebrow}>Live communication</div>
+                  <h2 style={styles.sectionTitle}>Client communication</h2>
+                </div>
+                <button type="button" onClick={() => navigate('/dashboard/messages')} style={styles.inlineButton}>Open inbox</button>
+              </div>
+              {!threads.length ? (
+                <div style={styles.emptyState}>Client and stakeholder threads will appear here once messages start.</div>
+              ) : (
+                <div style={styles.stack}>
+                  {threads.slice(0, 6).map((thread) => {
+                    const other = String(thread.participantOne?.id) === String(user?.id) ? thread.participantTwo : thread.participantOne;
+                    return (
+                      <div key={thread.id} style={styles.projectRow}>
+                        <div>
+                          <div style={styles.reviewTitle}>{other?.fullName || 'Conversation'}</div>
+                          <div style={styles.reviewMeta}>{thread.lastMessage?.body || 'Attachment shared'} | {formatDate(thread.lastMessageAt || thread.createdAt)}</div>
+                        </div>
+                        <button type="button" onClick={() => navigate('/dashboard/messages')} style={styles.secondaryButton}>Reply</button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
           </div>
-        </div>
-      </div>
+
+          {/* ── Upload Plan ── */}
+          <div style={styles.commandGrid}>
+            <section style={styles.sectionCard}>
+              <div style={styles.sectionHeader}>
+                <div>
+                  <div style={styles.panelEyebrow}>Plan publishing</div>
+                  <h2 style={styles.sectionTitle}>Upload a plan</h2>
+                </div>
+              </div>
+              {planFormState.message ? (
+                <div style={{ ...styles.banner, ...(planFormState.type === 'error' ? styles.bannerError : styles.bannerSuccess) }}>{planFormState.message}</div>
+              ) : null}
+              <form onSubmit={handlePlanSubmit} style={styles.formGrid}>
+                <label style={{ ...styles.fieldLabel, gridColumn: '1 / -1' }}>
+                  <span>Title</span>
+                  <input value={planForm.title} onChange={(e) => setPlanForm((f) => ({ ...f, title: e.target.value }))} placeholder="e.g. Modern 3-Bedroom Villa" style={styles.input} />
+                </label>
+                <label style={styles.fieldLabel}>
+                  <span>Category</span>
+                  <select value={planForm.category} onChange={(e) => setPlanForm((f) => ({ ...f, category: e.target.value }))} style={styles.select}>
+                    {['RESIDENTIAL', 'COMMERCIAL', 'INDUSTRIAL', 'INFRA'].map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </label>
+                <label style={styles.fieldLabel}>
+                  <span>Tier</span>
+                  <select value={planForm.tier} onChange={(e) => setPlanForm((f) => ({ ...f, tier: e.target.value }))} style={styles.select}>
+                    {['FREE', 'PRO', 'PREMIUM'].map((t) => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </label>
+                <label style={styles.fieldLabel}>
+                  <span>Built area (m²)</span>
+                  <input type="number" min="1" value={planForm.builtAreaM2} onChange={(e) => setPlanForm((f) => ({ ...f, builtAreaM2: e.target.value }))} style={styles.input} />
+                </label>
+                <label style={styles.fieldLabel}>
+                  <span>Floors</span>
+                  <input type="number" min="1" value={planForm.floors} onChange={(e) => setPlanForm((f) => ({ ...f, floors: e.target.value }))} style={styles.input} />
+                </label>
+                <label style={styles.fieldLabel}>
+                  <span>Bedrooms</span>
+                  <input type="number" min="0" value={planForm.bedrooms} onChange={(e) => setPlanForm((f) => ({ ...f, bedrooms: e.target.value }))} style={styles.input} />
+                </label>
+                <label style={styles.fieldLabel}>
+                  <span>Style</span>
+                  <input value={planForm.style} onChange={(e) => setPlanForm((f) => ({ ...f, style: e.target.value }))} placeholder="Modern, Colonial, etc." style={styles.input} />
+                </label>
+                <label style={styles.fieldLabel}>
+                  <span>Est. cost min (RWF)</span>
+                  <input type="number" min="0" value={planForm.estimatedCostMin} onChange={(e) => setPlanForm((f) => ({ ...f, estimatedCostMin: e.target.value }))} style={styles.input} />
+                </label>
+                <label style={styles.fieldLabel}>
+                  <span>Est. cost max (RWF)</span>
+                  <input type="number" min="0" value={planForm.estimatedCostMax} onChange={(e) => setPlanForm((f) => ({ ...f, estimatedCostMax: e.target.value }))} style={styles.input} />
+                </label>
+                <label style={{ ...styles.fieldLabel, gridColumn: '1 / -1' }}>
+                  <span>Description</span>
+                  <textarea rows={3} value={planForm.description} onChange={(e) => setPlanForm((f) => ({ ...f, description: e.target.value }))} placeholder="Describe the plan, materials, and any notable features." style={styles.textarea} />
+                </label>
+                <label style={{ ...styles.fieldLabel, gridColumn: '1 / -1' }}>
+                  <span>Drawings / images (PDF, PNG, JPG)</span>
+                  <input ref={planFileInputRef} type="file" multiple accept="image/*,application/pdf" onChange={(e) => setPlanFiles(Array.from(e.target.files || []))} style={styles.input} />
+                  {planFiles.length > 0 && <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{planFiles.length} file(s) selected</span>}
+                </label>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gridColumn: '1 / -1' }}>
+                  <button type="submit" style={styles.primaryButton} disabled={planFormState.loading}>
+                    {planFormState.loading ? 'Submitting...' : 'Submit for review'}
+                  </button>
+                </div>
+              </form>
+            </section>
+
+            <section style={styles.sectionCard}>
+              <div style={styles.sectionHeader}>
+                <div>
+                  <div style={styles.panelEyebrow}>My contributions</div>
+                  <h2 style={styles.sectionTitle}>My plans</h2>
+                </div>
+                <button type="button" onClick={() => navigate('/plans')} style={styles.inlineButton}>View catalog</button>
+              </div>
+              {!myPlans.length ? (
+                <div style={styles.emptyState}>Plans you upload will appear here. Submitted plans are reviewed by admin before going public.</div>
+              ) : (
+                <div style={styles.stack}>
+                  {myPlans.slice(0, 8).map((plan) => (
+                    <button key={plan.id} type="button" onClick={() => navigate(`/plans/${plan.id}`)} style={styles.projectRow}>
+                      <div>
+                        <div style={styles.reviewTitle}>{plan.title}</div>
+                        <div style={styles.reviewMeta}>{plan.category} | {plan.builtAreaM2} m² | {plan.tier}</div>
+                      </div>
+                      <span style={{ ...styles.phaseBadge, background: plan.isVerified ? 'rgba(34,197,94,0.15)' : 'rgba(251,191,36,0.15)', color: plan.isVerified ? '#86efac' : '#fde68a' }}>
+                        {plan.isVerified ? 'Published' : 'Pending review'}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </section>
+          </div>
+        </>
+      )}
     </div>
   );
 }
 
 const styles = {
-  dashboard: {
-    maxWidth: '100%',
-    margin: '0 auto'
-  },
-  header: {
-    marginBottom: 32
-  },
-  title: {
-    margin: '0 0 8px',
-    fontSize: 28,
-    fontWeight: 700,
-    color: 'var(--text-color)'
-  },
-  subtitle: {
-    margin: 0,
-    fontSize: 16,
-    color: 'var(--text-muted)'
-  },
-  sectionTitle: {
-    margin: '0 0 20px',
-    fontSize: 20,
-    fontWeight: 600,
-    color: 'var(--text-color)'
-  },
-  projectsSection: {
-    marginBottom: 32
-  },
-  projectsGrid: {
+  page: { display: 'grid', gap: 24 },
+  headerBlock: { display: 'grid', gap: 8 },
+  title: { margin: 0, fontSize: 30, color: 'var(--text-color)' },
+  subtitle: { margin: 0, color: 'var(--text-muted)', lineHeight: 1.6 },
+  heroShell: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-    gap: 20
+    gridTemplateColumns: '1.25fr 0.85fr',
+    gap: 18,
+    padding: 22,
+    borderRadius: 28,
+    border: '1px solid rgba(255,255,255,0.08)',
+    background: 'linear-gradient(135deg, rgba(5,18,30,0.98), rgba(9,24,35,0.94) 58%, rgba(43,60,19,0.76))',
+    boxShadow: '0 28px 60px rgba(0,0,0,0.32)',
   },
-  projectCard: {
-    background: 'var(--card-bg)',
-    border: '1px solid #1a1a1a',
-    borderRadius: 12,
-    padding: 20
-  },
-  projectHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12
-  },
-  projectTitle: {
-    margin: 0,
-    fontSize: 16,
-    fontWeight: 600,
-    color: 'var(--text-color)'
-  },
-  statusBadge: {
-    fontSize: 10,
-    fontWeight: 600,
-    padding: '4px 8px',
-    borderRadius: 6,
-    textTransform: 'uppercase'
-  },
-  statusInProgress: {
-    background: 'rgba(0, 242, 255, 0.1)',
-    color: '#00f2ff'
-  },
-  statusReview: {
-    background: 'rgba(245, 158, 11, 0.1)',
-    color: '#f59e0b'
-  },
-  projectMeta: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    marginBottom: 16
-  },
-  clientName: {
-    fontSize: 14,
-    color: 'var(--text-muted)'
-  },
-  deadline: {
-    fontSize: 14,
-    color: 'var(--text-muted)'
-  },
-  progressSection: {
-    marginBottom: 16
-  },
-  progressLabel: {
-    fontSize: 12,
-    color: 'var(--text-muted)',
-    marginBottom: 8
-  },
-  progressBar: {
-    height: 6,
-    background: 'var(--border-color)',
-    borderRadius: 3,
-    overflow: 'hidden'
-  },
-  progressFill: {
-    height: '100%',
-    background: 'linear-gradient(90deg, #00f2ff, #6366f1)',
-    transition: 'width 0.3s ease'
-  },
-  projectActions: {
-    display: 'flex',
-    gap: 8
-  },
-  actionButton: {
-    background: 'var(--border-color)',
-    border: '1px solid #262626',
-    borderRadius: 6,
-    padding: '8px 12px',
-    fontSize: 12,
-    color: 'var(--text-muted)',
-    cursor: 'pointer',
-    transition: 'all 0.2s ease'
-  },
-  kanbanSection: {
-    marginBottom: 32
-  },
-  kanbanBoard: {
+  heroMain: { display: 'grid', gap: 14, alignContent: 'space-between', minHeight: 238 },
+  heroAside: { display: 'grid', gap: 12 },
+  heroEyebrow: { fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.18em', color: '#84cc16' },
+  heroTitle: { margin: 0, fontSize: 'clamp(28px, 4vw, 42px)', lineHeight: 1.05, color: '#f0f9ff', maxWidth: 720 },
+  heroText: { margin: 0, color: 'rgba(191,219,254,0.74)', lineHeight: 1.75, fontSize: 15, maxWidth: 720 },
+  heroActions: { display: 'flex', gap: 12, flexWrap: 'wrap' },
+  pulseCard: {
+    borderRadius: 22,
+    padding: 18,
+    background: 'linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.015))',
+    border: '1px solid rgba(255,255,255,0.08)',
     display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: 20
-  },
-  kanbanColumn: {
-    background: 'var(--card-bg)',
-    border: '1px solid #1a1a1a',
-    borderRadius: 12,
-    padding: 20
-  },
-  columnHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16
-  },
-  columnTitle: {
-    margin: 0,
-    fontSize: 16,
-    fontWeight: 600,
-    color: 'var(--text-color)'
-  },
-  columnCount: {
-    background: 'var(--border-color)',
-    color: 'var(--text-muted)',
-    fontSize: 12,
-    padding: '4px 8px',
-    borderRadius: 12
-  },
-  taskList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 12
-  },
-  taskCard: {
-    background: 'var(--border-color)',
-    border: '1px solid #262626',
-    borderRadius: 8,
-    padding: 12
-  },
-  taskHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8
-  },
-  taskTitle: {
-    margin: 0,
-    fontSize: 14,
-    fontWeight: 500,
-    color: 'var(--text-color)'
-  },
-  priorityTag: {
-    fontSize: 10,
-    fontWeight: 600,
-    padding: '2px 6px',
-    borderRadius: 4,
-    textTransform: 'uppercase'
-  },
-  priorityHigh: {
-    background: 'rgba(239, 68, 68, 0.1)',
-    color: '#ef4444'
-  },
-  priorityMedium: {
-    background: 'rgba(245, 158, 11, 0.1)',
-    color: '#f59e0b'
-  },
-  priorityLow: {
-    background: 'rgba(34, 197, 94, 0.1)',
-    color: '#22c55e'
-  },
-  taskProject: {
-    fontSize: 12,
-    color: 'var(--text-muted)'
-  },
-  bottomSection: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: 20
-  },
-  deadlinesPanel: {
-    background: 'var(--card-bg)',
-    border: '1px solid #1a1a1a',
-    borderRadius: 12,
-    padding: 20
-  },
-  deadlinesList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 12
-  },
-  deadlineItem: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '12px 0',
-    borderBottom: '1px solid #1a1a1a'
-  },
-  deadlineContent: {
-    flex: 1
-  },
-  deadlineProject: {
-    fontSize: 14,
-    color: 'var(--text-color)',
-    marginBottom: 4
-  },
-  deadlineDate: {
-    fontSize: 12,
-    color: 'var(--text-muted)'
-  },
-  daysLeft: {
-    fontSize: 12,
-    fontWeight: 600,
-    padding: '4px 8px',
-    borderRadius: 6,
-    background: 'rgba(34, 197, 94, 0.1)',
-    color: '#22c55e'
-  },
-  daysLeftUrgent: {
-    background: 'rgba(239, 68, 68, 0.1)',
-    color: '#ef4444'
-  },
-  quickActionsPanel: {
-    background: 'var(--card-bg)',
-    border: '1px solid #1a1a1a',
-    borderRadius: 12,
-    padding: 20
-  },
-  quickActionsGrid: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: 12
-  },
-  quickActionButton: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
     gap: 8,
-    padding: '16px',
-    background: 'var(--border-color)',
-    border: '1px solid #262626',
-    borderRadius: 8,
-    cursor: 'pointer',
-    transition: 'all 0.2s ease'
+    minHeight: 94,
   },
-  actionIcon: {
-    fontSize: 24
-  },
-  actionLabel: {
-    fontSize: 12,
-    color: 'var(--text-muted)'
-  }
+  pulseLabel: { fontSize: 11, color: 'rgba(191,219,254,0.6)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 },
+  pulseValue: { fontSize: 24, fontWeight: 800, color: '#f0f9ff', lineHeight: 1.25 },
+  pulseHint: { color: 'rgba(191,219,254,0.68)', fontSize: 13, lineHeight: 1.5 },
+  banner: { padding: '12px 14px', borderRadius: 14, border: '1px solid transparent', fontWeight: 600 },
+  bannerSuccess: { background: 'rgba(34,197,94,0.08)', borderColor: 'rgba(34,197,94,0.24)', color: '#22c55e' },
+  bannerError: { background: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.24)', color: '#ef4444' },
+  freshWorkspaceCard: { border: '1px solid rgba(255,255,255,0.08)', borderRadius: 24, padding: 28, background: 'linear-gradient(135deg, rgba(8,18,30,0.82), rgba(8,18,30,0.42))', display: 'grid', gap: 14 },
+  freshWorkspaceEyebrow: { color: '#ccfbf1', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: 12 },
+  freshWorkspaceTitle: { margin: 0, fontSize: 28, color: 'var(--text-color)' },
+  freshWorkspaceText: { margin: 0, maxWidth: 720, color: 'var(--text-muted)', lineHeight: 1.7 },
+  freshWorkspaceActions: { display: 'flex', gap: 12, flexWrap: 'wrap' },
+  kpiGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 },
+  kpiCard: { border: '1px solid rgba(255,255,255,0.08)', borderRadius: 22, padding: 20, background: 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015))', display: 'grid', gap: 10 },
+  kpiValue: { fontSize: 32, fontWeight: 800, color: 'var(--text-color)' },
+  kpiLabel: { color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: 11 },
+  kpiFootnote: { color: 'rgba(191,219,254,0.62)', fontSize: 13, lineHeight: 1.5 },
+  skeletonCard: { height: 120, borderRadius: 18, background: 'linear-gradient(90deg, rgba(255,255,255,0.04), rgba(255,255,255,0.08), rgba(255,255,255,0.04))' },
+  commandGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 20, alignItems: 'start' },
+  sectionCard: { border: '1px solid rgba(255,255,255,0.08)', borderRadius: 24, padding: 20, background: 'linear-gradient(180deg, rgba(9,18,30,0.92), rgba(8,16,24,0.82))', display: 'grid', gap: 16, boxShadow: '0 18px 36px rgba(0,0,0,0.22)' },
+  sectionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' },
+  panelEyebrow: { fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.16em', color: '#84cc16', marginBottom: 6 },
+  sectionTitle: { margin: 0, color: 'var(--text-color)', fontSize: 22 },
+  inlineButton: { border: 'none', background: 'transparent', color: '#67e8f9', cursor: 'pointer', fontWeight: 700 },
+  stack: { display: 'grid', gap: 14 },
+  focusCard: { display: 'grid', gap: 14, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: 18, background: 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015))' },
+  focusTop: { display: 'flex', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', alignItems: 'flex-start' },
+  timelineGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 },
+  timelineLabel: { display: 'block', color: 'var(--text-muted)', fontSize: 12, marginBottom: 6 },
+  reviewCard: { display: 'grid', gap: 12, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 18, padding: 16, background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015))' },
+  reviewTopRow: { display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' },
+  reviewTitle: { color: 'var(--text-color)', fontWeight: 700, marginBottom: 6 },
+  reviewMeta: { color: 'var(--text-muted)', fontSize: 13, lineHeight: 1.5 },
+  statusBadge: { alignSelf: 'flex-start', padding: '6px 10px', borderRadius: 999, background: 'rgba(132,204,22,0.16)', color: '#d9f99d', fontSize: 12, fontWeight: 800 },
+  textarea: { width: '100%', padding: '12px 14px', borderRadius: 14, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(4,12,20,0.66)', color: 'var(--text-color)', resize: 'vertical', fontFamily: 'inherit' },
+  actionRow: { display: 'flex', justifyContent: 'flex-end', gap: 10, flexWrap: 'wrap' },
+  formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 },
+  fieldLabel: { display: 'grid', gap: 8, color: 'var(--text-color)', fontWeight: 600 },
+  select: { padding: '12px 14px', borderRadius: 14, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(4,12,20,0.66)', color: 'var(--text-color)' },
+  input: { padding: '12px 14px', borderRadius: 14, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(4,12,20,0.66)', color: 'var(--text-color)' },
+  projectRow: { display: 'flex', justifyContent: 'space-between', gap: 14, alignItems: 'center', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 18, padding: 14, background: 'rgba(255,255,255,0.02)', textAlign: 'left', color: 'inherit' },
+  projectRowActive: { borderColor: 'rgba(34,211,238,0.36)', boxShadow: '0 0 0 1px rgba(34,211,238,0.12)' },
+  phaseBadge: { padding: '6px 10px', borderRadius: 999, background: 'rgba(34,211,238,0.14)', color: '#a5f3fc', fontSize: 12, fontWeight: 800 },
+  emptyState: { minHeight: 140, display: 'grid', placeItems: 'center', textAlign: 'center', color: 'var(--text-muted)', border: '1px dashed rgba(255,255,255,0.12)', borderRadius: 18, padding: 20, lineHeight: 1.6 },
+  stateCard: { minHeight: 280, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 24, background: 'linear-gradient(180deg, rgba(9,18,30,0.94), rgba(8,16,24,0.82))', display: 'grid', placeItems: 'center', textAlign: 'center', padding: 24, gap: 12 },
+  stateText: { margin: 0, color: 'var(--text-muted)', lineHeight: 1.6, maxWidth: 540 },
+  primaryButton: { minHeight: 42, padding: '0 16px', borderRadius: 14, border: '1px solid rgba(34,211,238,0.3)', background: 'linear-gradient(135deg, #22d3ee, #84cc16)', color: '#061018', cursor: 'pointer', fontWeight: 800 },
+  secondaryButton: { minHeight: 42, padding: '0 16px', borderRadius: 14, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.02)', color: '#dbeafe', cursor: 'pointer', fontWeight: 700 },
+  dangerButton: { minHeight: 42, padding: '0 16px', borderRadius: 14, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)', color: '#fda4af', cursor: 'pointer', fontWeight: 700 },
 };
+

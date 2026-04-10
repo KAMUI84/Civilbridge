@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { protect } from "../../middlewares/auth.js";
+import { requireAdmin } from "../../middlewares/roles.js";
 import {
   getCatalog, getCatalogItem, createCatalogItem, updateCatalogItem, deleteCatalogItem,
   getEstimates, getEstimateById, createEstimate, updateEstimate, deleteEstimate,
@@ -12,10 +13,10 @@ const router = Router();
 router.get("/catalog", getCatalog);
 router.get("/catalog/:id", getCatalogItem);
 
-// Protected catalog management (admin only)
-router.post("/catalog", protect, createCatalogItem);
-router.put("/catalog/:id", protect, updateCatalogItem);
-router.delete("/catalog/:id", protect, deleteCatalogItem);
+// Admin-only catalog management — protect then requireAdmin
+router.post("/catalog",    protect, requireAdmin, createCatalogItem);
+router.put("/catalog/:id", protect, requireAdmin, updateCatalogItem);
+router.delete("/catalog/:id", protect, requireAdmin, deleteCatalogItem);
 
 // Protected estimate routes
 router.get("/estimates", protect, getEstimates);

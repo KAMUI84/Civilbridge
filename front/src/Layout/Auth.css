@@ -24,7 +24,7 @@
 
 .authLeft{
   position:relative;
-  background-image: url("/auth-left.jpg"); /* <-- put YOUR uploaded image in /public/auth-left.jpg */
+  background-image: url("/civilbridge.png");
   background-size: cover;
   background-position: center;
 }

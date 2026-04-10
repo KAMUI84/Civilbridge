@@ -1,68 +1,29 @@
 // User Management Routes with RBAC
 import express from 'express';
-import { 
-  getAllUsers, 
-  getUserById, 
-  updateUserRole, 
-  updateUserStatus, 
-  createUser, 
-  deleteUser, 
+import { protect } from '../../middlewares/auth.js';
+import {
+  getAllUsers,
+  getUserById,
+  updateUserRole,
+  updateUserStatus,
+  createUser,
+  deleteUser,
   getCurrentUserPermissions,
-  requirePermission 
+  requirePermission,
 } from './user.controller.js';
 
 const router = express.Router();
 
-// Apply authentication middleware to all routes (you'll need to add this)
-// router.use(authMiddleware);
+// Every route in this file requires a valid session first (protect),
+// then the relevant permission check second.
+router.use(protect);
 
-/**
- * @route   GET /api/users
- * @desc    Get all users (Admin/Super Admin only)
- * @access  Private (Requires MANAGE_USERS permission)
- */
-router.get('/', requirePermission('MANAGE_USERS'), getAllUsers);
-
-/**
- * @route   GET /api/users/me/permissions
- * @desc    Get current user's permissions
- * @access  Private
- */
-router.get('/me/permissions', getCurrentUserPermissions);
-
-/**
- * @route   GET /api/users/:id
- * @desc    Get user by ID (Admin/Super Admin or own profile)
- * @access  Private
- */
-router.get('/:id', requirePermission('MANAGE_USERS'), getUserById);
-
-/**
- * @route   POST /api/users
- * @desc    Create new user (Admin/Super Admin only)
- * @access  Private (Requires MANAGE_USERS permission)
- */
-router.post('/', requirePermission('MANAGE_USERS'), createUser);
-
-/**
- * @route   PUT /api/users/:id/role
- * @desc    Update user role (Admin/Super Admin only)
- * @access  Private (Requires ASSIGN_ROLES permission)
- */
-router.put('/:id/role', requirePermission('ASSIGN_ROLES'), updateUserRole);
-
-/**
- * @route   PUT /api/users/:id/status
- * @desc    Update user status (Admin/Super Admin only)
- * @access  Private (Requires MANAGE_USERS permission)
- */
-router.put('/:id/status', requirePermission('MANAGE_USERS'), updateUserStatus);
-
-/**
- * @route   DELETE /api/users/:id
- * @desc    Delete user (Super Admin only)
- * @access  Private (Requires MANAGE_USERS permission)
- */
-router.delete('/:id', requirePermission('MANAGE_USERS'), deleteUser);
+router.get('/',                protect, requirePermission('MANAGE_USERS'), getAllUsers);
+router.get('/me/permissions',  protect, getCurrentUserPermissions);
+router.get('/:id',             protect, requirePermission('MANAGE_USERS'), getUserById);
+router.post('/',               protect, requirePermission('MANAGE_USERS'), createUser);
+router.put('/:id/role',        protect, requirePermission('ASSIGN_ROLES'), updateUserRole);
+router.put('/:id/status',      protect, requirePermission('MANAGE_USERS'), updateUserStatus);
+router.delete('/:id',          protect, requirePermission('MANAGE_USERS'), deleteUser);
 
 export default router;

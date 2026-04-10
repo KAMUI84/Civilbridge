@@ -1,184 +1,98 @@
-// Enhanced Engineer Role System
-import React, { useState, useEffect } from 'react';
+﻿import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useAuth } from '../../context/useAuth';
+import appointmentsService from '../../services/appointmentsService';
+import { expertsService } from '../../services/expertsService';
 
 export default function EngineerSystem() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [pendingPlans, setPendingPlans] = useState([]);
-  const [approvedPlans, setApprovedPlans] = useState([]);
-  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [experts, setExperts] = useState([]);
+  const [bookedAppointments, setBookedAppointments] = useState([]);
+  const [selectedExpert, setSelectedExpert] = useState(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
-  const [engineerProfile, setEngineerProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [availability, setAvailability] = useState([]);
+  const [availabilityState, setAvailabilityState] = useState({ loading: false, error: '' });
+  const [bookingData, setBookingData] = useState({ calendarSlotId: '', notes: '' });
+  const [bookingState, setBookingState] = useState({ submitting: false, message: '', type: '' });
 
-  // Mock data
-  const mockPendingPlans = [
-    {
-      id: 1,
-      title: 'Modern Residential House - Kigali',
-      client: 'Jean Mugisha',
-      submittedDate: '2024-03-18',
-      status: 'pending_review',
-      priority: 'high',
-      planType: 'ai_generated',
-      estimatedCost: 28000000,
-      timeline: '8 months',
-      feasibilityScore: 85,
-      location: 'Kigali, Gasabo',
-      description: '3-bedroom residential house with modern amenities',
-      documents: [
-        { name: 'Architectural Plan.pdf', type: 'pdf', size: '2.4MB' },
-        { name: 'Material Breakdown.xlsx', type: 'excel', size: '156KB' },
-        { name: 'Cost Estimate.pdf', type: 'pdf', size: '890KB' }
-      ],
-      aiAnalysis: {
-        structuralIntegrity: 92,
-        complianceScore: 88,
-        materialEfficiency: 85,
-        costOptimization: 78
-      },
-      clientInfo: {
-        name: 'Jean Mugisha',
-        email: 'jean.mugisha@email.com',
-        phone: '+250788123456',
-        company: 'Mugisha Enterprises'
-      }
-    },
-    {
-      id: 2,
-      title: 'Commercial Office Building - Remera',
-      client: 'Sarah Uwimana',
-      submittedDate: '2024-03-17',
-      status: 'pending_review',
-      priority: 'medium',
-      planType: 'manual',
-      estimatedCost: 65000000,
-      timeline: '15 months',
-      feasibilityScore: 78,
-      location: 'Kigali, Kicukiro',
-      description: '4-story commercial office building with parking',
-      documents: [
-        { name: 'Floor Plans.dwg', type: 'dwg', size: '4.2MB' },
-        { name: 'Structural Analysis.pdf', type: 'pdf', size: '1.8MB' }
-      ],
-      aiAnalysis: {
-        structuralIntegrity: 85,
-        complianceScore: 92,
-        materialEfficiency: 80,
-        costOptimization: 75
-      },
-      clientInfo: {
-        name: 'Sarah Uwimana',
-        email: 'sarah.uwimana@company.rw',
-        phone: '+250787987654',
-        company: 'Uwimana Construction'
-      }
+  const loadExperts = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const data = await expertsService.getAll();
+      const nextExperts = (data?.experts || []).filter((expert) => String(expert.userId) !== String(user?.id));
+      setExperts(nextExperts);
+      setLoading(false);
+    } catch (loadError) {
+      setError(loadError.message || 'Failed to load appointment providers.');
+      setLoading(false);
     }
-  ];
-
-  const mockApprovedPlans = [
-    {
-      id: 3,
-      title: 'Apartment Complex - Nyarugenge',
-      client: 'Joseph Niyonzima',
-      approvedDate: '2024-03-15',
-      status: 'approved',
-      priority: 'high',
-      estimatedCost: 120000000,
-      timeline: '18 months',
-      feasibilityScore: 91,
-      location: 'Kigali, Nyarugenge',
-      engineerApproval: {
-        approvedBy: 'Eng. Marie Mukamana',
-        approvedDate: '2024-03-15',
-        licenseNumber: 'REB/ENG/2023/0456',
-        comments: 'Structural design is sound and meets all building codes. Recommended for construction.',
-        stamp: 'APPROVED'
-      }
-    }
-  ];
-
-  const mockEngineerProfile = {
-    name: 'Marie Mukamana',
-    title: 'Senior Structural Engineer',
-    licenseNumber: 'REB/ENG/2023/0456',
-    specializations: ['Structural Engineering', 'Building Codes', 'Project Management'],
-    experience: '12 years',
-    approvedProjects: 47,
-    rating: 4.9,
-    certifications: [
-      'Rwanda Engineers Board Certified',
-      'Structural Engineering Masters',
-      'Project Management Professional'
-    ],
-    contact: {
-      email: 'marie.mukamana@eng.rw',
-      phone: '+250785456789',
-      office: 'Kigali, Kacyiru'
-    }
-  };
+  }, [user?.id]);
 
   useEffect(() => {
-    setTimeout(() => {
-      setPendingPlans(mockPendingPlans);
-      setApprovedPlans(mockApprovedPlans);
-      setEngineerProfile(mockEngineerProfile);
-      setLoading(false);
-    }, 1000);
+    const timer = window.setTimeout(() => {
+      loadExperts();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [loadExperts]);
+
+  const loadAvailability = useCallback(async (providerId) => {
+    try {
+      setAvailabilityState({ loading: true, error: '' });
+      const data = await appointmentsService.getAvailability(providerId);
+      setAvailability(data?.availability || []);
+      setAvailabilityState({ loading: false, error: '' });
+    } catch (loadError) {
+      setAvailability([]);
+      setAvailabilityState({ loading: false, error: loadError.message || 'Failed to fetch availability.' });
+    }
   }, []);
 
-  const handleReviewPlan = (plan) => {
-    setSelectedPlan(plan);
+  const openBooking = async (expert) => {
+    setSelectedExpert(expert);
+    setBookingData({ calendarSlotId: '', notes: '' });
+    setBookingState({ submitting: false, message: '', type: '' });
     setShowReviewModal(true);
+    await loadAvailability(expert.userId);
   };
 
-  const handleApprovePlan = (planId, reviewData) => {
-    const plan = pendingPlans.find(p => p.id === planId);
-    const approvedPlan = {
-      ...plan,
-      status: 'approved',
-      engineerApproval: {
-        approvedBy: engineerProfile.name,
-        approvedDate: new Date().toISOString().split('T')[0],
-        licenseNumber: engineerProfile.licenseNumber,
-        comments: reviewData.comments,
-        recommendations: reviewData.recommendations,
-        stamp: 'APPROVED'
-      }
+  const handleBookAppointment = async () => {
+    if (!selectedExpert) return;
+    if (!bookingData.calendarSlotId) {
+      setBookingState({ submitting: false, message: 'Select an available slot first.', type: 'error' });
+      return;
+    }
+
+    try {
+      setBookingState({ submitting: true, message: '', type: '' });
+      const response = await appointmentsService.create({
+        providerId: String(selectedExpert.userId),
+        calendarSlotId: bookingData.calendarSlotId,
+        notes: bookingData.notes,
+      });
+
+      const appointment = response?.appointment;
+      setBookedAppointments((prev) => [appointment, ...prev]);
+      setBookingState({ submitting: false, message: 'Appointment request sent successfully.', type: 'success' });
+      await loadAvailability(selectedExpert.userId);
+      setBookingData({ calendarSlotId: '', notes: '' });
+    } catch (submitError) {
+      setBookingState({ submitting: false, message: submitError.message || 'Failed to book appointment.', type: 'error' });
+    }
+  };
+
+  const dashboardStats = useMemo(() => {
+    const totalSlots = experts.length;
+    const availableExperts = experts.filter((expert) => expert.verifiedAt).length;
+    return {
+      availableExperts,
+      bookedAppointments: bookedAppointments.length,
+      totalProviders: totalSlots,
+      completionRate: bookedAppointments.length ? 'Live' : 'Ready',
     };
-    
-    setPendingPlans(pendingPlans.filter(p => p.id !== planId));
-    setApprovedPlans([...approvedPlans, approvedPlan]);
-    setShowReviewModal(false);
-    setSelectedPlan(null);
-  };
-
-  const handleRejectPlan = (planId, reviewData) => {
-    const plan = pendingPlans.find(p => p.id === planId);
-    const rejectedPlan = {
-      ...plan,
-      status: 'rejected',
-      engineerApproval: {
-        approvedBy: engineerProfile.name,
-        approvedDate: new Date().toISOString().split('T')[0],
-        licenseNumber: engineerProfile.licenseNumber,
-        comments: reviewData.comments,
-        reasons: reviewData.reasons,
-        stamp: 'REJECTED'
-      }
-    };
-    
-    setPendingPlans(pendingPlans.filter(p => p.id !== planId));
-    setShowReviewModal(false);
-    setSelectedPlan(null);
-  };
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('rw-RW', {
-      style: 'currency',
-      currency: 'RWF',
-      minimumFractionDigits: 0
-    }).format(amount);
-  };
+  }, [bookedAppointments.length, experts]);
 
   if (loading) {
     return (
@@ -189,244 +103,175 @@ export default function EngineerSystem() {
     );
   }
 
+  if (error) {
+    return (
+      <div style={styles.loadingContainer}>
+        <p style={{ color: '#ef4444', marginBottom: 16 }}>{error}</p>
+        <button style={styles.reviewButton} onClick={loadExperts}>Retry</button>
+      </div>
+    );
+  }
+
   return (
     <div style={styles.container}>
-      {/* Header */}
       <div style={styles.header}>
         <h1 style={styles.title}>Engineer Dashboard</h1>
-        <p style={styles.subtitle}>Review and validate construction plans</p>
+        <p style={styles.subtitle}>Book consultations and coordinate with verified experts</p>
       </div>
 
-      {/* Engineer Profile Card */}
-      {engineerProfile && (
-        <div style={styles.profileCard}>
-          <div style={styles.profileHeader}>
-            <div style={styles.profileAvatar}>
-              {engineerProfile.name.split(' ').map(n => n[0]).join('')}
-            </div>
-            <div style={styles.profileInfo}>
-              <h2 style={styles.profileName}>{engineerProfile.name}</h2>
-              <p style={styles.profileTitle}>{engineerProfile.title}</p>
-              <div style={styles.profileLicense}>
-                License: {engineerProfile.licenseNumber}
-              </div>
-              <div style={styles.profileStats}>
-                <div style={styles.stat}>
-                  <span style={styles.statValue}>{engineerProfile.approvedProjects}</span>
-                  <span style={styles.statLabel}>Projects Approved</span>
-                </div>
-                <div style={styles.stat}>
-                  <span style={styles.statValue}>{engineerProfile.rating}</span>
-                  <span style={styles.statLabel}>Rating</span>
-                </div>
-                <div style={styles.stat}>
-                  <span style={styles.statValue}>{engineerProfile.experience}</span>
-                  <span style={styles.statLabel}>Experience</span>
-                </div>
-              </div>
-            </div>
+      <div style={styles.profileCard}>
+        <div style={styles.profileHeader}>
+          <div style={styles.profileAvatar}>
+            {(user?.fullName || 'Engineer')
+              .split(' ')
+              .map((part) => part[0])
+              .join('')
+              .slice(0, 2)}
           </div>
-          <div style={styles.profileDetails}>
-            <div style={styles.detailSection}>
-              <h4 style={styles.detailTitle}>Specializations</h4>
-              <div style={styles.specializations}>
-                {engineerProfile.specializations.map((spec, index) => (
-                  <span key={index} style={styles.specialization}>{spec}</span>
-                ))}
+          <div style={styles.profileInfo}>
+            <h2 style={styles.profileName}>{user?.fullName || 'Engineer'}</h2>
+            <p style={styles.profileTitle}>{user?.role || 'PROFESSIONAL'}</p>
+            <div style={styles.profileLicense}>Email: {user?.email || 'Not available'}</div>
+            <div style={styles.profileStats}>
+              <div style={styles.stat}>
+                <span style={styles.statValue}>{dashboardStats.availableExperts}</span>
+                <span style={styles.statLabel}>Available Experts</span>
               </div>
-            </div>
-            <div style={styles.detailSection}>
-              <h4 style={styles.detailTitle}>Certifications</h4>
-              <div style={styles.certifications}>
-                {engineerProfile.certifications.map((cert, index) => (
-                  <div key={index} style={styles.certification}>
-                    ✓ {cert}
-                  </div>
-                ))}
+              <div style={styles.stat}>
+                <span style={styles.statValue}>{dashboardStats.bookedAppointments}</span>
+                <span style={styles.statLabel}>Booked Requests</span>
+              </div>
+              <div style={styles.stat}>
+                <span style={styles.statValue}>{dashboardStats.totalProviders}</span>
+                <span style={styles.statLabel}>Provider Network</span>
               </div>
             </div>
           </div>
         </div>
-      )}
+      </div>
 
-      {/* Tabs */}
       <div style={styles.tabs}>
         <button
-          style={{
-            ...styles.tab,
-            ...(activeTab === 'dashboard' && styles.tabActive)
-          }}
+          style={{ ...styles.tab, ...(activeTab === 'dashboard' && styles.tabActive) }}
           onClick={() => setActiveTab('dashboard')}
         >
-          📊 Dashboard
+          Dashboard
         </button>
         <button
-          style={{
-            ...styles.tab,
-            ...(activeTab === 'pending' && styles.tabActive)
-          }}
+          style={{ ...styles.tab, ...(activeTab === 'pending' && styles.tabActive) }}
           onClick={() => setActiveTab('pending')}
         >
-          ⏳ Pending Review ({pendingPlans.length})
+          Available Experts ({experts.length})
         </button>
         <button
-          style={{
-            ...styles.tab,
-            ...(activeTab === 'approved' && styles.tabActive)
-          }}
+          style={{ ...styles.tab, ...(activeTab === 'approved' && styles.tabActive) }}
           onClick={() => setActiveTab('approved')}
         >
-          ✅ Approved ({approvedPlans.length})
+          Booked Requests ({bookedAppointments.length})
         </button>
       </div>
 
-      {/* Dashboard Tab */}
       {activeTab === 'dashboard' && (
         <div style={styles.dashboardContent}>
           <div style={styles.statsGrid}>
             <div style={styles.statCard}>
-              <div style={styles.statIcon}>⏳</div>
+              <div style={styles.statIcon}>EX</div>
               <div style={styles.statInfo}>
-                <h3 style={styles.statNumber}>{pendingPlans.length}</h3>
-                <p style={styles.statLabel}>Pending Reviews</p>
+                <h3 style={styles.statNumber}>{dashboardStats.availableExperts}</h3>
+                <p style={styles.statLabel}>Verified Experts</p>
               </div>
             </div>
             <div style={styles.statCard}>
-              <div style={styles.statIcon}>✅</div>
+              <div style={styles.statIcon}>RQ</div>
               <div style={styles.statInfo}>
-                <h3 style={styles.statNumber}>{approvedPlans.length}</h3>
-                <p style={styles.statLabel}>Approved Plans</p>
+                <h3 style={styles.statNumber}>{dashboardStats.bookedAppointments}</h3>
+                <p style={styles.statLabel}>Appointment Requests</p>
               </div>
             </div>
             <div style={styles.statCard}>
-              <div style={styles.statIcon}>📈</div>
+              <div style={styles.statIcon}>NW</div>
               <div style={styles.statInfo}>
-                <h3 style={styles.statNumber}>91%</h3>
-                <p style={styles.statLabel}>Avg. Approval Rate</p>
+                <h3 style={styles.statNumber}>{dashboardStats.totalProviders}</h3>
+                <p style={styles.statLabel}>Provider Network</p>
               </div>
             </div>
             <div style={styles.statCard}>
-              <div style={styles.statIcon}>⏱️</div>
+              <div style={styles.statIcon}>OK</div>
               <div style={styles.statInfo}>
-                <h3 style={styles.statNumber}>2.5 days</h3>
-                <p style={styles.statLabel}>Avg. Review Time</p>
+                <h3 style={styles.statNumber}>{dashboardStats.completionRate}</h3>
+                <p style={styles.statLabel}>Booking Status</p>
               </div>
             </div>
           </div>
 
           <div style={styles.recentActivity}>
-            <h3 style={styles.sectionTitle}>Recent Activity</h3>
+            <h3 style={styles.sectionTitle}>Recent Booking Activity</h3>
             <div style={styles.activityList}>
-              {[...pendingPlans, ...approvedPlans].slice(0, 5).map((plan, index) => (
-                <div key={plan.id} style={styles.activityItem}>
-                  <div style={styles.activityIcon}>
-                    {plan.status === 'approved' ? '✅' : '⏳'}
+              {bookedAppointments.length ? (
+                bookedAppointments.slice(0, 5).map((appointment) => (
+                  <div key={appointment.id} style={styles.activityItem}>
+                    <div style={styles.activityIcon}>AP</div>
+                    <div style={styles.activityContent}>
+                      <p style={styles.activityText}>
+                        Appointment with {appointment.provider?.fullName || 'provider'}
+                      </p>
+                      <p style={styles.activityTime}>
+                        {new Date(appointment.startsAt).toLocaleString()} • {appointment.status}
+                      </p>
+                    </div>
                   </div>
-                  <div style={styles.activityContent}>
-                    <p style={styles.activityText}>
-                      {plan.title} - {plan.client}
-                    </p>
-                    <p style={styles.activityTime}>
-                      {plan.status === 'approved' ? 'Approved' : 'Submitted'} on {plan.status === 'approved' ? plan.approvedDate : plan.submittedDate}
-                    </p>
-                  </div>
+                ))
+              ) : (
+                <div style={styles.emptyState}>
+                  <p>No appointment activity yet. Book your first consultation from the Available Experts tab.</p>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* Pending Reviews Tab */}
       {activeTab === 'pending' && (
         <div style={styles.plansList}>
-          <h3 style={styles.sectionTitle}>Plans Pending Review</h3>
-          {pendingPlans.length === 0 ? (
-            <div style={styles.emptyState}>
-              <p>No plans pending review</p>
-            </div>
+          <h3 style={styles.sectionTitle}>Verified Experts With Bookable Availability</h3>
+          {experts.length === 0 ? (
+            <div style={styles.emptyState}><p>No experts available right now.</p></div>
           ) : (
             <div style={styles.plansGrid}>
-              {pendingPlans.map((plan, index) => (
-                <div
-                  key={plan.id}
-                  style={styles.planCard}
-                >
+              {experts.map((expert) => (
+                <div key={expert.id} style={styles.planCard}>
                   <div style={styles.planHeader}>
-                    <h3 style={styles.planTitle}>{plan.title}</h3>
-                    <span style={{
-                      ...styles.priorityBadge,
-                      ...(plan.priority === 'high' && styles.priorityHigh)
-                    }}>
-                      {plan.priority}
+                    <h3 style={styles.planTitle}>{expert.user?.fullName}</h3>
+                    <span style={{ ...styles.priorityBadge, ...(expert.verifiedAt && styles.approvedBadge) }}>
+                      {expert.verifiedAt ? 'Verified' : 'Profile'}
                     </span>
                   </div>
-                  
                   <div style={styles.planInfo}>
                     <div style={styles.infoItem}>
-                      <span style={styles.infoLabel}>Client:</span>
-                      <span style={styles.infoValue}>{plan.client}</span>
+                      <span style={styles.infoLabel}>Profession:</span>
+                      <span style={styles.infoValue}>{expert.user?.profession || 'Expert'}</span>
                     </div>
                     <div style={styles.infoItem}>
-                      <span style={styles.infoLabel}>Location:</span>
-                      <span style={styles.infoValue}>{plan.location}</span>
+                      <span style={styles.infoLabel}>Region:</span>
+                      <span style={styles.infoValue}>{expert.region || expert.user?.region || 'Rwanda'}</span>
                     </div>
                     <div style={styles.infoItem}>
-                      <span style={styles.infoLabel}>Cost:</span>
-                      <span style={styles.infoValue}>{formatCurrency(plan.estimatedCost)}</span>
-                    </div>
-                    <div style={styles.infoItem}>
-                      <span style={styles.infoLabel}>Timeline:</span>
-                      <span style={styles.infoValue}>{plan.timeline}</span>
-                    </div>
-                    <div style={styles.infoItem}>
-                      <span style={styles.infoLabel}>Feasibility:</span>
-                      <span style={styles.infoValue}>{plan.feasibilityScore}%</span>
+                      <span style={styles.infoLabel}>Rating:</span>
+                      <span style={styles.infoValue}>{expert.ratingAvg?.toFixed?.(1) || '—'} ({expert.ratingCount || 0})</span>
                     </div>
                   </div>
-
                   <div style={styles.aiAnalysis}>
-                    <h4 style={styles.analysisTitle}>AI Analysis</h4>
+                    <h4 style={styles.analysisTitle}>Summary</h4>
                     <div style={styles.analysisGrid}>
-                      {Object.entries(plan.aiAnalysis).map(([key, value]) => (
-                        <div key={key} style={styles.analysisItem}>
-                          <span style={styles.analysisLabel}>
-                            {key.replace(/([A-Z])/g, ' $1').trim()}
-                          </span>
-                          <div style={styles.analysisBar}>
-                            <div style={{
-                              ...styles.analysisFill,
-                              width: `${value}%`,
-                              background: value >= 90 ? '#22c55e' : value >= 80 ? '#f59e0b' : '#ef4444'
-                            }}></div>
-                          </div>
-                          <span style={styles.analysisValue}>{value}%</span>
-                        </div>
-                      ))}
+                      <div style={styles.analysisItem}>
+                        <span style={styles.analysisLabel}>Headline</span>
+                        <span style={styles.analysisValue}>{expert.headline || 'Available for consultations'}</span>
+                      </div>
                     </div>
                   </div>
-
-                  <div style={styles.planDocuments}>
-                    <h4 style={styles.documentsTitle}>Documents</h4>
-                    <div style={styles.documentsList}>
-                      {plan.documents.map((doc, index) => (
-                        <div key={index} style={styles.documentItem}>
-                          <span style={styles.documentIcon}>
-                            {doc.type === 'pdf' ? '📄' : doc.type === 'excel' ? '📊' : '📐'}
-                          </span>
-                          <span style={styles.documentName}>{doc.name}</span>
-                          <span style={styles.documentSize}>{doc.size}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
                   <div style={styles.planActions}>
-                    <button
-                      style={styles.reviewButton}
-                      onClick={() => handleReviewPlan(plan)}
-                    >
-                      🔍 Review Plan
+                    <button style={styles.reviewButton} onClick={() => openBooking(expert)}>
+                      Book Appointment
                     </button>
                   </div>
                 </div>
@@ -436,51 +281,35 @@ export default function EngineerSystem() {
         </div>
       )}
 
-      {/* Approved Plans Tab */}
       {activeTab === 'approved' && (
         <div style={styles.plansList}>
-          <h3 style={styles.sectionTitle}>Approved Plans</h3>
-          {approvedPlans.length === 0 ? (
-            <div style={styles.emptyState}>
-              <p>No approved plans yet</p>
-            </div>
+          <h3 style={styles.sectionTitle}>Booked Appointment Requests</h3>
+          {bookedAppointments.length === 0 ? (
+            <div style={styles.emptyState}><p>No booked appointment requests yet.</p></div>
           ) : (
             <div style={styles.plansGrid}>
-              {approvedPlans.map((plan, index) => (
-                <div
-                  key={plan.id}
-                  style={styles.planCard}
-                >
+              {bookedAppointments.map((appointment) => (
+                <div key={appointment.id} style={styles.planCard}>
                   <div style={styles.planHeader}>
-                    <h3 style={styles.planTitle}>{plan.title}</h3>
-                    <span style={styles.approvedBadge}>✅ APPROVED</span>
+                    <h3 style={styles.planTitle}>{appointment.provider?.fullName || 'Appointment'}</h3>
+                    <span style={styles.approvedBadge}>{appointment.status}</span>
                   </div>
-                  
                   <div style={styles.approvalInfo}>
-                    <h4 style={styles.approvalTitle}>Engineer Approval</h4>
+                    <h4 style={styles.approvalTitle}>Appointment Details</h4>
                     <div style={styles.approvalDetails}>
                       <div style={styles.approvalItem}>
-                        <span style={styles.approvalLabel}>Approved by:</span>
-                        <span style={styles.approvalValue}>{plan.engineerApproval.approvedBy}</span>
+                        <span style={styles.approvalLabel}>Starts:</span>
+                        <span style={styles.approvalValue}>{new Date(appointment.startsAt).toLocaleString()}</span>
                       </div>
                       <div style={styles.approvalItem}>
-                        <span style={styles.approvalLabel}>License:</span>
-                        <span style={styles.approvalValue}>{plan.engineerApproval.licenseNumber}</span>
+                        <span style={styles.approvalLabel}>Ends:</span>
+                        <span style={styles.approvalValue}>{new Date(appointment.endsAt).toLocaleString()}</span>
                       </div>
                       <div style={styles.approvalItem}>
-                        <span style={styles.approvalLabel}>Date:</span>
-                        <span style={styles.approvalValue}>{plan.engineerApproval.approvedDate}</span>
+                        <span style={styles.approvalLabel}>Notes:</span>
+                        <span style={styles.approvalValue}>{appointment.notes || 'None'}</span>
                       </div>
                     </div>
-                    <div style={styles.approvalComments}>
-                      <p style={styles.commentsText}>{plan.engineerApproval.comments}</p>
-                    </div>
-                  </div>
-
-                  <div style={styles.planActions}>
-                    <button style={styles.viewButton}>
-                      📄 View Certificate
-                    </button>
                   </div>
                 </div>
               ))}
@@ -489,125 +318,102 @@ export default function EngineerSystem() {
         </div>
       )}
 
-      {/* Review Modal */}
-      {showReviewModal && selectedPlan && (
+      {showReviewModal && selectedExpert && (
         <div style={styles.modalOverlay}>
           <div style={styles.modal}>
-            <ReviewModal
-              plan={selectedPlan}
-              engineerProfile={engineerProfile}
-              onApprove={handleApprovePlan}
-              onReject={handleRejectPlan}
-              onClose={() => setShowReviewModal(false)}
-            />
+            <div style={styles.reviewModal}>
+              <div style={styles.modalHeader}>
+                <h3 style={styles.modalTitle}>Book Appointment With {selectedExpert.user?.fullName}</h3>
+                <button style={styles.modalClose} onClick={() => setShowReviewModal(false)}>X</button>
+              </div>
+
+              <div style={styles.modalContent}>
+                {bookingState.message ? (
+                  <div style={{
+                    padding: '12px 14px',
+                    borderRadius: 10,
+                    background: bookingState.type === 'error' ? 'rgba(239,68,68,0.12)' : 'rgba(34,197,94,0.12)',
+                    color: bookingState.type === 'error' ? '#ef4444' : '#22c55e',
+                  }}>
+                    {bookingState.message}
+                  </div>
+                ) : null}
+
+                <div style={styles.planSummary}>
+                  <h4 style={styles.summaryTitle}>Provider Details</h4>
+                  <div style={styles.summaryInfo}>
+                    <p><strong>Name:</strong> {selectedExpert.user?.fullName}</p>
+                    <p><strong>Profession:</strong> {selectedExpert.user?.profession || 'Expert'}</p>
+                    <p><strong>Region:</strong> {selectedExpert.region || selectedExpert.user?.region || 'Rwanda'}</p>
+                  </div>
+                </div>
+
+                <div style={styles.reviewSection}>
+                  <h4 style={styles.reviewTitle}>Choose Availability</h4>
+                  {availabilityState.loading ? (
+                    <div style={styles.emptyState}><p>Loading available slots...</p></div>
+                  ) : availabilityState.error ? (
+                    <div style={styles.emptyState}>
+                      <p>{availabilityState.error}</p>
+                      <button style={styles.viewButton} onClick={() => loadAvailability(selectedExpert.userId)}>Retry availability</button>
+                    </div>
+                  ) : availability.length === 0 ? (
+                    <div style={styles.emptyState}><p>No open slots for this expert right now.</p></div>
+                  ) : (
+                    <div style={{ display: 'grid', gap: 8 }}>
+                      {availability.map((slot) => {
+                        const selectedSlot = String(bookingData.calendarSlotId) === String(slot.id);
+                        return (
+                          <label
+                            key={slot.id}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 10,
+                              padding: '10px 12px',
+                              borderRadius: 10,
+                              border: selectedSlot ? '1px solid #00f2ff' : '1px solid rgba(255,255,255,0.1)',
+                            }}
+                          >
+                            <input
+                              type="radio"
+                              name="calendarSlotId"
+                              value={slot.id}
+                              checked={selectedSlot}
+                              onChange={(event) => setBookingData((prev) => ({ ...prev, calendarSlotId: event.target.value }))}
+                            />
+                            <span>{new Date(slot.startsAt).toLocaleString()} - {new Date(slot.endsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <div style={styles.formGroup}>
+                    <label style={styles.formLabel}>Notes</label>
+                    <textarea
+                      style={styles.formTextarea}
+                      value={bookingData.notes}
+                      onChange={(event) => setBookingData((prev) => ({ ...prev, notes: event.target.value }))}
+                      placeholder="Add project notes or meeting context..."
+                      rows={3}
+                    />
+                  </div>
+                </div>
+
+                <div style={styles.modalActions}>
+                  <button style={styles.rejectButton} onClick={() => setShowReviewModal(false)} disabled={bookingState.submitting}>
+                    Close
+                  </button>
+                  <button style={styles.approveButton} onClick={handleBookAppointment} disabled={bookingState.submitting || !availability.length}>
+                    {bookingState.submitting ? 'Processing...' : 'Book Appointment'}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-// Review Modal Component
-function ReviewModal({ plan, engineerProfile, onApprove, onReject, onClose }) {
-  const [reviewData, setReviewData] = useState({
-    comments: '',
-    recommendations: '',
-    reasons: []
-  });
-  const [loading, setLoading] = useState(false);
-
-  const handleApprove = async () => {
-    if (!reviewData.comments.trim()) {
-      alert('Please provide comments for approval');
-      return;
-    }
-    
-    setLoading(true);
-    setTimeout(() => {
-      onApprove(plan.id, reviewData);
-      setLoading(false);
-    }, 1000);
-  };
-
-  const handleReject = async () => {
-    if (!reviewData.comments.trim()) {
-      alert('Please provide reasons for rejection');
-      return;
-    }
-    
-    setLoading(true);
-    setTimeout(() => {
-      onReject(plan.id, reviewData);
-      setLoading(false);
-    }, 1000);
-  };
-
-  return (
-    <div style={styles.reviewModal}>
-      <div style={styles.modalHeader}>
-        <h3 style={styles.modalTitle}>Review Construction Plan</h3>
-        <button style={styles.modalClose} onClick={onClose}>×</button>
-      </div>
-
-      <div style={styles.modalContent}>
-        <div style={styles.planSummary}>
-          <h4 style={styles.summaryTitle}>Plan Details</h4>
-          <div style={styles.summaryInfo}>
-            <p><strong>Title:</strong> {plan.title}</p>
-            <p><strong>Client:</strong> {plan.client}</p>
-            <p><strong>Location:</strong> {plan.location}</p>
-            <p><strong>Cost:</strong> {new Intl.NumberFormat('rw-RW', {
-              style: 'currency',
-              currency: 'RWF',
-              minimumFractionDigits: 0
-            }).format(plan.estimatedCost)}</p>
-            <p><strong>Feasibility Score:</strong> {plan.feasibilityScore}%</p>
-          </div>
-        </div>
-
-        <div style={styles.reviewSection}>
-          <h4 style={styles.reviewTitle}>Engineer Review</h4>
-          <div style={styles.formGroup}>
-            <label style={styles.formLabel}>Comments *</label>
-            <textarea
-              style={styles.formTextarea}
-              value={reviewData.comments}
-              onChange={(e) => setReviewData({ ...reviewData, comments: e.target.value })}
-              placeholder="Provide your professional assessment..."
-              rows={4}
-              required
-            />
-          </div>
-
-          <div style={styles.formGroup}>
-            <label style={styles.formLabel}>Recommendations</label>
-            <textarea
-              style={styles.formTextarea}
-              value={reviewData.recommendations}
-              onChange={(e) => setReviewData({ ...reviewData, recommendations: e.target.value })}
-              placeholder="Suggestions for improvement..."
-              rows={3}
-            />
-          </div>
-        </div>
-
-        <div style={styles.modalActions}>
-          <button
-            style={styles.rejectButton}
-            onClick={handleReject}
-            disabled={loading}
-          >
-            {loading ? 'Processing...' : '❌ Reject Plan'}
-          </button>
-          <button
-            style={styles.approveButton}
-            onClick={handleApprove}
-            disabled={loading}
-          >
-            {loading ? 'Processing...' : '✅ Approve Plan'}
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
@@ -619,8 +425,6 @@ const styles = {
     padding: '20px',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
   },
-  
-  // Loading
   loadingContainer: {
     display: 'flex',
     flexDirection: 'column',
@@ -638,8 +442,6 @@ const styles = {
     animation: 'spin 1s linear infinite',
     marginBottom: '16px'
   },
-
-  // Header
   header: {
     textAlign: 'center',
     marginBottom: '40px'
@@ -654,8 +456,6 @@ const styles = {
     fontSize: '1.125rem',
     color: 'var(--text-muted)'
   },
-
-  // Profile Card
   profileCard: {
     background: 'rgba(255, 255, 255, 0.05)',
     backdropFilter: 'blur(10px)',
@@ -681,9 +481,7 @@ const styles = {
     fontWeight: 700,
     color: 'var(--bg-color)'
   },
-  profileInfo: {
-    flex: 1
-  },
+  profileInfo: { flex: 1 },
   profileName: {
     fontSize: '24px',
     fontWeight: 700,
@@ -704,9 +502,7 @@ const styles = {
     display: 'flex',
     gap: '32px'
   },
-  stat: {
-    textAlign: 'center'
-  },
+  stat: { textAlign: 'center' },
   statValue: {
     fontSize: '20px',
     fontWeight: 700,
@@ -717,45 +513,6 @@ const styles = {
     fontSize: '12px',
     color: 'var(--text-muted)'
   },
-  profileDetails: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-    gap: '24px'
-  },
-  detailSection: {
-    background: 'rgba(255, 255, 255, 0.03)',
-    borderRadius: '8px',
-    padding: '16px'
-  },
-  detailTitle: {
-    fontSize: '14px',
-    fontWeight: 600,
-    color: 'var(--text-color)',
-    marginBottom: '12px'
-  },
-  specializations: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: '8px'
-  },
-  specialization: {
-    fontSize: '12px',
-    background: 'rgba(0, 242, 255, 0.1)',
-    color: '#00f2ff',
-    padding: '4px 8px',
-    borderRadius: '6px'
-  },
-  certifications: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '8px'
-  },
-  certification: {
-    fontSize: '13px',
-    color: '#22c55e'
-  },
-
-  // Tabs
   tabs: {
     display: 'flex',
     gap: '4px',
@@ -776,8 +533,6 @@ const styles = {
     color: '#00f2ff',
     borderBottomColor: '#00f2ff'
   },
-
-  // Dashboard
   dashboardContent: {
     display: 'flex',
     flexDirection: 'column',
@@ -807,9 +562,7 @@ const styles = {
     background: 'rgba(255, 255, 255, 0.1)',
     borderRadius: '8px'
   },
-  statInfo: {
-    flex: 1
-  },
+  statInfo: { flex: 1 },
   statNumber: {
     fontSize: '24px',
     fontWeight: 700,
@@ -841,12 +594,7 @@ const styles = {
     background: 'rgba(255, 255, 255, 0.03)',
     borderRadius: '8px'
   },
-  activityIcon: {
-    fontSize: '16px'
-  },
-  activityContent: {
-    flex: 1
-  },
+  activityContent: { flex: 1 },
   activityText: {
     fontSize: '14px',
     color: 'var(--text-color)',
@@ -856,8 +604,6 @@ const styles = {
     fontSize: '12px',
     color: 'var(--text-muted)'
   },
-
-  // Plans List
   plansList: {
     display: 'flex',
     flexDirection: 'column',
@@ -895,16 +641,7 @@ const styles = {
     background: 'rgba(245, 158, 11, 0.1)',
     color: '#f59e0b'
   },
-  priorityHigh: {
-    background: 'rgba(239, 68, 68, 0.1)',
-    color: '#ef4444'
-  },
   approvedBadge: {
-    fontSize: '10px',
-    fontWeight: 600,
-    padding: '4px 8px',
-    borderRadius: '6px',
-    textTransform: 'uppercase',
     background: 'rgba(34, 197, 94, 0.1)',
     color: '#22c55e'
   },
@@ -919,15 +656,11 @@ const styles = {
     justifyContent: 'space-between',
     fontSize: '14px'
   },
-  infoLabel: {
-    color: 'var(--text-muted)'
-  },
+  infoLabel: { color: 'var(--text-muted)' },
   infoValue: {
     color: 'var(--text-color)',
     fontWeight: 500
   },
-
-  // AI Analysis
   aiAnalysis: {
     background: 'rgba(0, 242, 255, 0.05)',
     border: '1px solid rgba(0, 242, 255, 0.1)',
@@ -956,57 +689,11 @@ const styles = {
     color: 'var(--text-muted)',
     minWidth: '120px'
   },
-  analysisBar: {
-    flex: 1,
-    height: '6px',
-    background: 'var(--border-color)',
-    borderRadius: '3px',
-    overflow: 'hidden'
-  },
-  analysisFill: {
-    height: '100%',
-    transition: 'width 0.3s ease'
-  },
   analysisValue: {
     fontSize: '12px',
     color: 'var(--text-color)',
-    minWidth: '30px',
-    textAlign: 'right'
+    minWidth: '30px'
   },
-
-  // Documents
-  planDocuments: {
-    marginBottom: '16px'
-  },
-  documentsTitle: {
-    fontSize: '14px',
-    fontWeight: 600,
-    color: 'var(--text-color)',
-    marginBottom: '8px'
-  },
-  documentsList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '6px'
-  },
-  documentItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    fontSize: '12px',
-    color: 'var(--text-muted)'
-  },
-  documentIcon: {
-    fontSize: '16px'
-  },
-  documentName: {
-    flex: 1
-  },
-  documentSize: {
-    color: 'var(--text-muted)'
-  },
-
-  // Actions
   planActions: {
     display: 'flex',
     gap: '12px'
@@ -1033,8 +720,6 @@ const styles = {
     fontWeight: 600,
     cursor: 'pointer'
   },
-
-  // Approval Info
   approvalInfo: {
     background: 'rgba(34, 197, 94, 0.05)',
     border: '1px solid rgba(34, 197, 94, 0.1)',
@@ -1059,32 +744,16 @@ const styles = {
     justifyContent: 'space-between',
     fontSize: '13px'
   },
-  approvalLabel: {
-    color: 'var(--text-muted)'
-  },
+  approvalLabel: { color: 'var(--text-muted)' },
   approvalValue: {
     color: 'var(--text-color)',
     fontWeight: 500
   },
-  approvalComments: {
-    padding: '12px',
-    background: 'rgba(255, 255, 255, 0.03)',
-    borderRadius: '8px'
-  },
-  commentsText: {
-    fontSize: '13px',
-    color: '#22c55e',
-    margin: 0
-  },
-
-  // Empty State
   emptyState: {
     textAlign: 'center',
     padding: '40px',
     color: 'var(--text-muted)'
   },
-
-  // Modal
   modalOverlay: {
     position: 'fixed',
     top: 0,
@@ -1107,9 +776,7 @@ const styles = {
     maxHeight: '80vh',
     overflowY: 'auto'
   },
-  reviewModal: {
-    width: '100%'
-  },
+  reviewModal: { width: '100%' },
   modalHeader: {
     display: 'flex',
     justifyContent: 'space-between',
@@ -1207,3 +874,4 @@ const styles = {
     cursor: 'pointer'
   }
 };
+

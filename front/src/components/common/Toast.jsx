@@ -1,16 +1,18 @@
 import { useEffect, useState } from "react";
 
 export default function Toast({ message = "", type = "info", duration = 3000, onClose }) {
-    const [visible, setVisible] = useState(!!message);
+    const [dismissedMessage, setDismissedMessage] = useState("");
 
     useEffect(() => {
         if (!message) return;
-        setVisible(true);
-        const t = setTimeout(() => { setVisible(false); onClose?.(); }, duration);
+        const t = setTimeout(() => {
+            setDismissedMessage(message);
+            onClose?.();
+        }, duration);
         return () => clearTimeout(t);
     }, [message, duration, onClose]);
 
-    if (!visible) return null;
+    if (!message || dismissedMessage === message) return null;
 
     const colors = { info: "#2563eb", success: "#16a34a", error: "#dc2626", warning: "#d97706" };
 

@@ -1,4 +1,5 @@
 import PageShell from "../../components/common/PageShell";
+import SEO from "../../components/seo/SEO";
 
 export default function About() {
   return (
@@ -6,6 +7,10 @@ export default function About() {
       title="About CivilBridge"
       subtitle="We connect real estate + land + plans + estimation + verified experts into one practical construction ecosystem."
     >
+      <SEO
+        title="About"
+        description="CivilBridge connects Rwanda's construction sector — real estate, build-ready land, architectural plans, cost estimation, and verified professionals in one platform."
+      />
       <div style={{ display: "grid", gap: 14 }}>
         <Section title="What we do">
           CivilBridge helps people buy finished real estate, find build-ready plots, explore modern plans, and estimate costs

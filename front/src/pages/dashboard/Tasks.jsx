@@ -1,121 +1,95 @@
-// Enhanced Tasks Management System
-import React, { useState, useEffect } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { tasksService } from '../../services/tasksService';
+import SEO from '../../components/seo/SEO';
 
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+function SkeletonCard() {
+  return (
+    <div style={styles.taskCard}>
+      <div style={{ ...sk.block, width: '70%', height: 16, marginBottom: 10 }} />
+      <div style={{ ...sk.block, width: '100%', height: 12, marginBottom: 6 }} />
+      <div style={{ ...sk.block, width: '60%', height: 12, marginBottom: 16 }} />
+      <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ ...sk.block, width: 80, height: 28, borderRadius: 6 }} />
+        <div style={{ ...sk.block, width: 80, height: 28, borderRadius: 6 }} />
+      </div>
+    </div>
+  );
+}
+
+// ─── Empty state ──────────────────────────────────────────────────────────────
+function EmptyState({ onNew }) {
+  return (
+    <div style={styles.emptyState}>
+      <div style={styles.emptyIcon}>📋</div>
+      <h3 style={styles.emptyTitle}>No tasks yet</h3>
+      <p style={styles.emptyText}>Create your first task to start tracking work.</p>
+      <button onClick={onNew} style={styles.createButton}>+ New Task</button>
+    </div>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
 export default function Tasks() {
-  const { dashboardConfig } = useOutletContext();
-  const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [view, setView] = useState('board'); // board, list, calendar
-  const [filter, setFilter] = useState('all');
+  const [tasks, setTasks]               = useState([]);
+  const [loading, setLoading]           = useState(true);
+  const [error, setError]               = useState(null);
+  const [view, setView]                 = useState('board');
+  const [filter, setFilter]             = useState('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [selectedTask, setSelectedTask] = useState(null);
+  const [patchingId, setPatchingId]     = useState(null);
 
-  // Mock tasks data
-  const mockTasks = [
-    {
-      id: 1,
-      title: 'Review bridge design blueprints',
-      description: 'Review and approve the structural design for the new bridge project',
-      status: 'todo',
-      priority: 'high',
-      assignee: 'Sarah Wilson',
-      project: 'Bridge Design Project',
-      dueDate: '2024-03-25',
-      createdAt: '2024-03-19',
-      tags: ['review', 'urgent', 'design']
-    },
-    {
-      id: 2,
-      title: 'Site inspection preparation',
-      description: 'Prepare equipment and documentation for site visit',
-      status: 'in-progress',
-      priority: 'medium',
-      assignee: 'Mike Johnson',
-      project: 'Road Construction',
-      dueDate: '2024-03-28',
-      createdAt: '2024-03-18',
-      tags: ['inspection', 'preparation']
-    },
-    {
-      id: 3,
-      title: 'Client meeting - project kickoff',
-      description: 'Initial meeting with client to discuss project requirements',
-      status: 'completed',
-      priority: 'high',
-      assignee: 'David Chen',
-      project: 'Infrastructure Audit',
-      dueDate: '2024-03-20',
-      createdAt: '2024-03-15',
-      tags: ['meeting', 'client']
-    },
-    {
-      id: 4,
-      title: 'Update project documentation',
-      description: 'Update all project documentation with latest changes',
-      status: 'todo',
-      priority: 'low',
-      assignee: 'John Doe',
-      project: 'Bridge Design Project',
-      dueDate: '2024-04-01',
-      createdAt: '2024-03-19',
-      tags: ['documentation', 'update']
-    }
-  ];
-
-  useEffect(() => {
-    setTimeout(() => {
-      setTasks(mockTasks);
+  const fetchTasks = useCallback(async () => {
+    try {
+      setError(null);
+      setLoading(true);
+      const data = await tasksService.list(filter);
+      setTasks(data.tasks || []);
+    } catch (err) {
+      setError(err.message || 'Failed to load tasks');
+    } finally {
       setLoading(false);
-    }, 1000);
-  }, []);
+    }
+  }, [filter]);
 
-  const filteredTasks = tasks.filter(task => {
-    if (filter === 'all') return true;
-    return task.status === filter;
-  });
+  useEffect(() => { fetchTasks(); }, [fetchTasks]);
 
-  const handleStatusChange = (taskId, newStatus) => {
-    setTasks(tasks.map(task => 
-      task.id === taskId ? { ...task, status: newStatus } : task
-    ));
+  const filteredTasks = filter === 'all'
+    ? tasks
+    : tasks.filter(t => t.status === filter);
+
+  const handleStatusChange = async (taskId, newStatus) => {
+    // Optimistic update
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
+    setPatchingId(taskId);
+    try {
+      await tasksService.update(taskId, { status: newStatus });
+    } catch {
+      // Revert on failure
+      fetchTasks();
+    } finally {
+      setPatchingId(null);
+    }
   };
 
-  const handleCreateTask = (taskData) => {
-    const newTask = {
-      ...taskData,
-      id: tasks.length + 1,
-      status: 'todo',
-      createdAt: new Date().toISOString().split('T')[0]
-    };
-    setTasks([...tasks, newTask]);
-    setShowCreateModal(false);
+  const handleCreateTask = async (taskData) => {
+    try {
+      const data = await tasksService.create(taskData);
+      setTasks(prev => [data.task, ...prev]);
+      setShowCreateModal(false);
+    } catch (err) {
+      alert(err.message || 'Failed to create task');
+    }
   };
 
-  const getPriorityColor = (priority) => {
-    const colors = {
-      'high': '#ef4444',
-      'medium': '#f59e0b',
-      'low': '#22c55e'
-    };
-    return colors[priority] || 'var(--text-muted)';
-  };
-
-  const getStatusLabel = (status) => {
-    const labels = {
-      'todo': 'To Do',
-      'in-progress': 'In Progress',
-      'completed': 'Completed'
-    };
-    return labels[status] || status;
-  };
-
-  if (loading) {
-    return <div style={styles.loading}>Loading tasks...</div>;
-  }
+  const getPriorityColor = (priority) => ({
+    high: '#ef4444', medium: '#f59e0b', low: '#22c55e'
+  }[priority] || '#6b7280');
 
   return (
     <div style={styles.container}>
+      <SEO title="Tasks" noindex />
+
       {/* Header */}
       <div style={styles.header}>
         <h1 style={styles.title}>Task Management</h1>
@@ -126,35 +100,17 @@ export default function Tasks() {
       <div style={styles.toolbar}>
         <div style={styles.toolbarLeft}>
           <div style={styles.viewSwitcher}>
-            <button
-              style={{
-                ...styles.viewButton,
-                ...(view === 'board' && styles.viewButtonActive)
-              }}
-              onClick={() => setView('board')}
-            >
-              📋 Board
-            </button>
-            <button
-              style={{
-                ...styles.viewButton,
-                ...(view === 'list' && styles.viewButtonActive)
-              }}
-              onClick={() => setView('list')}
-            >
-              📝 List
-            </button>
-            <button
-              style={{
-                ...styles.viewButton,
-                ...(view === 'calendar' && styles.viewButtonActive)
-              }}
-              onClick={() => setView('calendar')}
-            >
-              📅 Calendar
-            </button>
+            {['board', 'list'].map(v => (
+              <button
+                key={v}
+                style={{ ...styles.viewButton, ...(view === v && styles.viewButtonActive) }}
+                onClick={() => setView(v)}
+              >
+                {v === 'board' ? '📋 Board' : '📝 List'}
+              </button>
+            ))}
           </div>
-          
+
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
@@ -167,154 +123,124 @@ export default function Tasks() {
           </select>
         </div>
 
-        <button
-          onClick={() => setShowCreateModal(true)}
-          style={styles.createButton}
-        >
+        <button onClick={() => setShowCreateModal(true)} style={styles.createButton}>
           + New Task
         </button>
       </div>
 
-      {/* Task Board */}
-      {view === 'board' && (
-        <div style={styles.board}>
-          <div style={styles.column}>
-            <div style={styles.columnHeader}>
-              <h3 style={styles.columnTitle}>To Do</h3>
-              <span style={styles.columnCount}>
-                {filteredTasks.filter(t => t.status === 'todo').length}
-              </span>
-            </div>
-            <div style={styles.taskList}>
-              {filteredTasks.filter(t => t.status === 'todo').map(task => (
-                <TaskCard key={task.id} task={task} onStatusChange={handleStatusChange} />
-              ))}
-            </div>
-          </div>
-
-          <div style={styles.column}>
-            <div style={styles.columnHeader}>
-              <h3 style={styles.columnTitle}>In Progress</h3>
-              <span style={styles.columnCount}>
-                {filteredTasks.filter(t => t.status === 'in-progress').length}
-              </span>
-            </div>
-            <div style={styles.taskList}>
-              {filteredTasks.filter(t => t.status === 'in-progress').map(task => (
-                <TaskCard key={task.id} task={task} onStatusChange={handleStatusChange} />
-              ))}
-            </div>
-          </div>
-
-          <div style={styles.column}>
-            <div style={styles.columnHeader}>
-              <h3 style={styles.columnTitle}>Completed</h3>
-              <span style={styles.columnCount}>
-                {filteredTasks.filter(t => t.status === 'completed').length}
-              </span>
-            </div>
-            <div style={styles.taskList}>
-              {filteredTasks.filter(t => t.status === 'completed').map(task => (
-                <TaskCard key={task.id} task={task} onStatusChange={handleStatusChange} />
-              ))}
-            </div>
-          </div>
+      {/* Error */}
+      {error && (
+        <div style={styles.errorBanner}>
+          {error}
+          <button onClick={fetchTasks} style={styles.retryBtn}>Retry</button>
         </div>
       )}
 
-      {/* Task List */}
-      {view === 'list' && (
+      {/* Loading skeleton */}
+      {loading && (
+        <div style={styles.board}>
+          {['To Do', 'In Progress', 'Completed'].map(col => (
+            <div key={col} style={styles.column}>
+              <div style={styles.columnHeader}>
+                <div style={{ ...sk.block, width: 80, height: 16 }} />
+              </div>
+              <div style={styles.taskList}>
+                <SkeletonCard />
+                <SkeletonCard />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!loading && !error && tasks.length === 0 && (
+        <EmptyState onNew={() => setShowCreateModal(true)} />
+      )}
+
+      {/* Board view */}
+      {!loading && !error && tasks.length > 0 && view === 'board' && (
+        <div style={styles.board}>
+          {[
+            { key: 'todo', label: 'To Do' },
+            { key: 'in-progress', label: 'In Progress' },
+            { key: 'completed', label: 'Completed' },
+          ].map(col => {
+            const colTasks = filteredTasks.filter(t => t.status === col.key);
+            return (
+              <div key={col.key} style={styles.column}>
+                <div style={styles.columnHeader}>
+                  <h3 style={styles.columnTitle}>{col.label}</h3>
+                  <span style={styles.columnCount}>{colTasks.length}</span>
+                </div>
+                <div style={styles.taskList}>
+                  {colTasks.length === 0 && (
+                    <p style={styles.colEmpty}>No tasks</p>
+                  )}
+                  {colTasks.map(task => (
+                    <TaskCard
+                      key={task.id}
+                      task={task}
+                      patching={patchingId === task.id}
+                      onStatusChange={handleStatusChange}
+                      getPriorityColor={getPriorityColor}
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* List view */}
+      {!loading && !error && tasks.length > 0 && view === 'list' && (
         <div style={styles.listContainer}>
-          <table style={styles.table}>
-            <thead>
-              <tr style={styles.tableHeader}>
-                <th style={styles.tableHeaderCell}>Task</th>
-                <th style={styles.tableHeaderCell}>Assignee</th>
-                <th style={styles.tableHeaderCell}>Project</th>
-                <th style={styles.tableHeaderCell}>Priority</th>
-                <th style={styles.tableHeaderCell}>Due Date</th>
-                <th style={styles.tableHeaderCell}>Status</th>
-                <th style={styles.tableHeaderCell}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredTasks.map(task => (
-                <tr key={task.id} style={styles.tableRow}>
-                  <td style={styles.tableCell}>
-                    <div style={styles.taskCell}>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={styles.table}>
+              <thead>
+                <tr style={styles.tableHeader}>
+                  {['Task', 'Assignee', 'Project', 'Priority', 'Due Date', 'Status'].map(h => (
+                    <th key={h} style={styles.tableHeaderCell}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredTasks.map(task => (
+                  <tr key={task.id} style={styles.tableRow}>
+                    <td style={styles.tableCell}>
                       <div style={styles.taskTitle}>{task.title}</div>
                       <div style={styles.taskDescription}>{task.description}</div>
-                    </div>
-                  </td>
-                  <td style={styles.tableCell}>{task.assignee}</td>
-                  <td style={styles.tableCell}>{task.project}</td>
-                  <td style={styles.tableCell}>
-                    <span style={{
-                      ...styles.priorityBadge,
-                      backgroundColor: getPriorityColor(task.priority)
-                    }}>
-                      {task.priority}
-                    </span>
-                  </td>
-                  <td style={styles.tableCell}>{task.dueDate}</td>
-                  <td style={styles.tableCell}>
-                    <select
-                      value={task.status}
-                      onChange={(e) => handleStatusChange(task.id, e.target.value)}
-                      style={styles.statusSelect}
-                    >
-                      <option value="todo">To Do</option>
-                      <option value="in-progress">In Progress</option>
-                      <option value="completed">Completed</option>
-                    </select>
-                  </td>
-                  <td style={styles.tableCell}>
-                    <button style={styles.actionButton}>View</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Calendar View */}
-      {view === 'calendar' && (
-        <div style={styles.calendarContainer}>
-          <div style={styles.calendarHeader}>
-            <h3 style={styles.calendarTitle}>March 2024</h3>
-            <div style={styles.calendarActions}>
-              <button style={styles.calendarButton}>Previous</button>
-              <button style={styles.calendarButton}>Today</button>
-              <button style={styles.calendarButton}>Next</button>
-            </div>
-          </div>
-          <div style={styles.calendarGrid}>
-            <div style={styles.calendarDays}>
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                <div key={day} style={styles.calendarDayHeader}>{day}</div>
-              ))}
-            </div>
-            <div style={styles.calendarDates}>
-              {Array.from({ length: 35 }, (_, i) => (
-                <div key={i} style={styles.calendarDate}>
-                  <div style={styles.calendarDateNumber}>
-                    {i - 3 > 0 && i - 3 <= 31 ? i - 3 : ''}
-                  </div>
-                  {i === 25 && (
-                    <div style={styles.calendarTask}>
-                      <div style={styles.calendarTaskDot} />
-                      Bridge review
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+                    </td>
+                    <td style={styles.tableCell}>{task.assignee || '—'}</td>
+                    <td style={styles.tableCell}>{task.project || '—'}</td>
+                    <td style={styles.tableCell}>
+                      <span style={{ ...styles.priorityBadge, backgroundColor: getPriorityColor(task.priority) }}>
+                        {task.priority}
+                      </span>
+                    </td>
+                    <td style={styles.tableCell}>{task.dueDate || '—'}</td>
+                    <td style={styles.tableCell}>
+                      <select
+                        value={task.status}
+                        disabled={patchingId === task.id}
+                        onChange={(e) => handleStatusChange(task.id, e.target.value)}
+                        style={styles.statusSelect}
+                      >
+                        <option value="todo">To Do</option>
+                        <option value="in-progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                      </select>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
 
-      {/* Create Task Modal */}
+      {/* Create modal */}
       {showCreateModal && (
         <CreateTaskModal
           onClose={() => setShowCreateModal(false)}
@@ -325,54 +251,49 @@ export default function Tasks() {
   );
 }
 
-// Task Card Component
-function TaskCard({ task, onStatusChange }) {
-  const getPriorityColor = (priority) => {
-    const colors = {
-      'high': '#ef4444',
-      'medium': '#f59e0b',
-      'low': '#22c55e'
-    };
-    return colors[priority] || 'var(--text-muted)';
-  };
-
+// ─── Task Card ────────────────────────────────────────────────────────────────
+function TaskCard({ task, patching, onStatusChange, getPriorityColor }) {
   return (
-    <div style={styles.taskCard}>
+    <div style={{ ...styles.taskCard, opacity: patching ? 0.6 : 1 }}>
       <div style={styles.taskHeader}>
         <h4 style={styles.taskTitle}>{task.title}</h4>
-        <span style={{
-          ...styles.priorityBadge,
-          backgroundColor: getPriorityColor(task.priority)
-        }}>
+        <span style={{ ...styles.priorityBadge, backgroundColor: getPriorityColor(task.priority) }}>
           {task.priority}
         </span>
       </div>
-      
-      <p style={styles.taskDescription}>{task.description}</p>
-      
+
+      {task.description && <p style={styles.taskDescription}>{task.description}</p>}
+
       <div style={styles.taskMeta}>
-        <div style={styles.taskMetaItem}>
-          <span style={styles.metaLabel}>👤</span>
-          <span style={styles.metaValue}>{task.assignee}</span>
-        </div>
-        <div style={styles.taskMetaItem}>
-          <span style={styles.metaLabel}>🏗️</span>
-          <span style={styles.metaValue}>{task.project}</span>
-        </div>
-        <div style={styles.taskMetaItem}>
-          <span style={styles.metaLabel}>📅</span>
-          <span style={styles.metaValue}>{task.dueDate}</span>
-        </div>
+        {task.assignee && (
+          <div style={styles.taskMetaItem}>
+            <span>👤</span>
+            <span style={styles.metaValue}>{task.assignee}</span>
+          </div>
+        )}
+        {task.project && (
+          <div style={styles.taskMetaItem}>
+            <span>🏗️</span>
+            <span style={styles.metaValue}>{task.project}</span>
+          </div>
+        )}
+        {task.dueDate && (
+          <div style={styles.taskMetaItem}>
+            <span>📅</span>
+            <span style={styles.metaValue}>{task.dueDate}</span>
+          </div>
+        )}
       </div>
 
-      <div style={styles.taskTags}>
-        {task.tags.map(tag => (
-          <span key={tag} style={styles.taskTag}>{tag}</span>
-        ))}
-      </div>
+      {task.tags?.length > 0 && (
+        <div style={styles.taskTags}>
+          {task.tags.map(tag => <span key={tag} style={styles.taskTag}>{tag}</span>)}
+        </div>
+      )}
 
       <select
         value={task.status}
+        disabled={patching}
         onChange={(e) => onStatusChange(task.id, e.target.value)}
         style={styles.statusSelect}
       >
@@ -384,25 +305,26 @@ function TaskCard({ task, onStatusChange }) {
   );
 }
 
-// Create Task Modal
+// ─── Create Modal ─────────────────────────────────────────────────────────────
 function CreateTaskModal({ onClose, onSave }) {
+  const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    assignee: '',
-    project: '',
-    priority: 'medium',
-    dueDate: '',
-    tags: ''
+    title: '', description: '', assignee: '', projectName: '',
+    priority: 'medium', dueDate: '', tags: '',
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSave({
+    if (!formData.title.trim()) return;
+    setSaving(true);
+    await onSave({
       ...formData,
-      tags: formData.tags.split(',').map(t => t.trim()).filter(t => t)
+      tags: formData.tags.split(',').map(t => t.trim()).filter(Boolean),
     });
+    setSaving(false);
   };
+
+  const set = (field) => (e) => setFormData(prev => ({ ...prev, [field]: e.target.value }));
 
   return (
     <div style={styles.modalOverlay}>
@@ -410,55 +332,36 @@ function CreateTaskModal({ onClose, onSave }) {
         <h3 style={styles.modalTitle}>Create New Task</h3>
         <form onSubmit={handleSubmit} style={styles.modalForm}>
           <div style={styles.formGroup}>
-            <label style={styles.formLabel}>Task Title</label>
+            <label style={styles.formLabel}>Task Title *</label>
             <input
-              type="text"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              style={styles.formInput}
-              required
+              type="text" value={formData.title} onChange={set('title')}
+              style={styles.formInput} required autoFocus
             />
           </div>
 
           <div style={styles.formGroup}>
             <label style={styles.formLabel}>Description</label>
             <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              style={styles.formTextarea}
-              rows={3}
+              value={formData.description} onChange={set('description')}
+              style={styles.formTextarea} rows={3}
             />
           </div>
 
           <div style={styles.formRow}>
             <div style={styles.formGroup}>
               <label style={styles.formLabel}>Assignee</label>
-              <input
-                type="text"
-                value={formData.assignee}
-                onChange={(e) => setFormData({ ...formData, assignee: e.target.value })}
-                style={styles.formInput}
-              />
+              <input type="text" value={formData.assignee} onChange={set('assignee')} style={styles.formInput} />
             </div>
             <div style={styles.formGroup}>
               <label style={styles.formLabel}>Project</label>
-              <input
-                type="text"
-                value={formData.project}
-                onChange={(e) => setFormData({ ...formData, project: e.target.value })}
-                style={styles.formInput}
-              />
+              <input type="text" value={formData.projectName} onChange={set('projectName')} style={styles.formInput} />
             </div>
           </div>
 
           <div style={styles.formRow}>
             <div style={styles.formGroup}>
               <label style={styles.formLabel}>Priority</label>
-              <select
-                value={formData.priority}
-                onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                style={styles.formSelect}
-              >
+              <select value={formData.priority} onChange={set('priority')} style={styles.formSelect}>
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
                 <option value="high">High</option>
@@ -466,28 +369,22 @@ function CreateTaskModal({ onClose, onSave }) {
             </div>
             <div style={styles.formGroup}>
               <label style={styles.formLabel}>Due Date</label>
-              <input
-                type="date"
-                value={formData.dueDate}
-                onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-                style={styles.formInput}
-              />
+              <input type="date" value={formData.dueDate} onChange={set('dueDate')} style={styles.formInput} />
             </div>
           </div>
 
           <div style={styles.formGroup}>
-            <label style={styles.formLabel}>Tags (comma separated)</label>
+            <label style={styles.formLabel}>Tags (comma-separated)</label>
             <input
-              type="text"
-              value={formData.tags}
-              onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-              style={styles.formInput}
-              placeholder="urgent, review, design"
+              type="text" value={formData.tags} onChange={set('tags')}
+              style={styles.formInput} placeholder="urgent, review, design"
             />
           </div>
 
           <div style={styles.modalActions}>
-            <button type="submit" style={styles.saveButton}>Create Task</button>
+            <button type="submit" disabled={saving} style={styles.saveButton}>
+              {saving ? 'Creating…' : 'Create Task'}
+            </button>
             <button type="button" onClick={onClose} style={styles.cancelButton}>Cancel</button>
           </div>
         </form>
@@ -496,32 +393,149 @@ function CreateTaskModal({ onClose, onSave }) {
   );
 }
 
+// ─── Skeleton blocks ──────────────────────────────────────────────────────────
+const sk = {
+  block: {
+    background: 'linear-gradient(90deg, #1a1a1a 25%, #222 50%, #1a1a1a 75%)',
+    backgroundSize: '200% 100%',
+    animation: 'cb-shimmer 1.4s infinite',
+    borderRadius: 4,
+    display: 'block',
+  },
+};
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = {
-  container: {
-    maxWidth: '100%',
-    margin: '0 auto',
-    padding: '24px'
+  container: { maxWidth: '100%', margin: '0 auto', padding: '24px' },
+  header: { marginBottom: 8 },
+  title: { margin: '0 0 8px', fontSize: '28px', fontWeight: 700, color: 'var(--text-color)' },
+  subtitle: { margin: '0 0 32px', fontSize: '16px', color: 'var(--text-muted)' },
+
+  toolbar: {
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+    marginBottom: 24, gap: 12, flexWrap: 'wrap',
   },
-  title: {
-    margin: '0 0 8px',
-    fontSize: '28px',
-    fontWeight: 700,
-    color: 'var(--text-color)'
+  toolbarLeft: { display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' },
+  viewSwitcher: { display: 'flex', gap: 4, background: '#111', borderRadius: 8, padding: 4 },
+  viewButton: {
+    background: 'transparent', border: 'none', color: 'var(--text-muted)',
+    padding: '6px 14px', borderRadius: 6, cursor: 'pointer', fontSize: 13, fontWeight: 500,
   },
-  subtitle: {
-    margin: '0 0 32px',
-    fontSize: '16px',
-    color: 'var(--text-muted)'
+  viewButtonActive: { background: '#1a1a1a', color: '#00f2ff' },
+  filterSelect: {
+    background: '#111', border: '1px solid #222', color: 'var(--text-color)',
+    padding: '8px 12px', borderRadius: 8, fontSize: 14, cursor: 'pointer',
   },
-  placeholder: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: '200px',
-    background: 'var(--card-bg)',
-    border: '1px solid #1a1a1a',
-    borderRadius: '12px',
-    fontSize: '18px',
-    color: 'var(--text-muted)'
-  }
+  createButton: {
+    background: '#00f2ff', color: '#000', border: 'none',
+    padding: '10px 20px', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 14,
+  },
+
+  errorBanner: {
+    background: 'rgba(239,68,68,0.12)', border: '1px solid #ef4444',
+    color: '#ef4444', borderRadius: 8, padding: '12px 16px',
+    marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+  },
+  retryBtn: {
+    background: 'transparent', border: '1px solid #ef4444', color: '#ef4444',
+    padding: '4px 12px', borderRadius: 6, cursor: 'pointer', fontSize: 13,
+  },
+
+  emptyState: {
+    display: 'flex', flexDirection: 'column', alignItems: 'center',
+    justifyContent: 'center', padding: '80px 20px', gap: 12,
+  },
+  emptyIcon: { fontSize: 48 },
+  emptyTitle: { margin: 0, fontSize: 20, fontWeight: 600, color: 'var(--text-color)' },
+  emptyText: { margin: 0, color: 'var(--text-muted)', fontSize: 15 },
+
+  board: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 },
+  column: {
+    background: '#0d0d0d', borderRadius: 12, border: '1px solid #1a1a1a',
+    padding: 16, minHeight: 200,
+  },
+  columnHeader: {
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16,
+  },
+  columnTitle: { margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--text-color)' },
+  columnCount: {
+    background: '#1a1a1a', color: '#00f2ff', borderRadius: 12,
+    padding: '2px 10px', fontSize: 12, fontWeight: 600,
+  },
+  taskList: { display: 'flex', flexDirection: 'column', gap: 12 },
+  colEmpty: { color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', margin: '20px 0' },
+
+  taskCard: {
+    background: '#111', border: '1px solid #1a1a1a', borderRadius: 10,
+    padding: 14, transition: 'border-color 0.2s',
+  },
+  taskHeader: {
+    display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+    gap: 8, marginBottom: 8,
+  },
+  taskTitle: { margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--text-color)', lineHeight: 1.4 },
+  taskDescription: { margin: '0 0 10px', fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5 },
+  taskMeta: { display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 10 },
+  taskMetaItem: { display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 },
+  metaValue: { color: 'var(--text-muted)' },
+  taskTags: { display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10 },
+  taskTag: {
+    background: 'rgba(0,242,255,0.08)', color: '#00f2ff',
+    fontSize: 11, padding: '2px 8px', borderRadius: 4,
+  },
+
+  priorityBadge: {
+    color: '#fff', fontSize: 11, fontWeight: 600,
+    padding: '2px 8px', borderRadius: 4, whiteSpace: 'nowrap', flexShrink: 0,
+  },
+
+  listContainer: { background: '#0d0d0d', borderRadius: 12, border: '1px solid #1a1a1a', overflow: 'hidden' },
+  table: { width: '100%', borderCollapse: 'collapse', minWidth: 700 },
+  tableHeader: { background: '#111' },
+  tableHeaderCell: {
+    padding: '12px 16px', textAlign: 'left', fontSize: 12,
+    fontWeight: 600, color: 'var(--text-muted)', borderBottom: '1px solid #1a1a1a',
+  },
+  tableRow: { borderBottom: '1px solid #111' },
+  tableCell: { padding: '12px 16px', fontSize: 14, color: 'var(--text-color)', verticalAlign: 'middle' },
+
+  statusSelect: {
+    background: '#1a1a1a', border: '1px solid #222', color: 'var(--text-color)',
+    padding: '6px 10px', borderRadius: 6, fontSize: 12, cursor: 'pointer', width: '100%',
+  },
+
+  modalOverlay: {
+    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+  },
+  modal: {
+    background: '#111', border: '1px solid #1a1a1a', borderRadius: 16,
+    padding: 28, width: '100%', maxWidth: 540, maxHeight: '90vh', overflowY: 'auto',
+  },
+  modalTitle: { margin: '0 0 20px', fontSize: 18, fontWeight: 700, color: 'var(--text-color)' },
+  modalForm: { display: 'flex', flexDirection: 'column', gap: 16 },
+  formGroup: { display: 'flex', flexDirection: 'column', gap: 6, flex: 1 },
+  formRow: { display: 'flex', gap: 16 },
+  formLabel: { fontSize: 13, fontWeight: 500, color: 'var(--text-muted)' },
+  formInput: {
+    background: '#0d0d0d', border: '1px solid #222', color: 'var(--text-color)',
+    padding: '10px 12px', borderRadius: 8, fontSize: 14, outline: 'none',
+  },
+  formTextarea: {
+    background: '#0d0d0d', border: '1px solid #222', color: 'var(--text-color)',
+    padding: '10px 12px', borderRadius: 8, fontSize: 14, outline: 'none', resize: 'vertical',
+  },
+  formSelect: {
+    background: '#0d0d0d', border: '1px solid #222', color: 'var(--text-color)',
+    padding: '10px 12px', borderRadius: 8, fontSize: 14, cursor: 'pointer',
+  },
+  modalActions: { display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 8 },
+  saveButton: {
+    background: '#00f2ff', color: '#000', border: 'none',
+    padding: '10px 24px', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 14,
+  },
+  cancelButton: {
+    background: 'transparent', border: '1px solid #333', color: 'var(--text-muted)',
+    padding: '10px 20px', borderRadius: 8, cursor: 'pointer', fontSize: 14,
+  },
 };

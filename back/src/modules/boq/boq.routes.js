@@ -1,12 +1,14 @@
 import { Router } from "express";
-import { getBOQ, addBOQItem, updateBOQItem, deleteBOQItem } from "./boq.controller.js";
+import { protect } from "../../middlewares/auth.js";
+import { requireBoqExportPayment } from "../payments/payment-guard.middleware.js";
+import { getBOQ, addBOQItem, updateBOQItem, deleteBOQItem, exportProjectBOQPdf } from "./boq.controller.js";
 
 const router = Router();
 
-// All routes already protected from app.js
-router.get("/:estimate_id", getBOQ);
-router.post("/:estimate_id/items", addBOQItem);
-router.put("/items/:id", updateBOQItem);
-router.delete("/items/:id", deleteBOQItem);
+router.get("/:estimate_id",       protect, requireBoqExportPayment, getBOQ);
+router.post("/project/:projectId/export", protect, exportProjectBOQPdf);
+router.post("/:estimate_id/items", protect, addBOQItem);
+router.put("/items/:id",           protect, updateBOQItem);
+router.delete("/items/:id",        protect, deleteBOQItem);
 
 export default router;

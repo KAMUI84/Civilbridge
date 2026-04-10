@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { writeLS, readLS } from "../../utils/storage";
+import { writeLS, readLS } from "../../utils/storage.js";
 
 export default function OtpVerify({ target, onVerified }) {
   const [code, setCode] = useState("");

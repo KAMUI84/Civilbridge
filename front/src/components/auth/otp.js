@@ -1,4 +1,4 @@
-import { writeLS } from "../../utils/storage";
+import { writeLS } from "../../utils/storage.js";
 
 export default function generateOtp(target) {
   const code = String(Math.floor(100000 + Math.random() * 900000));

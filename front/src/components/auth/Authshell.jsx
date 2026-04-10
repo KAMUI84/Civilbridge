@@ -71,7 +71,7 @@ const modal = {
 
 const left = {
   position: "relative",
-  backgroundImage: `url("/img/auth-left.jpg")`,
+  backgroundImage: `url("/civilbridge.png")`,
   backgroundSize: "cover",
   backgroundPosition: "center",
 };

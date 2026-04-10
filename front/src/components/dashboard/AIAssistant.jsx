@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { budgetAnalysisService } from '../../services/budgetAnalysisService.js';
 
 export default function AIAssistant() {
   const [messages, setMessages] = useState([

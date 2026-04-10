@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import authService from '../services/authService';
+import { disconnectSocket } from '../services/socketService';
 
 export const useAuthStore = create((set) => ({
   user: JSON.parse(localStorage.getItem("cb_user")) || null,
@@ -15,14 +16,14 @@ export const useAuthStore = create((set) => ({
 
   login: async (credentials) => {
     const data = await authService.login(credentials);
-    const { token, user } = data;
+    const { user } = data;
     useAuthStore.getState().setAuth(user);
     return user;
   },
 
   googleLogin: async (credential) => {
     const data = await authService.googleLogin(credential);
-    const { token, user } = data;
+    const { user } = data;
     useAuthStore.getState().setAuth(user);
     return user;
   },
@@ -32,6 +33,7 @@ export const useAuthStore = create((set) => ({
   },
 
   logout: () => {
+    disconnectSocket();
     localStorage.removeItem("cb_user");
     set({ user: null, token: null, isAuthenticated: false });
   },

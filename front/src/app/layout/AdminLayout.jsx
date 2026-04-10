@@ -1,5 +1,5 @@
 import { NavLink, Outlet, Navigate, useLocation } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../context/useAuth";
 
 const ADMIN_NAV = [
   { to: "/admin", label: "Overview", end: true },
@@ -44,7 +44,7 @@ export default function AdminLayout() {
   const { user, role, logout } = useAuth();
   const { pathname } = useLocation();
 
-  if (role !== "ADMIN") return <Navigate to="/dashboard" replace />;
+  if (!["ADMIN", "SUPER_ADMIN"].includes(role)) return <Navigate to="/dashboard" replace />;
 
   return (
     <div style={styles.shell}>

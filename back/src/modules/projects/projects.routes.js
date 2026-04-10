@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { protect } from '../../middlewares/auth.js';
 import { uploadMultiple } from '../../middlewares/upload.js';
+import { requireEngineerAssignmentPaymentIfNeeded } from '../payments/payment-guard.middleware.js';
 import {
   getUserProjects, createProject, getProjectById, updateProject, deleteProject, addProjectMember,
   uploadDocuments, deleteDocument, addPermit, updatePermit, deletePermit,
@@ -15,7 +16,7 @@ router.post('/', protect, createProject);
 router.get('/:id', protect, getProjectById);
 router.put('/:id', protect, updateProject);
 router.delete('/:id', protect, deleteProject);
-router.post('/:id/members', protect, addProjectMember);
+router.post('/:id/members', protect, requireEngineerAssignmentPaymentIfNeeded(), addProjectMember);
 
 // Documents
 router.post('/:id/documents', protect, uploadMultiple('documents', 5), uploadDocuments);

@@ -136,7 +136,7 @@ export const getUsers = async (req, res) => {
 export const changeUserRole = async (req, res) => {
     try {
         const { role } = req.body;
-        const userId = Number(req.params.id);
+        const userId = BigInt(req.params.id);
         if (!role) return res.status(400).json({ message: "Role is required" });
 
         if (!ALL_USER_ROLES.includes(role)) {
@@ -150,7 +150,7 @@ export const changeUserRole = async (req, res) => {
 
         await prisma.auditLog.create({
             data: {
-                userId: req.user.id ? Number(req.user.id) : null,
+                userId: req.user.id ?? null,
                 action: "ROLE_CHANGE",
                 entityType: "USERS",
                 entityId: userId,
@@ -171,7 +171,7 @@ export const toggleUserActive = async (req, res) => {
     try {
         const { is_active } = req.body;
         await prisma.user.update({
-            where: { id: Number(req.params.id) },
+            where: { id: BigInt(req.params.id) },
             data: { isActive: Boolean(is_active) }
         });
         res.json({ success: true, message: `User ${is_active ? "activated" : "deactivated"}` });
@@ -259,7 +259,7 @@ export const getVerificationQueue = async (req, res) => {
 // ─── POST /api/admin/verification/:id/approve ────────────────────────────────
 export const approveVerification = async (req, res) => {
     try {
-        const userId = Number(req.params.id);
+        const userId = BigInt(req.params.id);
         const notes = req.body?.notes || null;
         const provider = await prisma.serviceProvider.findUnique({
             where: { userId: BigInt(userId) },
@@ -285,7 +285,7 @@ export const approveVerification = async (req, res) => {
 
         await prisma.auditLog.create({
             data: {
-                userId: req.user.id ? Number(req.user.id) : null,
+                userId: req.user.id ?? null,
                 action: "VERIFY_USER",
                 entityType: "USERS",
                 entityId: userId,
@@ -304,7 +304,7 @@ export const approveVerification = async (req, res) => {
 export const rejectVerification = async (req, res) => {
     try {
         const { reason } = req.body;
-        const userId = Number(req.params.id);
+        const userId = BigInt(req.params.id);
         const provider = await prisma.serviceProvider.findUnique({
             where: { userId: BigInt(userId) },
             select: { id: true },
@@ -328,7 +328,7 @@ export const rejectVerification = async (req, res) => {
 
         await prisma.auditLog.create({
             data: {
-                userId: req.user.id ? Number(req.user.id) : null,
+                userId: req.user.id ?? null,
                 action: "REJECT_USER",
                 entityType: "USERS",
                 entityId: userId,

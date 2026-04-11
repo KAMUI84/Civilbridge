@@ -1,5 +1,7 @@
 import { emailService } from "./email.service.js";
 
+const FRONTEND_URL = (process.env.FRONTEND_URL || "http://localhost:3000").replace(/\/$/, "");
+
 class LegacyEmailServiceAdapter {
   async sendEmail(to, templateName, variables = {}) {
     const { enqueueTemplateEmail } = await import("./email.queue.js");
@@ -17,7 +19,7 @@ class LegacyEmailServiceAdapter {
       projectName: project.name || project.projectName,
       clientName: project.client || project.clientName || "CivilBridge Client",
       role: project.role || "PROJECT_MEMBER",
-      projectUrl: `${process.env.APP_BASE_URL || process.env.FRONTEND_URL || "http://localhost:5175"}/projects/${project.id}`,
+      projectUrl: `${FRONTEND_URL}/projects/${project.id}`,
     });
   }
 
@@ -30,7 +32,7 @@ class LegacyEmailServiceAdapter {
       provider: invoice.provider || "CivilBridge",
       reference: invoice.number || invoice.reference,
       serviceLabel: invoice.projectName || "Invoice reminder",
-      invoiceUrl: `${process.env.APP_BASE_URL || process.env.FRONTEND_URL || "http://localhost:5175"}/payments/${invoice.id}`,
+      invoiceUrl: `${FRONTEND_URL}/payments/${invoice.id}`,
     });
   }
 
@@ -40,7 +42,7 @@ class LegacyEmailServiceAdapter {
       recipientName: client.fullName,
       projectName: project.name || project.projectName,
       documentName: "Final project package",
-      documentUrl: `${process.env.APP_BASE_URL || process.env.FRONTEND_URL || "http://localhost:5175"}/projects/${project.id}`,
+      documentUrl: `${FRONTEND_URL}/projects/${project.id}`,
       documentType: "PROJECT_PACKAGE_PDF",
     });
   }

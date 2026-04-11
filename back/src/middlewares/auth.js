@@ -11,7 +11,9 @@ export const protect = (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    req.user = decoded;
+    // JWT stores id as a string (BigInt can't be JSON-serialized).
+    // Parse to BigInt here once so all controllers receive a consistent type.
+    req.user = { ...decoded, id: BigInt(decoded.id) };
 
     next();
   } catch (err) {

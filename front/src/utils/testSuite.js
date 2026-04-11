@@ -2,6 +2,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import { api } from '../services/apiClientService';
 
 // Mock API responses
 const mockAPIResponses = {
@@ -119,13 +120,7 @@ describe('Authentication System', () => {
         setError(null);
         
         try {
-          const response = await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(credentials)
-          });
-          
-          const data = await response.json();
+          const data = await api.post('/api/auth/login', credentials);
           if (data.success) {
             setUser(data.user);
             localStorage.setItem('token', data.token);
@@ -158,11 +153,13 @@ describe('Authentication System', () => {
       expect(screen.getByText('Welcome test@example.com')).toBeInTheDocument();
     });
     
-    expect(fetch).toHaveBeenCalledWith('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'test@example.com', password: 'password' })
-    });
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/auth/login'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ email: 'test@example.com', password: 'password' })
+      })
+    );
   });
 
   it('should register successfully with valid data', async () => {
@@ -174,13 +171,7 @@ describe('Authentication System', () => {
         setLoading(true);
         
         try {
-          const response = await fetch('/api/auth/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(userData)
-          });
-          
-          const data = await response.json();
+          const data = await api.post('/api/auth/register', userData);
           if (data.success) {
             setMessage('Registration successful');
           }
@@ -232,8 +223,7 @@ describe('Project Management', () => {
       React.useEffect(() => {
         const fetchProjects = async () => {
           try {
-            const response = await fetch('/api/projects');
-            const data = await response.json();
+            const data = await api.get('/api/projects');
             setProjects(data);
           } catch {
             console.error('Failed to fetch projects');
@@ -271,7 +261,10 @@ describe('Project Management', () => {
       expect(screen.getByText('Another Project')).toBeInTheDocument();
     });
     
-    expect(fetch).toHaveBeenCalledWith('/api/projects');
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/projects'),
+      expect.objectContaining({ credentials: 'include' })
+    );
   });
 
   it('should create a new project', async () => {
@@ -280,13 +273,7 @@ describe('Project Management', () => {
 
       const createProject = async (projectData) => {
         try {
-          const response = await fetch('/api/projects', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(projectData)
-          });
-          
-          const data = await response.json();
+          const data = await api.post('/api/projects', projectData);
           setMessage(`Project created: ${data.name}`);
         } catch {
           setMessage('Failed to create project');
@@ -329,8 +316,7 @@ describe('Payment Processing', () => {
       React.useEffect(() => {
         const fetchTransactions = async () => {
           try {
-            const response = await fetch('/api/payments/transactions');
-            const data = await response.json();
+            const data = await api.get('/api/payments/transactions');
             setTransactions(data);
           } catch {
             console.error('Failed to fetch transactions');
@@ -377,8 +363,7 @@ describe('Payment Processing', () => {
       React.useEffect(() => {
         const fetchInvoices = async () => {
           try {
-            const response = await fetch('/api/payments/invoices');
-            const data = await response.json();
+            const data = await api.get('/api/payments/invoices');
             setInvoices(data);
           } catch {
             console.error('Failed to fetch invoices');
@@ -525,8 +510,7 @@ describe('Error Handling', () => {
         setError(null);
         
         try {
-          const response = await fetch('/api/data');
-          await response.json();
+          await api.get('/api/data');
         } catch {
           setError('Failed to load data');
         } finally {
@@ -592,31 +576,18 @@ describe('Integration Tests', () => {
       const [step, setStep] = React.useState('login');
 
       const handleLogin = async () => {
-        const response = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: 'test@example.com', password: 'password' })
-        });
-        
-        const data = await response.json();
+        const data = await api.post('/api/auth/login', { email: 'test@example.com', password: 'password' });
         setUser(data.user);
         setStep('projects');
       };
 
       const loadProjects = async () => {
-        const response = await fetch('/api/projects');
-        const data = await response.json();
+        const data = await api.get('/api/projects');
         setProjects(data);
       };
 
       const createProject = async () => {
-        const response = await fetch('/api/projects', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: 'Test Project', type: 'residential' })
-        });
-        
-        await response.json();
+        await api.post('/api/projects', { name: 'Test Project', type: 'residential' });
         await loadProjects(); // Refresh projects list
       };
 

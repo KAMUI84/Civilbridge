@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { apiFetch } from '../../services/apiClientService.js';
 
 export default function AIAssistant() {
   const [messages, setMessages] = useState([
@@ -44,12 +45,9 @@ export default function AIAssistant() {
     setIsLoading(true);
 
     try {
-      // Call the AI chat API
-      const response = await fetch('http://localhost:3000/api/ai/guest/chat', {
+      // Call the AI chat API via the shared HTTP client (credentials + CSRF handled automatically)
+      const data = await apiFetch('/api/ai/guest/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           message: input,
           guest_id: getGuestId(),
@@ -59,8 +57,6 @@ export default function AIAssistant() {
           }))
         })
       });
-
-      const data = await response.json();
 
       // Backend returns `response`; keep backward-compat with `reply` if older clients exist.
       const assistantText = data?.response ?? data?.reply;

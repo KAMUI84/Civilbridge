@@ -2,7 +2,7 @@ import prisma from "../../config/prisma.js";
 import { emailService } from "../../services/email.service.js";
 
 const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || "support@civilbridge.rw";
-const FRONTEND_URL  = process.env.FRONTEND_URL  || "http://localhost:5173";
+const FRONTEND_URL = (process.env.FRONTEND_URL || "http://localhost:3000").replace(/\/$/, "");
 
 export async function submitContact(req, res) {
   try {

@@ -1,12 +1,3 @@
-const BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000";
-
-export async function api(path, options = {}) {
-  const res = await fetch(`${BASE}${path}`, {
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
-    ...options,
-  });
-
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.error || "Request failed");
-  return data;
-}
+// Thin delegation layer — all calls go through apiClientService,
+// which is the single authoritative HTTP client (credentials + CSRF).
+export { apiFetch as api } from "../services/apiClientService.js";

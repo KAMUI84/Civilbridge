@@ -232,7 +232,7 @@ export async function addProjectMember(req, res) {
           projectName: project?.projectName ?? "CivilBridge project",
           clientName: "CivilBridge Client",
           role: normalizedMemberRole,
-          projectUrl: `${process.env.APP_BASE_URL || process.env.FRONTEND_URL || "http://localhost:5175"}/projects/${projectId}`,
+          projectUrl: `${(process.env.FRONTEND_URL || "http://localhost:3000").replace(/\/$/, "")}/projects/${projectId}`,
         });
       }
     }

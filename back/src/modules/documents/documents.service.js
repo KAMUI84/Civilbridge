@@ -424,7 +424,7 @@ export async function reviewProjectDocument({
         projectName: document.project.projectName,
         reviewerName: actor.fullName || actor.email || actor.id,
         notes: reviewNotes,
-        documentUrl: `${process.env.APP_BASE_URL || process.env.FRONTEND_URL || "http://localhost:5175"}/documents/${document.id}/download`,
+        documentUrl: `${(process.env.FRONTEND_URL || "http://localhost:3000").replace(/\/$/, "")}/documents/${document.id}/download`,
       });
     } else if (reviewStatus === "REJECTED") {
       await emailService.sendEngineerRejectedEmail({
@@ -433,7 +433,7 @@ export async function reviewProjectDocument({
         projectName: document.project.projectName,
         reviewerName: actor.fullName || actor.email || actor.id,
         notes: reviewNotes,
-        projectUrl: `${process.env.APP_BASE_URL || process.env.FRONTEND_URL || "http://localhost:5175"}/projects/${document.projectId}`,
+        projectUrl: `${(process.env.FRONTEND_URL || "http://localhost:3000").replace(/\/$/, "")}/projects/${document.projectId}`,
       });
     }
   }

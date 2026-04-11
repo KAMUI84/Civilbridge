@@ -3,8 +3,8 @@ import { emailService } from "../../services/email.service.js";
 export async function sendPaymentReceiptEmail({ user, transaction, pdfBuffer }) {
   if (!user?.email) return { skipped: true, reason: "User has no email address" };
 
-  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-  const invoiceUrl = `${frontendUrl.replace(/\/$/, "")}/payments/${transaction.id}/invoice`;
+  const frontendUrl = (process.env.FRONTEND_URL || "http://localhost:3000").replace(/\/$/, "");
+  const invoiceUrl = `${frontendUrl}/payments/${transaction.id}/invoice`;
 
   const queued = await emailService.sendPaymentConfirmedEmail({
     to: user.email,

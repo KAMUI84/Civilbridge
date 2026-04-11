@@ -76,7 +76,8 @@ class EmailService {
     });
   }
 
-  async sendTestEmail(to = "samuelnizeyimana505@gmail.com") {
+  async sendTestEmail(to) {
+    if (!to) throw new Error("sendTestEmail requires an explicit recipient address");
     return enqueueTestEmail(to);
   }
 

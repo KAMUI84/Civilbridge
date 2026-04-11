@@ -172,7 +172,7 @@ apiRouter.use("/payments", paymentsRoutes);
 // Current user
 apiRouter.get("/me", protect, async (req, res) => {
   try {
-    const userId = Number(req.user.id);
+    const userId = req.user.id; // BigInt, already parsed by auth middleware
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -246,14 +246,17 @@ app.get("/health", async (req, res) => {
   }
 });
 
-app.get("/api/email-status", (req, res) => {
-  try {
-    const emailStatus = emailService.getStatus();
-    res.json({ status: "Email service operational", ...emailStatus, timestamp: new Date().toISOString() });
-  } catch (error) {
-    res.status(500).json({ status: "Email service error", error: error.message, timestamp: new Date().toISOString() });
-  }
-});
+// ── Dev-only: email service status (not available in production) ──────────────
+if (process.env.NODE_ENV !== "production") {
+  app.get("/api/email-status", (req, res) => {
+    try {
+      const emailStatus = emailService.getStatus();
+      res.json({ status: "Email service operational", ...emailStatus, timestamp: new Date().toISOString() });
+    } catch (error) {
+      res.status(500).json({ status: "Email service error", error: error.message, timestamp: new Date().toISOString() });
+    }
+  });
+}
 
 app.get("/api/runtime-status", protect, requireRole(["SUPER_ADMIN"]), async (req, res) => {
   try {
@@ -275,15 +278,19 @@ app.get("/api/runtime-status", protect, requireRole(["SUPER_ADMIN"]), async (req
   }
 });
 
-app.post("/api/test-email", protect, requireRole(["SUPER_ADMIN"]), async (req, res) => {
-  try {
-    const { to = "samuelnizeyimana505@gmail.com" } = req.body;
-    const result = await emailService.sendTestEmail(to);
-    res.json({ status: "Test email sent successfully", ...result, timestamp: new Date().toISOString() });
-  } catch (error) {
-    res.status(500).json({ status: "Failed to send test email", error: error.message, timestamp: new Date().toISOString() });
-  }
-});
+// ── Dev-only: send a test email (not available in production) ─────────────────
+if (process.env.NODE_ENV !== "production") {
+  app.post("/api/test-email", protect, requireRole(["SUPER_ADMIN"]), async (req, res) => {
+    try {
+      const { to } = req.body;
+      if (!to) return res.status(400).json({ status: "Missing required field: to", timestamp: new Date().toISOString() });
+      const result = await emailService.sendTestEmail(to);
+      res.json({ status: "Test email sent successfully", ...result, timestamp: new Date().toISOString() });
+    } catch (error) {
+      res.status(500).json({ status: "Failed to send test email", error: error.message, timestamp: new Date().toISOString() });
+    }
+  });
+}
 
 app.get("/", (_req, res) => {
   res.json({ message: "Welcome to the CivilBridge API v1.0" });

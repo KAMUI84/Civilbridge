@@ -3,10 +3,11 @@ import authService from '../services/authService';
 import { disconnectSocket } from '../services/socketService';
 
 export const useAuthStore = create((set) => ({
-  user: JSON.parse(localStorage.getItem("cb_user")) || null,
+  // Start unauthenticated — /api/me must confirm the session before we trust any cached data.
+  user: null,
   // JWT is stored server-side in an httpOnly cookie; keep no client-side token.
   token: null,
-  isAuthenticated: !!localStorage.getItem("cb_user"),
+  isAuthenticated: false,
 
   // Centralized login/register success handler
   setAuth: (user) => {
@@ -47,16 +48,20 @@ export const useAuthStore = create((set) => ({
     }
   },
 
-  initializeAuth: () => {
-    const userStr = localStorage.getItem("cb_user");
-    if (userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        set({ user, token: null, isAuthenticated: true });
-      } catch (err) {
-        console.error("Failed to parse user", err);
-        set({ user: null, token: null, isAuthenticated: false });
-      }
+  // Called only after a successful /api/me — sets auth state from the verified server response.
+  initializeAuth: (verifiedUser) => {
+    if (verifiedUser) {
+      localStorage.setItem("cb_user", JSON.stringify(verifiedUser));
+      set({ user: verifiedUser, token: null, isAuthenticated: true });
+    } else {
+      localStorage.removeItem("cb_user");
+      set({ user: null, token: null, isAuthenticated: false });
     }
+  },
+
+  // Clears all auth state and the localStorage cache (called on 401 or failed rehydration).
+  clearAuth: () => {
+    localStorage.removeItem("cb_user");
+    set({ user: null, token: null, isAuthenticated: false });
   }
 }));

@@ -2,6 +2,7 @@ import prisma from "../config/prisma.js";
 import { enqueueAppointmentReminderEmail } from "./email.queue.js";
 
 let schedulerHandle = null;
+const FRONTEND_URL = (process.env.FRONTEND_URL || "http://localhost:3000").replace(/\/$/, "");
 
 function formatAppointmentTime(date) {
   return new Date(date).toLocaleString("en-US", {
@@ -34,7 +35,7 @@ async function queueReminderPair(appointment, reminderField, reminderWindow) {
 
   const startsAt = formatAppointmentTime(appointment.startsAt);
   const projectName = appointment.project?.projectName || "General consultation";
-  const meetingUrl = `${process.env.APP_BASE_URL || process.env.FRONTEND_URL || "http://localhost:5175"}/appointments`;
+  const meetingUrl = `${FRONTEND_URL}/appointments`;
 
   const sharedPayload = {
     projectName,

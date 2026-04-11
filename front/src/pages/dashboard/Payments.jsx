@@ -41,14 +41,17 @@ function fmtDate(iso) {
 }
 
 // ── Invoice download ────────────────────────────────────────────────────────
+// NOTE: apiClientService is JSON-only and this endpoint returns a PDF. We avoid
+// a second JSON-unaware fetch path by letting the browser navigate directly to
+// the authenticated download URL while keeping all JSON API calls on the shared client.
 async function downloadInvoice(transactionId) {
-  const res = await fetch(`${BASE_URL}/api/payments/invoice/${transactionId}`, { credentials: 'include' });
-  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.message || 'Invoice not available'); }
-  const blob = await res.blob();
-  const url  = URL.createObjectURL(blob);
-  const a    = Object.assign(document.createElement('a'), { href: url, download: `invoice-${transactionId}.pdf` });
+  const url = `${BASE_URL.replace(/\/$/, '')}/api/payments/invoice/${transactionId}`;
+  const a = Object.assign(document.createElement('a'), {
+    href: url,
+    target: '_blank',
+    rel: 'noopener noreferrer',
+  });
   a.click();
-  URL.revokeObjectURL(url);
 }
 
 // ── Polling hook ─────────────────────────────────────────────────────────────

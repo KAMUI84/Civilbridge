@@ -28,13 +28,15 @@ export function AuthProvider({ children }) {
     const setAuth = useAuthStore(state => state.setAuth);
     const logoutStore = useAuthStore(state => state.logout);
     const initializeAuth = useAuthStore(state => state.initializeAuth);
+    const clearAuth = useAuthStore(state => state.clearAuth);
 
     // ── Rehydrate auth state on first mount ──────────────────────────
     useEffect(() => {
         const csrf = getCookie("csrf");
 
-        // We cannot read httpOnly `token` cookie from JS, so validate via /api/me.
-        // If it fails, we'll fall back to local cached profile (cb_user) and let API 401 handlers clear it.
+        // The httpOnly token cookie cannot be read from JS — validate via /api/me.
+        // Only trust the session if the server confirms it. On any failure, clear
+        // the localStorage cache and set unauthenticated state to prevent ghost sessions.
         (async () => {
             try {
                 const res = await authService.getCurrentUser();
@@ -42,30 +44,24 @@ export function AuthProvider({ children }) {
                 if (fetchedUser) {
                     setUser(fetchedUser);
                     setCsrfToken(csrf);
-                    setAuth(fetchedUser);
-                    return;
+                    // Persist the verified user to localStorage as a display cache only.
+                    initializeAuth(fetchedUser);
+                } else {
+                    // /api/me returned 200 but no user — treat as unauthenticated.
+                    setUser(null);
+                    clearAuth();
                 }
             } catch (e) {
-                // If the cookie is missing/expired, just use cached user state.
-                // Guard will redirect if backend rejects calls.
-                console.warn("Auth rehydrate /api/me failed:", e?.message || e);
-            }
-
-            try {
-                const cachedUserStr = localStorage.getItem("cb_user");
-                if (cachedUserStr) {
-                    const parsedUser = JSON.parse(cachedUserStr);
-                    setUser(parsedUser);
-                    setCsrfToken(csrf);
-                    initializeAuth();
-                }
-            } catch {
-                // Ignore cache parse errors
+                // 401, network error, or any other failure: the session is invalid.
+                // Clear stale localStorage data so the user is not shown as logged in.
+                console.warn("Auth rehydrate /api/me failed — clearing cached auth:", e?.message || e);
+                setUser(null);
+                clearAuth();
             } finally {
                 setLoading(false);
             }
         })();
-    }, [initializeAuth, setAuth]);
+    }, [initializeAuth, clearAuth]);
 
     // ── Derived helpers ──────────────────────────────────────────────────────
     const role = user?.role ?? null;

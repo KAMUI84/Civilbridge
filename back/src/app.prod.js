@@ -254,7 +254,7 @@ app.use("/api/payments", paymentsRoutes);
 // ─── Current User ──────────────────────────────────────────────────────────
 app.get("/api/me", protect, async (req, res) => {
   try {
-    const userId = Number(req.user.id);
+    const userId = req.user.id; // BigInt, already parsed by auth middleware
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {

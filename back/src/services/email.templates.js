@@ -69,10 +69,7 @@ function baseText(lines) {
 }
 
 function resolveAppUrl(pathname = "") {
-  const baseUrl =
-    process.env.APP_BASE_URL ||
-    process.env.FRONTEND_URL ||
-    "http://localhost:5175";
+  const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
 
   return `${baseUrl.replace(/\/$/, "")}${pathname}`;
 }

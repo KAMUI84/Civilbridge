@@ -505,7 +505,7 @@ export async function approvePlan(req, res) {
           projectName: plan.title,
           reviewerName: req.user.fullName || req.user.email || "CivilBridge reviewer",
           notes: "Your plan has been approved and is now available on CivilBridge.",
-          documentUrl: `${process.env.APP_BASE_URL || process.env.FRONTEND_URL || "http://localhost:5175"}/plans/${planId}`,
+          documentUrl: `${(process.env.FRONTEND_URL || "http://localhost:3000").replace(/\/$/, "")}/plans/${planId}`,
         });
       }
 
@@ -547,7 +547,7 @@ export async function approvePlan(req, res) {
           projectName: plan.title,
           reviewerName: req.user.fullName || req.user.email || "CivilBridge reviewer",
           notes: rejectionReason || "Your plan needs revision before it can be approved.",
-          projectUrl: `${process.env.APP_BASE_URL || process.env.FRONTEND_URL || "http://localhost:5175"}/plans/${planId}`,
+          projectUrl: `${(process.env.FRONTEND_URL || "http://localhost:3000").replace(/\/$/, "")}/plans/${planId}`,
         });
       }
 

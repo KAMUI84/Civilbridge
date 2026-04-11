@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useGoogleLogin } from '@react-oauth/google';
 import { useAuth } from "../../context/useAuth";
+import GoogleButton from "../../components/auth/GoogleButton";
 import { api } from "../../services/apiClientService";
 import civilbridge from "/civilbridge.png";
 import SEO from "../../components/seo/SEO";
@@ -153,24 +153,17 @@ export default function Register() {
     }
   }
 
-  const googleSignIn = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      setLoading(true);
-      setErr('');
-      try {
-        await googleLogin(tokenResponse.access_token);
-        // Navigation is handled by the AuthContext
-      } catch (error) {
-        setErr(error.message || 'Google signup failed.');
-      } finally {
-        setLoading(false);
-      }
-    },
-    flow: 'implicit',
-  });
-
-  const handleGoogleClick = () => {
-    if (!loading) googleSignIn();
+  async function handleGoogleCredential(credential) {
+    setErr("");
+    setLoading(true);
+    try {
+      await googleLogin(credential);
+      // Navigation is handled by AuthContext
+    } catch (error) {
+      setErr(error.message || "Google signup failed.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -193,7 +186,15 @@ export default function Register() {
               <p style={S.subtext}>
                 Choose how you want to create your account. Google is quickest; email/phone uses a verification code to prevent spam.
               </p>
-              <button type="button" onClick={handleGoogleClick} style={S.googleBtn} disabled={loading}>Sign up with Google</button>
+              <div
+                style={{
+                  width: "100%",
+                  opacity: loading ? 0.6 : 1,
+                  pointerEvents: loading ? "none" : "auto",
+                }}
+              >
+                <GoogleButton onCredential={handleGoogleCredential} />
+              </div>
               <div style={S.divider}><div style={S.divLine} /><span style={S.divText}>OR</span><div style={S.divLine} /></div>
               {err && <div style={S.error}>{err}</div>}
               <form onSubmit={requestOtp} style={S.form}>

@@ -1,0 +1,7 @@
+# Claude Code worktrees
+/skills/
+
+# Python cache
+**/__pycache__/
+*.pyc
+*.pyo

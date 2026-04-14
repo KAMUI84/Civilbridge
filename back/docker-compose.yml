@@ -1,0 +1,61 @@
+version: "3.9"
+
+# ─── CivilBridge — local development + production compose file ────────────────
+# Usage:
+#   Development:  docker compose up
+#   Production:   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+
+  # ── MySQL database ───────────────────────────────────────────────────────────
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-admin123}
+      MYSQL_DATABASE:      ${DB_NAME:-civilbridge}
+      MYSQL_USER:          ${DB_USER:-root}
+      MYSQL_PASSWORD:      ${DB_PASSWORD:-admin123}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD:-admin123}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ── CivilBridge API ──────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL:        mysql://${DB_USER:-root}:${DB_PASSWORD:-admin123}@db:3306/${DB_NAME:-civilbridge}?connection_limit=10
+      DIRECT_DATABASE_URL: mysql://${DB_USER:-root}:${DB_PASSWORD:-admin123}@db:3306/${DB_NAME:-civilbridge}
+      NODE_ENV:            ${NODE_ENV:-development}
+    ports:
+      - "${PORT:-3000}:3000"
+    volumes:
+      - uploads:/app/uploads
+      - logs:/app/logs
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  mysql_data:
+  uploads:
+  logs:

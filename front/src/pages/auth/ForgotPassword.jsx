@@ -1,40 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { gsap } from 'gsap';
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import authService from '../../services/authService';
+
+/* ──────────────────────────────────────────────
+   CivilBridge – Premium Dark Forgot Password
+   ────────────────────────────────────────────── */
 
 export default function ForgotPassword() {
-  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [err, setErr] = useState('');
-
-  // GSAP animations
-  useEffect(() => {
-    const tl = gsap.timeline();
-    
-    tl.from('.forgot-container', {
-      opacity: 0,
-      y: 30,
-      duration: 0.8,
-      ease: 'power3.out'
-    })
-    .from('.form-group', {
-      opacity: 0,
-      x: -20,
-      duration: 0.6,
-      stagger: 0.1,
-      ease: 'power2.out'
-    }, '-=0.4')
-    .from('.reset-button', {
-      opacity: 0,
-      scale: 0.8,
-      duration: 0.5,
-      ease: 'back.out(1.7)'
-    }, '-=0.2');
-
-    return () => tl.kill();
-  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -42,192 +18,302 @@ export default function ForgotPassword() {
     setLoading(true);
 
     try {
-      if (!email) {
-        throw new Error('Email is required');
-      }
+      if (!email) throw new Error('Email is required');
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Please enter a valid email address');
 
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        throw new Error('Please enter a valid email address');
-      }
-
-      const response = await fetch('http://localhost:3000/api/password-reset/request', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to send reset link');
-      }
-
+      await authService.requestPasswordReset(email);
       setSuccess(true);
     } catch (error) {
-      setErr(error.message);
-      
-      // Shake animation for error
-      gsap.to('.error-message', {
-        x: [-10, 10, -10, 10, 0],
-        duration: 0.5,
-        ease: 'power2.inOut'
-      });
+      setErr(error?.message || 'Failed to send reset link');
     } finally {
       setLoading(false);
     }
   };
 
-  if (success) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-green-900 to-slate-900 flex items-center justify-center p-4">
-        {/* Background decoration */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute w-96 h-96 bg-green-500 rounded-full blur-3xl opacity-20 -top-48 -left-48"></div>
-          <div className="absolute w-96 h-96 bg-blue-500 rounded-full blur-3xl opacity-20 -bottom-48 -right-48"></div>
-        </div>
-
-        <div className="forgot-container relative z-10 w-full max-w-md">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-green-500 to-blue-600 rounded-2xl mb-4">
-              <span className="text-2xl font-bold text-white">✉️</span>
+  return (
+    <div style={S.page}>
+      {/* ── LEFT: Form Panel ── */}
+      <div style={S.left}>
+        <div style={S.formWrap}>
+          {/* Logo */}
+          <div style={S.logoRow}>
+            <div style={S.logoIcon}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" stroke="#00f2ff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             </div>
-            <h1 className="text-3xl font-bold text-white mb-2">Check Your Email</h1>
-            <p className="text-gray-300">Reset link sent successfully</p>
+            <span style={S.logoText}>CivilBridge</span>
           </div>
 
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+          {!success ? (
+            <>
+              {/* Heading */}
+              <h1 style={S.heading}>Reset Password</h1>
+              <p style={S.subtext}>Enter your email to receive a reset link</p>
+
+              {err && <div style={S.error}>{err}</div>}
+
+              {/* Form */}
+              <form onSubmit={handleSubmit} style={S.form}>
+                <label style={S.label}>
+                  Email Address
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    style={S.input}
+                    required
+                  />
+                </label>
+
+                <button type="submit" disabled={loading} style={S.submitBtn}>
+                  {loading ? 'Sending link…' : 'Send Reset Link'}
+                </button>
+              </form>
+            </>
+          ) : (
+            <div style={S.successBox}>
+              <div style={S.successIcon}>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                  <path d="M5 13l4 4L19 7" stroke="#00f2ff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
-              <h2 className="text-2xl font-semibold text-white mb-4">Email Sent!</h2>
-              <p className="text-gray-300 mb-6">
+              <h2 style={S.successHeading}>Check your email</h2>
+              <p style={S.successText}>
                 We've sent a password reset link to<br />
-                <span className="text-green-400 font-medium">{email}</span>
+                <span style={{ color: '#00f2ff', fontWeight: 600 }}>{email}</span>
               </p>
-              <p className="text-gray-400 text-sm mb-6">
-                The link will expire in 15 minutes. If you don't see the email, check your spam folder.
-              </p>
-              
-              <div className="space-y-3">
-                <button
-                  onClick={() => navigate('/login')}
-                  className="w-full py-3 px-4 bg-gradient-to-r from-green-500 to-blue-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
-                >
-                  Back to Login
-                </button>
-                
-                <button
-                  onClick={() => {
-                    setSuccess(false);
-                    setEmail('');
-                  }}
-                  className="w-full py-3 px-4 bg-white/10 border border-white/20 text-white font-semibold rounded-lg hover:bg-white/20 transition-all duration-200"
-                >
-                  Send Another Link
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-8 text-center text-sm text-gray-400">
-            <p>&copy; 2024 CivilBridge. Building Rwanda's Future.</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-green-900 to-slate-900 flex items-center justify-center p-4">
-      {/* Background decoration */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute w-96 h-96 bg-green-500 rounded-full blur-3xl opacity-20 -top-48 -right-48"></div>
-        <div className="absolute w-96 h-96 bg-blue-500 rounded-full blur-3xl opacity-20 -bottom-48 -left-48"></div>
-      </div>
-
-      <div className="forgot-container relative z-10 w-full max-w-md">
-        {/* Logo/Brand */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-green-500 to-blue-600 rounded-2xl mb-4">
-            <span className="text-2xl font-bold text-white">🔐</span>
-          </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Reset Password</h1>
-          <p className="text-gray-300">We'll send you a reset link</p>
-        </div>
-
-        {/* Reset Form */}
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20">
-          <h2 className="text-2xl font-semibold text-white mb-6">Forgot Password?</h2>
-          <p className="text-gray-300 mb-6">
-            No worries! Enter your email address below and we'll send you a link to reset your password.
-          </p>
-
-          {err && (
-            <div className="error-message mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-red-200 text-sm">
-              {err}
+              <button
+                onClick={() => { setSuccess(false); setEmail(''); }}
+                style={{ ...S.submitBtn, background: '#1a1a1a', border: '1px solid #262626', color: '#f0f0f0' }}
+              >
+                Send Another Link
+              </button>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Email */}
-            <div className="form-group">
-              <label className="block text-sm font-medium text-gray-200 mb-2">
-                Email Address
-              </label>
-              <div className="relative">
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@example.com"
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-                  required
-                />
-                <div className="absolute right-3 top-3.5 text-gray-400">
-                  📧
-                </div>
-              </div>
-            </div>
-
-            {/* Send Reset Link Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="reset-button w-full py-3 px-4 bg-gradient-to-r from-green-500 to-blue-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? (
-                <span className="flex items-center justify-center">
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Sending...
-                </span>
-              ) : 'Send Reset Link'}
-            </button>
-          </form>
-
-          {/* Back to Login */}
-          <div className="mt-6 text-center">
-            <p className="text-gray-300">
-              Remember your password?{' '}
-              <Link to="/login" className="text-green-400 hover:text-green-300 font-medium transition-colors">
-                Back to Login
-              </Link>
-            </p>
-          </div>
+          {/* Footer */}
+          <p style={S.footer}>
+            Remember your password?{' '}
+            <Link to="/login" style={S.footerLink}>Back to Login</Link>
+          </p>
         </div>
+      </div>
 
-        {/* Footer */}
-        <div className="mt-8 text-center text-sm text-gray-400">
-          <p>&copy; 2024 CivilBridge. Building Rwanda's Future.</p>
+      {/* ── RIGHT: Branding Panel ── */}
+      <div style={S.right}>
+        <div style={S.brandOverlay} />
+        <div style={S.brandContent}>
+          <h2 style={S.brandStat}>
+            Build Smarter,<br />Build with Data.
+          </h2>
+          <p style={S.brandDesc}>
+            Join thousands of construction professionals using CivilBridge to plan, estimate, and build with precision in Rwanda.
+          </p>
+          <div style={S.brandChips}>
+            <span style={S.chip}>✅ Free to start</span>
+            <span style={S.chip}>🔒 Bank-grade security</span>
+          </div>
         </div>
       </div>
     </div>
   );
 }
+
+/* ── Inline Styles ── */
+const accent = '#00f2ff';
+
+const S = {
+  page: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    minHeight: '100vh',
+    background: '#050505',
+    fontFamily: "'Inter', 'DM Sans', system-ui, sans-serif",
+  },
+  left: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '40px 32px',
+  },
+  formWrap: {
+    width: '100%',
+    maxWidth: 400,
+  },
+  logoRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 40,
+  },
+  logoIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    background: 'rgba(0,242,255,.08)',
+    border: '1px solid rgba(0,242,255,.15)',
+    display: 'grid',
+    placeItems: 'center',
+  },
+  logoText: {
+    fontSize: 16,
+    fontWeight: 700,
+    color: '#f0f0f0',
+    letterSpacing: '-0.02em',
+  },
+  heading: {
+    margin: '0 0 6px',
+    fontSize: 28,
+    fontWeight: 700,
+    color: '#f0f0f0',
+    letterSpacing: '-0.03em',
+  },
+  subtext: {
+    margin: '0 0 28px',
+    fontSize: 14,
+    color: '#64748b',
+    fontWeight: 400,
+  },
+  error: {
+    padding: '10px 14px',
+    marginBottom: 16,
+    borderRadius: 8,
+    background: 'rgba(239,68,68,.08)',
+    border: '1px solid rgba(239,68,68,.18)',
+    color: '#fca5a5',
+    fontSize: 13,
+    fontWeight: 500,
+  },
+  form: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 18,
+  },
+  label: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+    fontSize: 13,
+    fontWeight: 600,
+    color: '#a1a1aa',
+  },
+  input: {
+    width: '100%',
+    height: 44,
+    padding: '0 14px',
+    background: '#1a1a1a',
+    border: '1px solid #262626',
+    borderRadius: 10,
+    color: '#f0f0f0',
+    fontSize: 14,
+    fontFamily: 'inherit',
+    outline: 'none',
+    transition: 'border-color .2s',
+    boxSizing: 'border-box',
+  },
+  submitBtn: {
+    width: '100%',
+    height: 44,
+    background: accent,
+    color: '#050505',
+    border: 'none',
+    borderRadius: 10,
+    fontSize: 14,
+    fontWeight: 700,
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+    transition: 'opacity .2s',
+    marginTop: 4,
+  },
+  successBox: {
+    background: '#171717',
+    border: '1px solid #262626',
+    borderRadius: 12,
+    padding: '32px 24px',
+    textAlign: 'center',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+  },
+  successIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: '50%',
+    background: 'rgba(0,242,255,.08)',
+    display: 'grid',
+    placeItems: 'center',
+    marginBottom: 16,
+  },
+  successHeading: {
+    fontSize: 22,
+    fontWeight: 700,
+    color: '#f0f0f0',
+    margin: '0 0 10px',
+  },
+  successText: {
+    fontSize: 14,
+    color: '#94a3b8',
+    margin: '0 0 24px',
+    lineHeight: 1.6,
+  },
+  footer: {
+    marginTop: 28,
+    textAlign: 'center',
+    fontSize: 13,
+    color: '#64748b',
+  },
+  footerLink: {
+    color: accent,
+    fontWeight: 600,
+    textDecoration: 'none',
+  },
+  right: {
+    position: 'relative',
+    background: '#0a0f1a',
+    overflow: 'hidden',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  brandOverlay: {
+    position: 'absolute',
+    inset: 0,
+    background: 'radial-gradient(600px 400px at 70% 30%, rgba(0,242,255,.06), transparent 65%)',
+    pointerEvents: 'none',
+  },
+  brandContent: {
+    position: 'relative',
+    zIndex: 1,
+    padding: '48px 40px',
+    maxWidth: 460,
+  },
+  brandStat: {
+    margin: '0 0 16px',
+    fontSize: 36,
+    fontWeight: 800,
+    color: '#f0f0f0',
+    lineHeight: 1.15,
+  },
+  brandDesc: {
+    margin: '0 0 32px',
+    fontSize: 15,
+    color: '#94a3b8',
+    lineHeight: 1.65,
+  },
+  brandChips: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  chip: {
+    padding: '8px 14px',
+    borderRadius: 8,
+    fontSize: 12,
+    fontWeight: 600,
+    background: 'rgba(255,255,255,.04)',
+    border: '1px solid rgba(255,255,255,.06)',
+    color: '#94a3b8',
+  },
+};

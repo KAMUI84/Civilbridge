@@ -1,10 +1,12 @@
 import { NavLink, Outlet, Navigate, useLocation } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../context/useAuth";
 
 const ADMIN_NAV = [
   { to: "/admin", label: "Overview", end: true },
   { to: "/admin/users", label: "Users Management" },
   { to: "/admin/verification", label: "Verification Queue" },
+  { to: "/admin/plans", label: "Plans Moderation" },
+  { to: "/admin/listings", label: "Listings Moderation" },
 ];
 
 const linkStyle = ({ isActive }) => ({
@@ -29,6 +31,8 @@ function pageTitle(pathname) {
     "/admin": "Admin Overview",
     "/admin/users": "Users Management",
     "/admin/verification": "Verification Queue",
+    "/admin/plans": "Plans Moderation",
+    "/admin/listings": "Listings Moderation",
   };
   return map[pathname] ?? "Admin Panel";
 }
@@ -40,7 +44,7 @@ export default function AdminLayout() {
   const { user, role, logout } = useAuth();
   const { pathname } = useLocation();
 
-  if (role !== "ADMIN") return <Navigate to="/dashboard" replace />;
+  if (!["ADMIN", "SUPER_ADMIN"].includes(role)) return <Navigate to="/dashboard" replace />;
 
   return (
     <div style={styles.shell}>

@@ -1,4 +1,5 @@
 import PageShell from "../../components/common/PageShell";
+import SEO from "../../components/seo/SEO";
 
 export default function About() {
   return (
@@ -6,6 +7,10 @@ export default function About() {
       title="About CivilBridge"
       subtitle="We connect real estate + land + plans + estimation + verified experts into one practical construction ecosystem."
     >
+      <SEO
+        title="About"
+        description="CivilBridge connects Rwanda's construction sector — real estate, build-ready land, architectural plans, cost estimation, and verified professionals in one platform."
+      />
       <div style={{ display: "grid", gap: 14 }}>
         <Section title="What we do">
           CivilBridge helps people buy finished real estate, find build-ready plots, explore modern plans, and estimate costs
@@ -33,9 +38,9 @@ export default function About() {
 
 function Section({ title, children }) {
   return (
-    <div style={{ border: "1px solid #eef0f4", borderRadius: 16, padding: 16, background: "#fff" }}>
-      <div style={{ fontWeight: 950, color: "#0c1220", marginBottom: 6 }}>{title}</div>
-      <div style={{ color: "#3a4357", lineHeight: 1.6, fontWeight: 650 }}>{children}</div>
+    <div style={{ border: "1px solid #e8eef5", borderRadius: 16, padding: 14, background: "#ffffff", boxShadow: "0 12px 26px rgba(15,23,42,0.05)" }}>
+      <div style={{ fontWeight: 950, color: "#0f172a", marginBottom: 6 }}>{title}</div>
+      <div style={{ color: "#64748b", lineHeight: 1.6, fontWeight: 650 }}>{children}</div>
     </div>
   );
 }
@@ -44,9 +49,9 @@ function Grid3({ items }) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12 }}>
       {items.map((x) => (
-        <div key={x.t} style={{ border: "1px solid #eef0f4", borderRadius: 16, padding: 16, background: "#f7f9ff" }}>
-          <div style={{ fontWeight: 950, color: "#0c1220", marginBottom: 6 }}>{x.t}</div>
-          <div style={{ color: "#3a4357", lineHeight: 1.55, fontWeight: 650 }}>{x.d}</div>
+        <div key={x.t} style={{ border: "1px solid #e8eef5", borderRadius: 16, padding: 14, background: "#ffffff", boxShadow: "0 12px 26px rgba(15,23,42,0.05)" }}>
+          <div style={{ fontWeight: 950, color: "#0f172a", marginBottom: 6 }}>{x.t}</div>
+          <div style={{ color: "#64748b", lineHeight: 1.55, fontWeight: 650 }}>{x.d}</div>
         </div>
       ))}
       <style>{`@media (max-width: 960px){ div[style*="repeat(3,1fr)"]{ grid-template-columns: 1fr !important; } }`}</style>

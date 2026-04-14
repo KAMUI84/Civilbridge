@@ -15,10 +15,10 @@ const TRUST_ITEMS = [
 ];
 
 const STATS = [
-  { num: "2,400", suffix: "+", label: "Registered Experts" },
-  { num: "18K",   suffix: "+", label: "Projects Estimated" },
-  { num: "97",    suffix: "%", label: "Client Satisfaction" },
-  { num: "140",   suffix: "+", label: "Plan Templates" },
+  { value: "Live", label: "expert directory" },
+  { value: "Fresh", label: "project workspaces" },
+  { value: "Verified", label: "publishing workflow" },
+  { value: "Connected", label: "planning to delivery flow" },
 ];
 
 const HOW_STEPS = [
@@ -63,7 +63,7 @@ const FEATURES = [
   {
     icon: "📐",
     title: "Plans Library",
-    desc: "150+ curated residential and commercial designs. Filter by size, style, budget, and region. Download specs instantly.",
+    desc: "Curated residential and commercial designs. Filter by size, style, budget, and region, then open the plans that match your project.",
   },
   {
     icon: "👷",
@@ -88,7 +88,7 @@ const STORY_SECTIONS = [
     title: "Plan smarter, avoid costly mistakes",
     desc: "CivilBridge guides you from idea → plan → estimate → compliance → build. It works entirely without AI — intelligence is an optional layer you add when you're ready.",
     image: "https://images.unsplash.com/photo-1503387762-592dea58ef23?auto=format&fit=crop&w=1600&q=80",
-    badge: "Trusted by 12,000+ professionals",
+    badge: "Live marketplace, planning, and delivery workflow",
     cta: { label: "Browse Plans", to: "/plans" },
     ctaGhost: { label: "How it works", to: "/#how-it-works" },
     tone: "light",
@@ -109,7 +109,7 @@ const STORY_SECTIONS = [
     image: "https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&w=1600&q=80",
     badge: "BOQ-based accuracy",
     cta: { label: "Start Estimation", to: "/estimator" },
-    ctaGhost: { label: "See sample report", to: "/estimator/sample" },
+    ctaGhost: { label: "Open estimator", to: "/estimator" },
     tone: "dark",
   },
   {
@@ -117,7 +117,7 @@ const STORY_SECTIONS = [
     title: "Hire engineers, contractors & suppliers you can trust",
     desc: "Browse vetted professionals with verified credentials, active portfolios, and transparent project histories. Request quotes, review compliance status, and engage — all in one place.",
     image: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=1600&q=80",
-    badge: "2,400+ active professionals",
+    badge: "Verified credentials and booking workflow",
     cta: { label: "Browse Experts", to: "/experts" },
     tone: "light",
   },
@@ -172,7 +172,7 @@ export default function ScrollStory() {
             {STATS.map((s, i) => (
               <div className="cb-stat" key={i} data-reveal data-delay={i + 1}>
                 <div className="cb-statNum">
-                  {s.num}<span>{s.suffix}</span>
+                  {s.value}
                 </div>
                 <div className="cb-statDesc">{s.label}</div>
               </div>

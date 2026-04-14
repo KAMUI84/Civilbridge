@@ -1,149 +1,162 @@
-import React from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { lazy, Suspense } from "react";
+import { Routes, Route } from "react-router-dom";
 
-// Components & Layouts
-import Navbar from "./components/common/Navbar";
-// import AuthModalHost from "./components/auth/AuthModalHost";
-import PublicLayout from "./app/layout/PublicLayout";
-import DashboardLayout from "./app/layout/DashboardLayout";
-import AdminLayout from "./app/layout/AdminLayout";
-import About from "./pages/public/About";
-import Contact from "./pages/public/Contact";
-import Pricing from "./pages/public/Pricing";
-import FAQ from "./pages/public/FAQ";
-import Terms from "./pages/public/Terms";
-import Privacy from "./pages/public/Privacy";
-import Uploads from "./pages/public/Uploads";
-import Intelligence from "./pages/public/Intelligence";
-import AuthLayout from "./Layout/AuthLayout";
+import { useAuthStore } from "./store/authStore";
+import { getRoleDashboardKey } from "./utils/roles";
 
-// Guards
-import RequireAuth from "./app/guards/RequireAuth";
-import RequireRole from "./app/guards/RequireRole";
+// Layouts & guards (not lazy — tiny, always needed on first paint)
+import PublicLayout    from "./app/layout/PublicLayout";
+import DashboardLayout from "./pages/dashboard/DashboardLayout";
+import RequireAuth     from "./app/guards/RequireAuth";
+import RequireRole     from "./app/guards/RequireRole";
+import ErrorBoundary   from "./components/common/ErrorBoundary";
+import PageTransition  from "./components/common/PageTransition";
 
-// ─── PAGES ───────────────────────────────────────────────────
+// ─── Suspense fallback ─────────────────────────────────────────────────────────
+function PageLoader() {
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", justifyContent: "center",
+      minHeight: "60vh", color: "#6b7280", fontSize: 14, gap: 10,
+    }}>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+        style={{ animation: "cb-app-spin 0.9s linear infinite" }}>
+        <style>{`@keyframes cb-app-spin { to { transform:rotate(360deg); } }`}</style>
+        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.15" />
+        <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+      </svg>
+      Loading…
+    </div>
+  );
+}
 
-// Public
-import Home from "./pages/public/Home";
-import Marketplace from "./pages/public/Marketplace";
-import ListingDetails from "./pages/public/ListingDetails";
-import PlansLibrary from "./pages/public/PlansLibrary";
-import PlanDetails from "./pages/public/PlanDetails";
-import Experts from "./pages/public/Experts";
-import Estimator from "./pages/public/Estimator";
+// ─── Lazy public pages ─────────────────────────────────────────────────────────
+const Home               = lazy(() => import("./pages/public/Home"));
+const About              = lazy(() => import("./pages/public/About"));
+const Contact            = lazy(() => import("./pages/public/Contact"));
+const FAQ                = lazy(() => import("./pages/public/FAQ"));
+const Uploads            = lazy(() => import("./pages/public/UploadsReal"));
+const Intelligence       = lazy(() => import("./pages/public/Intelligence"));
+const Marketplace        = lazy(() => import("./pages/public/Marketplace"));
+const ListingDetail      = lazy(() => import("./pages/public/ListingDetail"));
+const PlansLibrary       = lazy(() => import("./pages/public/PlansLibrary"));
+const PlanDetails        = lazy(() => import("./pages/public/PlanDetails"));
+const Experts            = lazy(() => import("./pages/public/Experts"));
+const ExpertProfile      = lazy(() => import("./pages/public/ExpertProfile"));
+const Estimator          = lazy(() => import("./pages/public/Estimator"));
+const TermsAndConditions = lazy(() => import("./pages/public/TermsAndConditions"));
+const PrivacyPolicy      = lazy(() => import("./pages/public/PrivacyPolicy"));
 
-// Auth (Pages + Role-specific Logins)
-import Login from "./pages/auth/ModernLogin";
-import Register from "./pages/auth/ModernRegister";
-import ForgotPassword from "./pages/auth/ForgotPassword";
-import ResetPassword from "./pages/auth/ResetPassword";
-import LoginAdmin from "./pages/auth/LoginAdmin";
-import LoginEngineer from "./pages/auth/LoginEngineer";
-import LoginContractor from "./pages/auth/LoginContractor";
-import LoginSupplier from "./pages/auth/LoginSupplier";
-import LoginStudent from "./pages/auth/LoginStudent";
-import LoginHomeBuilder from "./pages/auth/LoginHomeBuilder";
+// ─── Lazy auth pages ───────────────────────────────────────────────────────────
+const Login          = lazy(() => import("./pages/public/Login"));
+const Register       = lazy(() => import("./pages/public/Register"));
+const ForgotPassword  = lazy(() => import("./pages/auth/ForgotPassword"));
+const ResetPassword   = lazy(() => import("./pages/auth/ResetPassword"));
+const AnimatedSignIn  = lazy(() => import("./pages/auth/AnimatedSignIn"));
 
-// User Dashboard
-import DashboardHome from "./pages/dashboard/DashboardHome";
-import Projects from "./pages/dashboard/Projects";
-import Estimates from "./pages/dashboard/Estimator";
-import BudgetAnalysis from "./pages/dashboard/BudgetAnalysis";
-import Documents from "./pages/dashboard/Documents";
-import Team from "./pages/dashboard/Team"; 
-import Permits from "./pages/dashboard/PermitGuide";
-import AiStudio from "./pages/dashboard/AiStudio";
-import RoiTools from "./pages/dashboard/RoiTools";
+// ─── Lazy error pages ──────────────────────────────────────────────────────────
+const NotFound   = lazy(() => import("./pages/errors/NotFound"));
+const Forbidden  = lazy(() => import("./pages/errors/Forbidden"));
+const ServerError = lazy(() => import("./pages/errors/ServerError"));
 
-// Admin
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import UsersManagement from "./pages/admin/UsersManagement";
-import VerificationQueue from "./pages/admin/VerificationQueue";
+// ─── Lazy role dashboards ──────────────────────────────────────────────────────
+const SuperAdminDashboard  = lazy(() => import("./pages/dashboard/roles/SuperAdminDashboard"));
+const AdminDashboard       = lazy(() => import("./pages/dashboard/roles/AdminDashboard"));
+const EngineerDashboard    = lazy(() => import("./pages/dashboard/roles/EngineerDashboard"));
+const HomeBuilderDashboard = lazy(() => import("./pages/dashboard/roles/HomeBuilderDashboard"));
 
-// ─── COMPONENT DEFINITION ─────────────────────────────────────
+// ─── Lazy dashboard pages ──────────────────────────────────────────────────────
+const UserManagement      = lazy(() => import("./pages/dashboard/UserManagement"));
+const ProjectManagement   = lazy(() => import("./pages/dashboard/ProjectManagement"));
+const Analytics           = lazy(() => import("./pages/dashboard/Analytics"));
+const Settings            = lazy(() => import("./pages/dashboard/Settings"));
+const Logs                = lazy(() => import("./pages/dashboard/Logs"));
+const Payments            = lazy(() => import("./pages/dashboard/Payments"));
+const Tasks               = lazy(() => import("./pages/dashboard/Tasks"));
+const Messages            = lazy(() => import("./pages/dashboard/Messages"));
+const Files               = lazy(() => import("./pages/dashboard/Files"));
+const Profile             = lazy(() => import("./pages/dashboard/Profile"));
+const PropertyMarketplace = lazy(() => import("./pages/dashboard/PropertyMarketplace"));
+const PlanLibraryEnhanced = lazy(() => import("./pages/dashboard/PlanLibraryEnhanced"));
+const EngineerSystem      = lazy(() => import("./pages/dashboard/EngineerSystem"));
 
+// ─── Role-based dashboard router ──────────────────────────────────────────────
+const RoleBasedDashboard = () => {
+  const { user } = useAuthStore();
+  switch (getRoleDashboardKey(user?.role)) {
+    case "SUPER_ADMIN": return <SuperAdminDashboard />;
+    case "ADMIN":       return <AdminDashboard />;
+    case "PROFESSIONAL":return <EngineerDashboard />;
+    default:            return <HomeBuilderDashboard />;
+  }
+};
+
+// ─── PageTransition shorthand ─────────────────────────────────────────────────
+const PT = ({ children }) => <PageTransition>{children}</PageTransition>;
+
+// ─── App ──────────────────────────────────────────────────────────────────────
 export default function App() {
   return (
-    <>
-      {/* <Navbar /> */}
+    <ErrorBoundary>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          {/* 1. PUBLIC */}
+          <Route element={<PublicLayout />}>
+            <Route path="/"                element={<PT><Home /></PT>} />
+            <Route path="/marketplace"     element={<PT><Marketplace /></PT>} />
+            <Route path="/marketplace/:id" element={<PT><ListingDetail /></PT>} />
+            <Route path="/plans"           element={<PT><PlansLibrary /></PT>} />
+            <Route path="/plans/:id"       element={<PT><PlanDetails /></PT>} />
+            <Route path="/experts"         element={<PT><Experts /></PT>} />
+            <Route path="/experts/:id"     element={<PT><ExpertProfile /></PT>} />
+            <Route path="/estimator"       element={<PT><Estimator /></PT>} />
+            <Route path="/about"           element={<PT><About /></PT>} />
+            <Route path="/contact"         element={<PT><Contact /></PT>} />
+            <Route path="/faq"             element={<PT><FAQ /></PT>} />
+            <Route path="/terms"           element={<PT><TermsAndConditions /></PT>} />
+            <Route path="/privacy"         element={<PT><PrivacyPolicy /></PT>} />
+            <Route path="/uploads"         element={<PT><Uploads /></PT>} />
+            <Route path="/intelligence"    element={<PT><Intelligence /></PT>} />
+            <Route path="/403"             element={<PT><Forbidden /></PT>} />
+            <Route path="/500"             element={<PT><ServerError /></PT>} />
+          </Route>
 
-      <Routes>
-        {/* 1. PUBLIC ROUTES (Wrapped in PublicLayout) */}
-        <Route element={<PublicLayout />}>
-          <Route path="/" element={<Home />} />
-          <Route path="/marketplace" element={<Marketplace />} />
-          <Route path="/marketplace/:id" element={<ListingDetails />} />
-          <Route path="/plans" element={<PlansLibrary />} />
-          <Route path="/plans/:id" element={<PlanDetails />} />
-          <Route path="/experts" element={<Experts />} />
-          <Route path="/estimator" element={<Estimator />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/pricing" element={<Pricing />} />
-          <Route path="/faq" element={<FAQ />} />
-          <Route path="/terms" element={<Terms />} />
-          <Route path="/privacy" element={<Privacy />} />
-          <Route path="/uploads" element={<Uploads />} />
-          <Route path="/intelligence" element={<Intelligence />} /> 
-        </Route>
+          {/* 2. AUTH */}
+          <Route path="/login"    element={<PT><Login /></PT>} />
+          <Route path="/register" element={<PT><Register /></PT>} />
+          <Route path="/forgot-password"  element={<PT><ForgotPassword /></PT>} />
+          <Route path="/reset-password"   element={<PT><ResetPassword /></PT>} />
+          <Route path="/animated-signin"  element={<PT><AnimatedSignIn /></PT>} />
 
-        {/* 2. AUTH ROUTES (Supporting both Page and Modal logic) */}
-        <Route element={<AuthLayout />}>
-             <Route path="/login" element={<Login />} />
-             <Route path="/register" element={<Register />} />
-             <Route path="/forgot-password" element={<ForgotPassword />} />
-             <Route path="/reset-password" element={<ResetPassword />} />
-        </Route>
-        
-        <Route path="/login/admin" element={<LoginAdmin />} />
-        <Route path="/login/engineer" element={<LoginEngineer />} />
-        <Route path="/login/contractor" element={<LoginContractor />} />
-        <Route path="/login/supplier" element={<LoginSupplier />} />
-        <Route path="/login/student" element={<LoginStudent />} />
-        <Route path="/login/home-builder" element={<LoginHomeBuilder />} />
+          {/* 3. DASHBOARD */}
+          <Route
+            path="/dashboard"
+            element={
+              <RequireAuth>
+                <DashboardLayout />
+              </RequireAuth>
+            }
+          >
+            <Route index               element={<PT><RoleBasedDashboard /></PT>} />
+            <Route path="users"        element={<PT><UserManagement /></PT>} />
+            <Route path="projects"     element={<PT><ProjectManagement /></PT>} />
+            <Route path="analytics"    element={<PT><Analytics /></PT>} />
+            <Route path="settings"     element={<PT><Settings /></PT>} />
+            <Route path="logs"         element={<PT><Logs /></PT>} />
+            <Route path="payments"     element={<PT><Payments /></PT>} />
+            <Route path="tasks"        element={<PT><Tasks /></PT>} />
+            <Route path="messages"     element={<PT><Messages /></PT>} />
+            <Route path="files"        element={<PT><Files /></PT>} />
+            <Route path="profile"      element={<PT><Profile /></PT>} />
+            <Route path="marketplace"  element={<PT><PropertyMarketplace /></PT>} />
+            <Route path="plan-library" element={<PT><PlanLibraryEnhanced /></PT>} />
+            <Route path="engineer-system" element={<PT><EngineerSystem /></PT>} />
+          </Route>
 
-        {/* 3. USER DASHBOARD (Protected) */}
-        <Route
-          path="/dashboard"
-          element={
-            <RequireAuth>
-              <DashboardLayout />
-            </RequireAuth>
-          }
-        >
-          <Route index element={<DashboardHome />} />
-          <Route path="projects" element={<Projects />} />
-          <Route path="estimates" element={<Estimates />} />
-          <Route path="budget-analysis" element={<BudgetAnalysis />} />
-          <Route path="documents" element={<Documents />} />
-          <Route path="team" element={<Team />} />
-          <Route path="permits" element={<Permits />} />
-          <Route path="intelligence/ai" element={<AiStudio />} />
-          <Route path="intelligence/roi" element={<RoiTools />} />
-        </Route>
-
-        {/* 4. ADMIN DASHBOARD (Protected + Role Guard) */}
-        <Route
-          path="/admin"
-          element={
-            <RequireAuth>
-              <RequireRole allowedRoles={["ADMIN"]}>
-                <AdminLayout />
-              </RequireRole>
-            </RequireAuth>
-          }
-        >
-          <Route index element={<AdminDashboard />} />
-          <Route path="users" element={<UsersManagement />} />
-          <Route path="verification" element={<VerificationQueue />} />
-        </Route>
-
-        {/* 5. FALLBACK */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-
-      {/* Global Modal Host: Listens to URL for /login or /register to trigger modals */}
-      {/* <AuthModalHost /> */}
-    </>
+          {/* 4. CATCH-ALL → 404 */}
+          <Route path="*" element={<PT><NotFound /></PT>} />
+        </Routes>
+      </Suspense>
+    </ErrorBoundary>
   );
 }

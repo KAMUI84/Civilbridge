@@ -6,50 +6,50 @@ const SLIDES = [
   {
     badge: "Welcome to CivilBridge",
     badgeIcon: "🏗️",
-    title: ["Your Construction Journey,", "Digitally Mastered."],
-    desc: "Bridging the gap between architectural dreams and structural reality with smart, reliable workflows.",
+    title: ["Building Dreams", "Into Reality"],
+    desc: "Transform your architectural vision into stunning structures with our comprehensive construction management platform.",
     ctas: [
       { label: "Explore Marketplace", to: "/marketplace", variant: "primary" },
       { label: "How it Works", to: "/#how-it-works", variant: "ghost" },
     ],
-    image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=85&w=2400&auto=format&fit=cropimport",
-    stat: { value: "18K+", label: "Projects estimated" },
+    image: "https://images.unsplash.com/photo-1541888946425-d81bb840317e?q=85&w=2400&auto=format&fit=crop",
+    stat: { value: "Live", label: "marketplace and planning workspace" },
   },
   {
-    badge: "AI Studio (Beta)",
+    badge: "AI-Powered Planning",
     badgeIcon: "🤖",
-    title: ["Smarter Guidance.", "Real Decisions."],
-    desc: "Optional intelligence to support planning, budgeting, and next-step recommendations — without replacing your judgment.",
+    title: ["Smart Construction", "Intelligent Solutions"],
+    desc: "Leverage cutting-edge AI technology for precise cost estimation, project planning, and resource optimization.",
     ctas: [
-      { label: "Open AI Studio", to: "/dashboard/ai-studio", variant: "primary" },
-      { label: "Learn more", to: "/intelligence", variant: "ghost" },
+      { label: "Try AI Studio", to: "/dashboard/ai-studio", variant: "primary" },
+      { label: "Learn More", to: "/intelligence", variant: "ghost" },
     ],
-    image: "https://images.unsplash.com/photo-1633356305829-0c70a1d5a8e0?q=85&w=2400&auto=format&fit=cropimport",
-    stat: { value: "Beta", label: "Early access open" },
+    image: "https://images.unsplash.com/photo-1677442135722-5f1a1d2f0688?q=85&w=2400&auto=format&fit=crop",
+    stat: { value: "Ready", label: "for user-driven planning" },
   },
   {
-    badge: "Verified Experts",
+    badge: "Expert Network",
     badgeIcon: "👷",
-    title: ["Hire Trusted", "Engineering Talent."],
-    desc: "Connect with vetted engineers, architects, and contractors — built for trust, compliance, and long-term projects.",
+    title: ["Connect with", "Verified Professionals"],
+    desc: "Access a curated network of architects, engineers, and contractors vetted for excellence and reliability.",
     ctas: [
-      { label: "Browse Experts", to: "/experts", variant: "primary" },
-      { label: "Become an Expert", to: "/register", variant: "ghost" },
+      { label: "Find Experts", to: "/experts", variant: "primary" },
+      { label: "Join Network", to: "/register", variant: "ghost" },
     ],
-    image: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=85&w=2400&auto=format&fit=cropimport",
-    stat: { value: "2,400+", label: "Active professionals" },
+    image: "https://images.unsplash.com/photo-1581094794329-c8112a89af12?q=85&w=2400&auto=format&fit=crop",
+    stat: { value: "Verified", label: "expert review workflow" },
   },
   {
-    badge: "Plans Library",
+    badge: "Blueprint Library",
     badgeIcon: "📐",
-    title: ["Ready-to-build Plans", "You Can Trust."],
-    desc: "Browse curated residential and commercial plans with estimated build ranges, compliance notes, and architect contacts.",
+    title: ["Professional Plans", "Ready to Build"],
+    desc: "Browse our extensive collection of architectural blueprints with detailed specifications and compliance information.",
     ctas: [
-      { label: "Explore Plans", to: "/plans", variant: "primary" },
-      { label: "Upload yours", to: "/uploads", variant: "ghost" },
+      { label: "Browse Plans", to: "/plans", variant: "primary" },
+      { label: "Upload Plans", to: "/uploads", variant: "ghost" },
     ],
-    image: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=85&w=2400&auto=format&fit=cropimport",
-    stat: { value: "140+", label: "Plan templates" },
+    image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=85&w=2400&auto=format&fit=crop",
+    stat: { value: "Current", label: "library and plan workflow" },
   },
   {
     badge: "Cost Control",
@@ -58,10 +58,10 @@ const SLIDES = [
     desc: "Estimate project cost, materials, and timeline — transparently, accurately, and instantly.",
     ctas: [
       { label: "Get an Estimate", to: "/estimator", variant: "primary" },
-      { label: "See sample", to: "/estimator", variant: "ghost" },
+      { label: "Open estimator", to: "/estimator", variant: "ghost" },
     ],
-    image: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=85&w=2400&auto=format&fit=cropimport",
-    stat: { value: "97%", label: "Client satisfaction" },
+    image: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=85&w=2400&auto=format&fit=crop",
+    stat: { value: "Real", label: "inputs from your project" },
   },
 ];
 
@@ -96,7 +96,7 @@ const S = {
     position: "absolute",
     inset: 0,
     background:
-      "linear-gradient(to right, rgba(7,11,20,0.94) 0%, rgba(7,11,20,0.58) 55%, rgba(7,11,20,0.18) 100%), linear-gradient(to top, rgba(7,11,20,0.55) 0%, transparent 40%)",
+      "linear-gradient(to right, rgba(7,11,20,0.96) 0%, rgba(7,11,20,0.72) 55%, rgba(7,11,20,0.45) 100%), linear-gradient(to top, rgba(7,11,20,0.65) 0%, transparent 40%)",
   },
   contentArea: {
     position: "relative",
@@ -284,8 +284,8 @@ function ctaStyle(variant, hovered) {
         ? "linear-gradient(135deg,#3d78ff,#2a66ff)"
         : "linear-gradient(135deg,#2a66ff,#1d4ed8)",
       boxShadow: hovered
-        ? "0 16px 40px rgba(29,78,216,.50)"
-        : "0 10px 28px rgba(29,78,216,.35)",
+        ? "0 12px 28px rgba(29,78,216,.25)"
+        : "0 8px 20px rgba(29,78,216,.15)",
       transform: hovered ? "translateY(-2px)" : "translateY(0)",
     };
   }
@@ -339,7 +339,6 @@ export default function HeroSlider() {
 
   useEffect(() => {
     clearInterval(progressRef.current);
-    setProgress(0);
 
     const tick = 50;
     progressRef.current = setInterval(() => {

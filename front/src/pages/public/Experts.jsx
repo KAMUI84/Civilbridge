@@ -1,255 +1,275 @@
-import { useMemo, useState } from "react";
-import { experts } from "../../Data/MockExpert";
-import { KEYS, readLS, writeLS } from "../../utils/storage";
+﻿import React, { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { expertsService } from '../../services/expertsService';
+import { Button, Card, Badge, Container } from '../../components/ui';
+import SEO from '../../components/seo/SEO';
 
-export default function Experts() {
-  const [q, setQ] = useState("");
-  const [role, setRole] = useState("all");
-  const [region, setRegion] = useState("all");
-  const [selected, setSelected] = useState(null);
-  const [req, setReq] = useState({ name: "", phone: "", message: "" });
+function getInitials(value) {
+  return (value || 'Expert')
+    .split(' ')
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+}
 
-  const filtered = useMemo(() => {
-    const query = q.trim().toLowerCase();
-    return experts.filter((e) => {
-      const matchQ =
-        !query ||
-        e.name.toLowerCase().includes(query) ||
-        e.role.toLowerCase().includes(query) ||
-        e.skills.join(" ").toLowerCase().includes(query);
-
-      const matchRole = role === "all" ? true : e.role === role;
-      const matchRegion = region === "all" ? true : e.region === region;
-
-      return matchQ && matchRole && matchRegion;
-    });
-  }, [q, role, region]);
-
-  const submitRequest = () => {
-    if (!selected) return;
-    if (!req.name || !req.phone || !req.message) {
-      alert("Fill name, phone and message.");
-      return;
-    }
-
-    const payload = {
-      id: "REQ-" + Date.now(),
-      expertId: selected.id,
-      expertName: selected.name,
-      ...req,
-      createdAt: new Date().toISOString(),
-    };
-
-    const prev = readLS(KEYS.EXPERT_REQUESTS, []);
-    writeLS(KEYS.EXPERT_REQUESTS, [payload, ...prev].slice(0, 30));
-
-    setReq({ name: "", phone: "", message: "" });
-    alert("Request sent (saved locally for now).");
-    setSelected(null);
-  };
-
+function ExpertCardSkeleton() {
   return (
-    <div style={{ maxWidth: 1200, margin: "0 auto", padding: "22px 18px 40px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: 34, color: "#0c1220" }}>Experts</h1>
-          <p style={{ marginTop: 8, color: "#64708a", fontWeight: 650 }}>
-            Browse verified professionals. Request quotes and consultations.
-          </p>
-        </div>
-
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search experts..." style={inputStyle} />
-          <select value={role} onChange={(e) => setRole(e.target.value)} style={selectStyle}>
-            <option value="all">All roles</option>
-            <option>Structural Engineer</option>
-            <option>Architect</option>
-            <option>Contractor</option>
-            <option>Supplier</option>
-            <option>Surveyor</option>
-          </select>
-          <select value={region} onChange={(e) => setRegion(e.target.value)} style={selectStyle}>
-            <option value="all">All regions</option>
-            <option>Kigali</option>
-            <option>Eastern Province</option>
-            <option>Southern Province</option>
-            <option>Northern Province</option>
-            <option>Western Province</option>
-          </select>
-        </div>
-      </div>
-
-      <div style={gridStyle}>
-        {filtered.map((e) => (
-          <div key={e.id} style={cardStyle}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <img src={e.avatar} alt={e.name} style={{ width: 54, height: 54, borderRadius: 16, border: "1px solid #eef0f4" }} />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 950, color: "#0c1220" }}>{e.name}</div>
-                <div style={{ color: "#64708a", fontWeight: 750 }}>{e.role} • {e.region}</div>
-              </div>
-              <span style={pill}>{e.rating.toFixed(1)} ★</span>
-            </div>
-
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
-              {e.verified ? <span style={pillBlue}>Verified</span> : <span style={pillSoft}>Unverified</span>}
-              <span style={pillSoft}>{e.jobs} jobs</span>
-            </div>
-
-            <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {e.skills.slice(0, 3).map((s) => (
-                <span key={s} style={skillPill}>{s}</span>
-              ))}
-            </div>
-
-            <button onClick={() => setSelected(e)} style={{ ...btnPrimary, marginTop: 12 }}>
-              View Profile / Request
-            </button>
-          </div>
-        ))}
-      </div>
-
-      {/* Modal */}
-      {selected ? (
-        <div style={modalBackdrop}>
-          <div style={modalCard}>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
-              <div>
-                <div style={{ fontWeight: 950, fontSize: 18, color: "#0c1220" }}>{selected.name}</div>
-                <div style={{ color: "#64708a", fontWeight: 750 }}>
-                  {selected.role} • {selected.region} • {selected.rating.toFixed(1)} ★
-                </div>
-              </div>
-              <button onClick={() => setSelected(null)} style={btnGhost}>Close</button>
-            </div>
-
-            <div style={{ height: 12 }} />
-            <div style={{ color: "#3a4357", fontWeight: 650, lineHeight: 1.55 }}>{selected.bio}</div>
-
-            <div style={{ height: 12 }} />
-            <div style={{ fontWeight: 900, color: "#0c1220" }}>Request a quote</div>
-
-            <div style={{ display: "grid", gap: 10, marginTop: 10 }}>
-              <input style={inputStyle} placeholder="Your name" value={req.name} onChange={(e) => setReq({ ...req, name: e.target.value })} />
-              <input style={inputStyle} placeholder="Phone (+250...)" value={req.phone} onChange={(e) => setReq({ ...req, phone: e.target.value })} />
-              <textarea
-                style={{ ...inputStyle, minHeight: 100 }}
-                placeholder="Describe your project (location, size, timeline)..."
-                value={req.message}
-                onChange={(e) => setReq({ ...req, message: e.target.value })}
-              />
-              <button onClick={submitRequest} style={btnPrimary}>Send Request</button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-    </div>
+    <div
+      style={{
+        height: 280,
+        borderRadius: 20,
+        background: 'linear-gradient(90deg, rgba(255,255,255,0.04), rgba(255,255,255,0.08), rgba(255,255,255,0.04))',
+      }}
+    />
   );
 }
 
-const inputStyle = {
-  minWidth: 260,
-  padding: "12px 12px",
-  borderRadius: 14,
-  border: "1px solid #eef0f4",
-  outline: "none",
-  fontWeight: 700,
-};
+export default function Experts() {
+  const navigate = useNavigate();
+  const [experts, setExperts] = useState([]);
+  const [state, setState] = useState({ loading: true, error: '' });
+  const [q, setQ] = useState('');
+  const [role, setRole] = useState('all');
+  const [region, setRegion] = useState('all');
 
-const selectStyle = {
-  padding: "12px 12px",
-  borderRadius: 14,
-  border: "1px solid #eef0f4",
-  background: "#fff",
-  fontWeight: 750,
-};
+  const loadExperts = useCallback(async () => {
+    try {
+      setState({ loading: true, error: '' });
+      const data = await expertsService.getAll({
+        role: role !== 'all' ? role : undefined,
+        region: region !== 'all' ? region : undefined,
+        search: q || undefined,
+      });
+      setExperts(data?.experts || []);
+      setState({ loading: false, error: '' });
+    } catch (error) {
+      setState({ loading: false, error: error.message || 'Failed to load experts.' });
+    }
+  }, [q, region, role]);
 
-const gridStyle = {
-  marginTop: 18,
-  display: "grid",
-  gridTemplateColumns: "repeat(3, 1fr)",
-  gap: 12,
-};
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      loadExperts();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [loadExperts]);
 
-const cardStyle = {
-  border: "1px solid #eef0f4",
-  borderRadius: 18,
-  background: "#fff",
-  padding: 14,
-  boxShadow: "0 14px 40px rgba(12,18,32,.06)",
-};
+  // Build JSON-LD for expert directory
+  const expertsJsonLd = experts.length > 0 ? {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "name": "CivilBridge Verified Construction Experts",
+    "itemListElement": experts.slice(0, 10).map((e, i) => ({
+      "@type": "ListItem",
+      "position": i + 1,
+      "item": {
+        "@type": "Person",
+        "name": e.user?.fullName || "Expert",
+        "jobTitle": e.user?.profession || e.providerType,
+        "description": e.bio,
+      }
+    }))
+  } : undefined;
 
-const pill = {
-  display: "inline-flex",
-  alignItems: "center",
-  padding: "6px 10px",
-  borderRadius: 999,
-  border: "1px solid #eef0f4",
-  background: "linear-gradient(135deg,#ffffff,#f7f9ff)",
-  fontWeight: 900,
-  fontSize: 12,
-  color: "#0c1220",
-};
+  return (
+    <Container>
+      <SEO
+        title="Verified Construction Experts"
+        description="Connect with Rwanda's top architects, engineers, contractors, and suppliers. Book appointments with verified construction professionals."
+        jsonLd={expertsJsonLd}
+      />
+      <div className="animate-fadeIn">
+        <header style={{ textAlign: 'center', marginBottom: 48 }}>
+          <h1 style={{ fontSize: '2.5rem', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: 12 }}>
+            Verified Construction Experts
+          </h1>
+          <p style={{ fontSize: '1.125rem', color: 'var(--color-text-secondary)', maxWidth: 600, margin: '0 auto' }}>
+            Explore real expert profiles, verified credentials, live availability, and completed reviews before you book.
+          </p>
+        </header>
 
-const pillBlue = {
-  ...pill,
-  color: "#1d4ed8",
-  border: "1px solid rgba(29,78,216,0.18)",
-  background: "rgba(29,78,216,0.06)",
-};
+        <Card padding="lg" style={{ marginBottom: 32 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center' }}>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <input
+                type="text"
+                placeholder="Search by name, location, or specialty..."
+                value={q}
+                onChange={(event) => setQ(event.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: '12px',
+                  fontSize: '0.875rem',
+                  background: 'var(--color-background)',
+                  color: 'var(--color-text-primary)',
+                }}
+              />
+            </div>
+            <select
+              value={role}
+              onChange={(event) => setRole(event.target.value)}
+              style={{
+                padding: '12px 16px',
+                border: '1px solid var(--color-border)',
+                borderRadius: '12px',
+                fontSize: '0.875rem',
+                background: 'var(--color-background)',
+                color: 'var(--color-text-primary)',
+                minWidth: 150,
+              }}
+            >
+              <option value="all">All roles</option>
+              <option value="ENGINEER">Engineer</option>
+              <option value="ARCHITECT">Architect</option>
+              <option value="CONTRACTOR">Contractor</option>
+              <option value="SUPPLIER">Supplier</option>
+              <option value="SURVEYOR">Surveyor</option>
+            </select>
+            <select
+              value={region}
+              onChange={(event) => setRegion(event.target.value)}
+              style={{
+                padding: '12px 16px',
+                border: '1px solid var(--color-border)',
+                borderRadius: '12px',
+                fontSize: '0.875rem',
+                background: 'var(--color-background)',
+                color: 'var(--color-text-primary)',
+                minWidth: 120,
+              }}
+            >
+              <option value="all">All regions</option>
+              <option value="Kigali">Kigali</option>
+              <option value="Eastern Province">Eastern Province</option>
+              <option value="Southern Province">Southern Province</option>
+              <option value="Northern Province">Northern Province</option>
+              <option value="Western Province">Western Province</option>
+            </select>
+            <Button variant="secondary" onClick={() => { setRole('all'); setRegion('all'); setQ(''); }}>
+              Clear
+            </Button>
+          </div>
+        </Card>
 
-const pillSoft = {
-  ...pill,
-  color: "#3a4357",
-};
+        {state.loading ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 24 }}>
+            {Array.from({ length: 6 }).map((_, index) => <ExpertCardSkeleton key={index} />)}
+          </div>
+        ) : state.error ? (
+          <div style={{ textAlign: 'center', padding: '80px 0' }}>
+            <h2 style={{ color: 'var(--color-error)', marginBottom: 8 }}>Error</h2>
+            <p style={{ color: 'var(--color-text-secondary)', marginBottom: 16 }}>{state.error}</p>
+            <Button onClick={loadExperts}>Retry</Button>
+          </div>
+        ) : experts.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '80px 0' }}>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 8 }}>
+              No experts found
+            </h3>
+            <p style={{ color: 'var(--color-text-secondary)' }}>Try adjusting your filters or search terms.</p>
+          </div>
+        ) : (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+            gap: 24,
+          }}>
+            {experts.map((expert, idx) => (
+              <Card
+                key={expert.id}
+                hover
+                className="animate-slideUp"
+                style={{ animationDelay: `${idx * 50}ms` }}
+                onClick={() => navigate(`/experts/${expert.id}`)}
+              >
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 16 }}>
+                  {expert.user?.avatarUrl ? (
+                    <img
+                      src={expert.user.avatarUrl}
+                      alt={expert.user?.fullName || 'Expert'}
+                      style={{
+                        width: 64,
+                        height: 64,
+                        borderRadius: '50%',
+                        objectFit: 'cover',
+                        border: '3px solid var(--color-border)',
+                      }}
+                    />
+                  ) : (
+                    <div
+                      aria-hidden="true"
+                      style={{
+                        width: 64,
+                        height: 64,
+                        borderRadius: '50%',
+                        border: '3px solid var(--color-border)',
+                        background: 'linear-gradient(135deg, var(--color-brand-600), var(--color-brand-400))',
+                        color: '#fff',
+                        display: 'grid',
+                        placeItems: 'center',
+                        fontWeight: 800,
+                      }}
+                    >
+                      {getInitials(expert.user?.fullName)}
+                    </div>
+                  )}
+                  <div style={{ flex: 1 }}>
+                    <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 4 }}>
+                      {expert.user?.fullName}
+                    </h3>
+                    <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', marginBottom: 8 }}>
+                      {expert.headline || expert.user?.profession} | {expert.region?.name || 'Rwanda'}
+                    </p>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <Badge variant="brand" size="sm">{expert.user?.profession || expert.providerType || 'Expert'}</Badge>
+                      {expert.verifiedAt && <Badge variant="success" size="sm">Verified</Badge>}
+                      <Badge variant="default" size="sm">{expert.reviewCount || 0} reviews</Badge>
+                      <Badge variant="default" size="sm">{Number(expert.avgRating || 0).toFixed(1)} rating</Badge>
+                    </div>
+                  </div>
+                </div>
 
-const skillPill = {
-  display: "inline-flex",
-  padding: "6px 10px",
-  borderRadius: 999,
-  border: "1px solid #eef0f4",
-  background: "#fff",
-  color: "#0c1220",
-  fontWeight: 800,
-  fontSize: 12,
-};
+                {expert.user?.bio ? (
+                  <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', marginBottom: 16, lineHeight: 1.5 }}>
+                    {expert.user.bio.length > 150 ? `${expert.user.bio.substring(0, 150)}...` : expert.user.bio}
+                  </p>
+                ) : null}
 
-const btnPrimary = {
-  padding: "12px 14px",
-  borderRadius: 14,
-  border: "1px solid rgba(29,78,216,0.2)",
-  background: "linear-gradient(135deg,#2a66ff,#1d4ed8)",
-  color: "#fff",
-  fontWeight: 950,
-  cursor: "pointer",
-  boxShadow: "0 14px 26px rgba(29,78,216,.18)",
-};
+                {expert.specialties?.length ? (
+                  <div style={{ marginBottom: 16 }}>
+                    <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 8 }}>
+                      Expertise
+                    </h4>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {expert.specialties.slice(0, 3).map((skill) => (
+                        <Badge key={skill} variant="default" size="sm">{skill}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
 
-const btnGhost = {
-  padding: "10px 12px",
-  borderRadius: 14,
-  border: "1px solid #eef0f4",
-  background: "#fff",
-  color: "#0c1220",
-  fontWeight: 900,
-  cursor: "pointer",
-};
-
-const modalBackdrop = {
-  position: "fixed",
-  inset: 0,
-  background: "rgba(12,18,32,0.55)",
-  display: "grid",
-  placeItems: "center",
-  padding: 18,
-  zIndex: 200,
-};
-
-const modalCard = {
-  width: "min(720px, 100%)",
-  borderRadius: 18,
-  background: "#fff",
-  border: "1px solid #eef0f4",
-  boxShadow: "0 24px 80px rgba(12,18,32,.28)",
-  padding: 16,
-};
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ fontSize: '0.875rem', color: 'var(--color-text-tertiary)' }}>
+                    View profile, reviews, and calendar
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      navigate(`/experts/${expert.id}`);
+                    }}
+                  >
+                    Open Profile
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+    </Container>
+  );
+}

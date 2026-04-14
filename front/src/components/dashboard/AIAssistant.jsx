@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { budgetAnalysisService } from '../../services/budgetAnalysisService.js';
+import { apiFetch } from '../../services/apiClientService.js';
 
 export default function AIAssistant() {
   const [messages, setMessages] = useState([
@@ -21,6 +21,16 @@ export default function AIAssistant() {
     scrollToBottom();
   }, [messages]);
 
+  // Generate a guest ID if not already stored
+  const getGuestId = () => {
+    let guestId = localStorage.getItem('civilbridge_guest_id');
+    if (!guestId) {
+      guestId = 'guest_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+      localStorage.setItem('civilbridge_guest_id', guestId);
+    }
+    return guestId;
+  };
+
   const handleSendMessage = async () => {
     if (!input.trim() || isLoading) return;
 
@@ -35,14 +45,12 @@ export default function AIAssistant() {
     setIsLoading(true);
 
     try {
-      // Call the AI chat API
-      const response = await fetch('http://localhost:3000/api/ai/chat', {
+      // Call the AI chat API via the shared HTTP client (credentials + CSRF handled automatically)
+      const data = await apiFetch('/api/ai/guest/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           message: input,
+          guest_id: getGuestId(),
           history: messages.slice(-5).map(msg => ({
             role: msg.type === 'user' ? 'user' : 'model',
             content: msg.content
@@ -50,13 +58,13 @@ export default function AIAssistant() {
         })
       });
 
-      const data = await response.json();
-
-      if (data.reply) {
+      // Backend returns `response`; keep backward-compat with `reply` if older clients exist.
+      const assistantText = data?.response ?? data?.reply;
+      if (assistantText) {
         const assistantMessage = {
           id: Date.now() + 1,
           type: 'assistant',
-          content: data.reply
+          content: assistantText
         };
         setMessages(prev => [...prev, assistantMessage]);
       } else {
@@ -94,17 +102,17 @@ export default function AIAssistant() {
       height: '600px',
       display: 'flex',
       flexDirection: 'column',
-      background: 'white',
+      background: '#000000',
       borderRadius: '12px',
-      border: '1px solid #eef0f4',
+      border: '1px solid #1a1a1a',
       overflow: 'hidden'
     }}>
       {/* Header */}
       <div style={{
         padding: '16px 20px',
-        background: 'linear-gradient(135deg, #0c1220, #1e293b)',
+        background: 'linear-gradient(135deg, #000000, #1a1a1a)',
         color: 'white',
-        borderBottom: '1px solid #eef0f4'
+        borderBottom: '1px solid #1a1a1a'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{
@@ -129,10 +137,10 @@ export default function AIAssistant() {
       {/* Quick Actions */}
       <div style={{
         padding: '12px 20px',
-        background: '#f8fafc',
-        borderBottom: '1px solid #eef0f4'
+        background: '#ffffff',
+        borderBottom: '1px solid #e8eef5'
       }}>
-        <div style={{ fontSize: '12px', fontWeight: '600', color: '#64708a', marginBottom: '8px' }}>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: '#a0a0a0', marginBottom: '8px' }}>
           Quick Actions:
         </div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -143,20 +151,20 @@ export default function AIAssistant() {
               style={{
                 padding: '6px 12px',
                 borderRadius: '16px',
-                border: '1px solid #e2e8f0',
-                background: 'white',
-                color: '#475569',
+                border: '1px solid #1a1a1a',
+                background: '#000000',
+                color: '#ffffff',
                 fontSize: '12px',
                 cursor: 'pointer',
                 transition: 'all 0.2s'
               }}
               onMouseOver={(e) => {
-                e.target.style.background = '#f1f5f9';
-                e.target.style.borderColor = '#cbd5e1';
+                e.target.style.background = '#1a1a1a';
+                e.target.style.borderColor = '#3b82f6';
               }}
               onMouseOut={(e) => {
-                e.target.style.background = 'white';
-                e.target.style.borderColor = '#e2e8f0';
+                e.target.style.background = '#000000';
+                e.target.style.borderColor = '#1a1a1a';
               }}
             >
               {action.label}
@@ -170,7 +178,7 @@ export default function AIAssistant() {
         flex: 1,
         overflowY: 'auto',
         padding: '20px',
-        background: '#fafbfc'
+        background: '#000000'
       }}>
         {messages.map((message) => (
           <div
@@ -188,9 +196,9 @@ export default function AIAssistant() {
                 borderRadius: '16px',
                 background: message.type === 'user' 
                   ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' 
-                  : 'white',
-                color: message.type === 'user' ? 'white' : '#1e293b',
-                border: message.type === 'user' ? 'none' : '1px solid #e2e8f0',
+                  : '#ffffff',
+                color: message.type === 'user' ? 'white' : '#0f172a',
+                border: message.type === 'user' ? 'none' : '1px solid #e8eef5',
                 fontSize: '14px',
                 lineHeight: '1.5',
                 whiteSpace: 'pre-wrap'
@@ -206,8 +214,8 @@ export default function AIAssistant() {
             <div style={{
               padding: '12px 16px',
               borderRadius: '16px',
-              background: 'white',
-              border: '1px solid #e2e8f0',
+              background: '#ffffff',
+              border: '1px solid #e8eef5',
               display: 'flex',
               alignItems: 'center',
               gap: '8px'
@@ -216,14 +224,14 @@ export default function AIAssistant() {
                 width: '8px',
                 height: '8px',
                 borderRadius: '50%',
-                background: '#94a3b8',
+                background: '#666666',
                 animation: 'pulse 1.4s infinite ease-in-out both'
               }} />
               <div style={{
                 width: '8px',
                 height: '8px',
                 borderRadius: '50%',
-                background: '#94a3b8',
+                background: '#666666',
                 animation: 'pulse 1.4s infinite ease-in-out both',
                 animationDelay: '0.2s'
               }} />
@@ -231,7 +239,7 @@ export default function AIAssistant() {
                 width: '8px',
                 height: '8px',
                 borderRadius: '50%',
-                background: '#94a3b8',
+                background: '#666666',
                 animation: 'pulse 1.4s infinite ease-in-out both',
                 animationDelay: '0.4s'
               }} />
@@ -245,8 +253,8 @@ export default function AIAssistant() {
       {/* Input */}
       <div style={{
         padding: '16px 20px',
-        background: 'white',
-        borderTop: '1px solid #eef0f4'
+        background: '#ffffff',
+        borderTop: '1px solid #e8eef5'
       }}>
         <div style={{ display: 'flex', gap: '12px' }}>
           <input
@@ -260,10 +268,11 @@ export default function AIAssistant() {
               flex: 1,
               padding: '12px 16px',
               borderRadius: '24px',
-              border: '1px solid #e2e8f0',
+              border: '1px solid #1a1a1a',
               outline: 'none',
               fontSize: '14px',
-              background: '#f8fafc'
+              background: '#000000',
+              color: '#ffffff'
             }}
           />
           <button
@@ -275,8 +284,8 @@ export default function AIAssistant() {
               border: 'none',
               background: input.trim() && !isLoading 
                 ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' 
-                : '#e2e8f0',
-              color: input.trim() && !isLoading ? 'white' : '#94a3b8',
+                : '#1a1a1a',
+              color: input.trim() && !isLoading ? 'white' : '#666666',
               cursor: input.trim() && !isLoading ? 'pointer' : 'not-allowed',
               fontSize: '14px',
               fontWeight: '500',

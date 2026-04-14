@@ -1,6 +1,6 @@
 import { api } from './apiClientService.js';
 
-export const authService = {
+const authService = {
   // Register new user
   async register(userData) {
     const response = await api.post('/api/auth/register', userData);
@@ -9,7 +9,7 @@ export const authService = {
 
   // Request OTP for registration
   async requestRegisterOtp(contactInfo) {
-    const response = await api.post('/api/auth/request-otp', contactInfo);
+    const response = await api.post('/api/auth/register/request-otp', contactInfo);
     return response;
   },
 
@@ -35,5 +35,25 @@ export const authService = {
   async getCurrentUser() {
     const response = await api.get('/api/me');
     return response;
+  },
+
+  // Request password reset email
+  async requestPasswordReset(email) {
+    const response = await api.post('/api/password-reset/request', { email });
+    return response;
+  },
+
+  // Validate reset token
+  async validateResetToken(token) {
+    const response = await api.get(`/api/password-reset/validate/${token}`);
+    return response;
+  },
+
+  // Reset password
+  async resetPassword(token, newPassword) {
+    const response = await api.post('/api/password-reset/reset', { token, newPassword });
+    return response;
   }
 };
+
+export default authService;

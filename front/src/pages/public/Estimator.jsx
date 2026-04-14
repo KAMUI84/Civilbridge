@@ -1,14 +1,15 @@
 import { useMemo, useState } from "react";
-import { KEYS, readLS, writeLS } from "../../utils/storage";
+import { KEYS, readLS, writeLS } from "../../utils/storage.js";
 
 export default function Estimator() {
-  const [type, setType] = useState("Residential");
-  const [area, setArea] = useState(120);
-  const [quality, setQuality] = useState("Standard"); // Basic | Standard | Premium
-  const [region, setRegion] = useState("Kigali");
+  const [type, setType] = useState("");
+  const [area, setArea] = useState("");
+  const [quality, setQuality] = useState("");
+  const [region, setRegion] = useState("");
   const [saved, setSaved] = useState(() => readLS(KEYS.SAVED_ESTIMATES, []));
 
   const rate = useMemo(() => {
+    if (!type || !quality || !region || !Number(area || 0)) return 0;
     // simple realistic ranges (you can tune)
     const base = type === "Commercial" ? 650000 : type === "Healthcare" ? 750000 : 520000; // RWF/m²
     const q = quality === "Premium" ? 1.35 : quality === "Basic" ? 0.85 : 1.0;
@@ -17,8 +18,10 @@ export default function Estimator() {
   }, [type, quality, region]);
 
   const total = useMemo(() => Math.round(rate * Number(area || 0)), [rate, area]);
+  const canEstimate = Boolean(type && quality && region && Number(area || 0) > 0);
 
   const boq = useMemo(() => {
+    if (!canEstimate) return [];
     // quick BOQ split (very normal MVP)
     const items = [
       { name: "Substructure (foundation)", pct: 0.14 },
@@ -35,9 +38,10 @@ export default function Estimator() {
       ...x,
       amount: Math.round(total * x.pct),
     }));
-  }, [total]);
+  }, [canEstimate, total]);
 
   const saveEstimate = () => {
+    if (!canEstimate) return;
     const entry = {
       id: "EST-" + Date.now(),
       type,
@@ -54,6 +58,7 @@ export default function Estimator() {
   };
 
   const exportCSV = () => {
+    if (!canEstimate) return;
     const rows = [
       ["Item", "Percent", "Amount (RWF)"],
       ...boq.map((x) => [x.name, (x.pct * 100).toFixed(0) + "%", String(x.amount)]),
@@ -73,7 +78,7 @@ export default function Estimator() {
     <div style={{ maxWidth: 1200, margin: "0 auto", padding: "22px 18px 40px" }}>
       <h1 style={{ margin: 0, fontSize: 34, color: "#0c1220" }}>Estimator</h1>
       <p style={{ marginTop: 8, color: "#64708a", fontWeight: 650 }}>
-        Instant feasibility estimate + BOQ split. Save history and export.
+        Enter your own project details to generate a fresh estimate, save the result, and export the BOQ split.
       </p>
 
       <div style={{ display: "grid", gridTemplateColumns: "420px 1fr", gap: 12, marginTop: 14 }}>
@@ -81,6 +86,7 @@ export default function Estimator() {
         <div style={box}>
           <div style={label}>Project type</div>
           <select value={type} onChange={(e) => setType(e.target.value)} style={input}>
+            <option value="">Choose project type</option>
             <option>Residential</option>
             <option>Commercial</option>
             <option>Healthcare</option>
@@ -95,6 +101,7 @@ export default function Estimator() {
 
           <div style={label}>Quality</div>
           <select value={quality} onChange={(e) => setQuality(e.target.value)} style={input}>
+            <option value="">Choose quality</option>
             <option>Basic</option>
             <option>Standard</option>
             <option>Premium</option>
@@ -104,6 +111,7 @@ export default function Estimator() {
 
           <div style={label}>Region</div>
           <select value={region} onChange={(e) => setRegion(e.target.value)} style={input}>
+            <option value="">Choose region</option>
             <option>Kigali</option>
             <option>Southern Province</option>
             <option>Eastern Province</option>
@@ -125,8 +133,8 @@ export default function Estimator() {
           <div style={{ height: 14 }} />
 
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <button onClick={saveEstimate} style={btnPrimary}>Save Estimate</button>
-            <button onClick={exportCSV} style={btnGhost}>Export BOQ CSV</button>
+            <button onClick={saveEstimate} style={btnPrimary} disabled={!canEstimate}>Save Estimate</button>
+            <button onClick={exportCSV} style={btnGhost} disabled={!canEstimate}>Export BOQ CSV</button>
           </div>
         </div>
 
@@ -136,31 +144,37 @@ export default function Estimator() {
             BOQ split (MVP)
           </div>
 
-          <div style={{ overflow: "auto", border: "1px solid #eef0f4", borderRadius: 14 }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ background: "linear-gradient(135deg,#ffffff,#f7f9ff)" }}>
-                  <th style={th}>Item</th>
-                  <th style={th}>%</th>
-                  <th style={th}>Amount (RWF)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {boq.map((x) => (
-                  <tr key={x.name}>
-                    <td style={td}>{x.name}</td>
-                    <td style={td}>{Math.round(x.pct * 100)}%</td>
-                    <td style={td}>{money(x.amount)}</td>
+          {canEstimate ? (
+            <div style={{ overflow: "auto", border: "1px solid #eef0f4", borderRadius: 14 }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ background: "linear-gradient(135deg,#ffffff,#f7f9ff)" }}>
+                    <th style={th}>Item</th>
+                    <th style={th}>%</th>
+                    <th style={th}>Amount (RWF)</th>
                   </tr>
-                ))}
-                <tr>
-                  <td style={{ ...td, fontWeight: 950 }}>TOTAL</td>
-                  <td style={td}></td>
-                  <td style={{ ...td, fontWeight: 950 }}>{money(total)}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {boq.map((x) => (
+                    <tr key={x.name}>
+                      <td style={td}>{x.name}</td>
+                      <td style={td}>{Math.round(x.pct * 100)}%</td>
+                      <td style={td}>{money(x.amount)}</td>
+                    </tr>
+                  ))}
+                  <tr>
+                    <td style={{ ...td, fontWeight: 950 }}>TOTAL</td>
+                    <td style={td}></td>
+                    <td style={{ ...td, fontWeight: 950 }}>{money(total)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div style={emptyEstimateState}>
+              Add your project type, area, quality, and region to generate the first estimate.
+            </div>
+          )}
 
           <div style={{ height: 14 }} />
 
@@ -238,6 +252,16 @@ const btnGhost = {
   color: "#0c1220",
   fontWeight: 950,
   cursor: "pointer",
+};
+
+const emptyEstimateState = {
+  border: "1px dashed #dbe2ec",
+  borderRadius: 14,
+  padding: 24,
+  color: "#64708a",
+  fontWeight: 650,
+  textAlign: "center",
+  lineHeight: 1.6,
 };
 
 const th = { textAlign: "left", padding: 12, borderBottom: "1px solid #eef0f4", color: "#0c1220" };

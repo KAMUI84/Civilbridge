@@ -1,7 +1,7 @@
 # CivilBridge Production Deployment Guide
 
 ## Overview
-This guide covers deploying CivilBridge to production using Docker Compose with Nginx, MySQL, Redis, and monitoring stack.
+This guide covers deploying CivilBridge to production using Docker Compose with MySQL and Redis.
 
 ## Prerequisites
 
@@ -96,19 +96,10 @@ SENTRY_DSN="your-sentry-dsn"
 
 ### 4. SSL Certificate Setup
 ```bash
-# Install Certbot
-sudo apt install certbot python3-certbot-nginx -y
-
-# Obtain SSL certificate
-sudo certbot --nginx -d yourdomain.com -d www.yourdomain.com
-
-# Certificate will be automatically placed in /etc/letsencrypt/live/
-```
-
 ### 5. Create Required Directories
 ```bash
 # Create directories for persistent data
-sudo mkdir -p /var/www/civilbridge/{logs,uploads,backups,nginx/ssl}
+sudo mkdir -p /var/www/civilbridge/{logs,uploads,backups}
 sudo mkdir -p /var/backups/civilbridge
 
 # Set permissions
@@ -118,16 +109,7 @@ sudo chmod -R 755 /var/www/civilbridge/uploads
 
 ## Deployment
 
-### Option 1: Automated Deployment Script
-```bash
-# Make script executable (on Linux/Mac)
-chmod +x scripts/deploy.sh
-
-# Run deployment
-sudo ./scripts/deploy.sh production
-```
-
-### Option 2: Manual Deployment
+### Manual Deployment
 ```bash
 # Build and start services
 docker-compose -f docker-compose.prod.yml up -d --build
@@ -144,31 +126,6 @@ docker-compose -f docker-compose.prod.yml ps
 - **Application**: https://yourdomain.com
 - **API**: https://yourdomain.com/api
 - **Health Check**: https://yourdomain.com/health
-- **Grafana**: https://yourdomain.com:3001
-- **Prometheus**: https://yourdomain.com:9090
-
-## Monitoring
-
-### Grafana Dashboards
-1. Access Grafana at http://your-server:3001
-2. Login with admin/password (from environment)
-3. Import pre-configured dashboards from `monitoring/grafana/dashboards/`
-
-### Key Metrics to Monitor
-- API response times
-- Error rates
-- Database connections
-- Redis memory usage
-- System resources (CPU, RAM, Disk)
-- Active users and requests
-
-### Alerting Setup
-Configure alerts in Grafana for:
-- API downtime
-- High error rates (>5%)
-- Database connection issues
-- High memory usage (>80%)
-- Disk space shortage (<10%)
 
 ## Maintenance
 
@@ -224,7 +181,7 @@ docker exec civilbridge-db mysqldump -u root -p civilbridge_prod > backup.sql
 tar -czf uploads_backup.tar.gz uploads/
 
 # Configuration backup
-tar -czf config_backup.tar.gz .env.local nginx/ monitoring/
+tar -czf config_backup.tar.gz .env.local
 ```
 
 ### Restore from Backup
@@ -307,8 +264,6 @@ sudo certbot certificates
 # Force renewal
 sudo certbot renew --force-renewal
 
-# Test Nginx configuration
-sudo nginx -t
 ```
 
 ### Performance Optimization
@@ -375,12 +330,9 @@ docker-compose -f docker-compose.prod.yml up -d
 
 ### Logs Location
 - Application logs: `/var/www/civilbridge/logs/`
-- Nginx logs: `/var/log/nginx/`
 - Docker logs: `docker-compose logs`
 
 ### Monitoring
-- Grafana dashboards for real-time monitoring
-- Prometheus metrics collection
 - Health check endpoints
 
 ### Emergency Contacts

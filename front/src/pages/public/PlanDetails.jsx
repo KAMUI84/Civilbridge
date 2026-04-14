@@ -32,7 +32,7 @@ function InfoRow({ label, value }) {
       <div style={{ fontSize: 12, color: "#6b7280", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
         {label}
       </div>
-      <div style={{ fontSize: 15, color: "var(--color-text-primary, #fff)", fontWeight: 600 }}>
+      <div style={{ fontSize: 15, color: "#0f172a", fontWeight: 600 }}>
         {value}
       </div>
     </div>
@@ -199,7 +199,7 @@ export default function PlanDetails() {
   };
 
   return (
-    <div style={{ maxWidth: 1100, margin: "0 auto", padding: "28px 20px" }}>
+    <div style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 20px", background: "#ffffff" }}>
       <SEO
         title={plan.title}
         description={plan.description || `${plan.category} architectural plan — ${plan.builtAreaM2 ? `${plan.builtAreaM2} m²` : ""} ${plan.bedrooms ? `${plan.bedrooms} bedrooms` : ""} — available on CivilBridge`}
@@ -214,13 +214,13 @@ export default function PlanDetails() {
         ← Back to Plans Library
       </Link>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 32, alignItems: "start" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 24, alignItems: "start" }}>
         {/* ── Left column ─────────────────────────────────────────── */}
         <div>
           {/* Image gallery */}
           <div style={{
             borderRadius: 16, overflow: "hidden",
-            background: "#111", height: 420, position: "relative",
+            background: "#f8fbff", height: 420, position: "relative", border: "1px solid #e8eef5", boxShadow: "0 14px 30px rgba(15,23,42,0.05)",
           }}>
             {activeAsset ? (
               <img
@@ -231,7 +231,7 @@ export default function PlanDetails() {
             ) : (
               <div style={{
                 display: "flex", alignItems: "center", justifyContent: "center",
-                height: "100%", color: "#4b5563", fontSize: 14,
+                height: "100%", color: "#64748b", fontSize: 14,
               }}>
                 No images available
               </div>
@@ -244,7 +244,7 @@ export default function PlanDetails() {
                   onClick={() => setActiveImg((p) => (p - 1 + renders.length) % renders.length)}
                   style={{
                     position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)",
-                    background: "rgba(0,0,0,0.55)", border: "none", color: "#fff",
+                    background: "rgba(255,255,255,0.92)", border: "1px solid #e8eef5", color: "#0f172a",
                     width: 36, height: 36, borderRadius: "50%", cursor: "pointer", fontSize: 18,
                   }}
                 >‹</button>
@@ -252,7 +252,7 @@ export default function PlanDetails() {
                   onClick={() => setActiveImg((p) => (p + 1) % renders.length)}
                   style={{
                     position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)",
-                    background: "rgba(0,0,0,0.55)", border: "none", color: "#fff",
+                    background: "rgba(255,255,255,0.92)", border: "1px solid #e8eef5", color: "#0f172a",
                     width: 36, height: 36, borderRadius: "50%", cursor: "pointer", fontSize: 18,
                   }}
                 >›</button>
@@ -289,11 +289,11 @@ export default function PlanDetails() {
               {plan.style && <Chip color="#6b7280">{plan.style}</Chip>}
               {plan.status && <Chip color={statusColor}>{plan.status}</Chip>}
             </div>
-            <h1 style={{ margin: "0 0 8px", fontSize: 28, fontWeight: 800, color: "var(--color-text-primary, #fff)" }}>
+            <h1 style={{ margin: "0 0 8px", fontSize: 28, fontWeight: 800, color: "#0f172a" }}>
               {plan.title}
             </h1>
             {plan.creator?.fullName && (
-              <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 16 }}>
+              <div style={{ fontSize: 13, color: "#64748b", marginBottom: 16 }}>
                 Submitted by {plan.creator.fullName}
               </div>
             )}
@@ -301,8 +301,8 @@ export default function PlanDetails() {
             {/* Spec grid */}
             <div style={{
               display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
-              gap: 16, padding: 20,
-              background: "rgba(255,255,255,0.04)", borderRadius: 12, marginBottom: 24,
+              gap: 14, padding: 16,
+              background: "#f8fbff", borderRadius: 14, marginBottom: 20, border: "1px solid #e8eef5", boxShadow: "0 10px 24px rgba(15,23,42,0.04)",
             }}>
               <InfoRow label="Built Area" value={plan.builtAreaM2 ? `${plan.builtAreaM2} m²` : null} />
               <InfoRow label="Floors" value={plan.floors} />
@@ -313,10 +313,10 @@ export default function PlanDetails() {
             {/* Description */}
             {plan.description && (
               <div style={{ marginBottom: 24 }}>
-                <h2 style={{ fontSize: 17, fontWeight: 700, color: "var(--color-text-primary, #fff)", marginBottom: 10 }}>
+                <h2 style={{ fontSize: 17, fontWeight: 700, color: "#0f172a", marginBottom: 10 }}>
                   Description
                 </h2>
-                <p style={{ margin: 0, lineHeight: 1.7, color: "#9ca3af", fontSize: 14 }}>
+                <p style={{ margin: 0, lineHeight: 1.7, color: "#64748b", fontSize: 14 }}>
                   {plan.description}
                 </p>
               </div>
@@ -325,10 +325,10 @@ export default function PlanDetails() {
             {/* Zoning / site info */}
             {plan.zoningInfo && (
               <div style={{ marginBottom: 24 }}>
-                <h2 style={{ fontSize: 17, fontWeight: 700, color: "var(--color-text-primary, #fff)", marginBottom: 10 }}>
+                <h2 style={{ fontSize: 17, fontWeight: 700, color: "#0f172a", marginBottom: 10 }}>
                   Zoning & Site Information
                 </h2>
-                <p style={{ margin: 0, lineHeight: 1.7, color: "#9ca3af", fontSize: 14 }}>
+                <p style={{ margin: 0, lineHeight: 1.7, color: "#64748b", fontSize: 14 }}>
                   {plan.zoningInfo}
                 </p>
               </div>
@@ -337,7 +337,7 @@ export default function PlanDetails() {
             {/* Document assets */}
             {docs.length > 0 && (
               <div>
-                <h2 style={{ fontSize: 17, fontWeight: 700, color: "var(--color-text-primary, #fff)", marginBottom: 12 }}>
+                <h2 style={{ fontSize: 17, fontWeight: 700, color: "#0f172a", marginBottom: 12 }}>
                   Included Files
                 </h2>
                 <div style={{ display: "grid", gap: 8 }}>
@@ -345,10 +345,11 @@ export default function PlanDetails() {
                     <div key={doc.id} style={{
                       display: "flex", justifyContent: "space-between", alignItems: "center",
                       padding: "10px 14px", borderRadius: 8,
-                      background: "rgba(255,255,255,0.04)",
-                      border: "1px solid rgba(255,255,255,0.08)",
+                      background: "#ffffff",
+                      border: "1px solid #e8eef5",
+                      boxShadow: "0 8px 18px rgba(15,23,42,0.04)",
                     }}>
-                      <span style={{ fontSize: 14, color: "var(--color-text-primary, #fff)" }}>
+                      <span style={{ fontSize: 14, color: "#0f172a" }}>
                         {doc.assetType === "floor_plan" ? "Floor Plan" : doc.assetType === "material_list" ? "Material List" : doc.assetType}
                       </span>
                       <span style={{ fontSize: 12, color: "#3b82f6" }}>
@@ -365,9 +366,10 @@ export default function PlanDetails() {
         {/* ── Right column ─────────────────────────────────────────── */}
         <div style={{ position: "sticky", top: 20 }}>
           <div style={{
-            padding: 24, borderRadius: 16,
-            border: "1px solid rgba(255,255,255,0.1)",
-            background: "var(--color-surface, #111)",
+            padding: 20, borderRadius: 16,
+            border: "1px solid #e8eef5",
+            background: "#ffffff",
+            boxShadow: "0 14px 30px rgba(15,23,42,0.05)",
           }}>
             {/* Cost highlight */}
             {costRange && (
@@ -389,7 +391,7 @@ export default function PlanDetails() {
               <div style={{ fontSize: 13, fontWeight: 700, color: tierColor, marginBottom: 4 }}>
                 {TIER_LABEL[plan.tier] || plan.tier} Plan
               </div>
-              <div style={{ fontSize: 12, color: "#9ca3af" }}>
+              <div style={{ fontSize: 12, color: "#64748b" }}>
                 {plan.tier === "FREE"
                   ? "Download immediately after signing in."
                   : plan.tier === "PRO"
@@ -447,12 +449,12 @@ export default function PlanDetails() {
               </div>
             )}
 
-            <div style={{ marginTop: 18, paddingTop: 18, borderTop: "1px solid rgba(255,255,255,0.08)", display: "grid", gap: 12 }}>
+            <div style={{ marginTop: 18, paddingTop: 18, borderTop: "1px solid #edf2f8", display: "grid", gap: 12 }}>
               <div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: "var(--color-text-primary, #fff)", marginBottom: 6 }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", marginBottom: 6 }}>
                   Request plan follow-up
                 </div>
-                <div style={{ fontSize: 13, color: "#9ca3af", lineHeight: 1.6 }}>
+                <div style={{ fontSize: 13, color: "#64748b", lineHeight: 1.6 }}>
                   Use this when a client wants review, customization, stamping support, or to move forward with the full package.
                 </div>
               </div>
@@ -466,7 +468,7 @@ export default function PlanDetails() {
                   <select
                     value={requestType}
                     onChange={(event) => setRequestType(event.target.value)}
-                    style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#111827", color: "#fff" }}
+                    style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid #e6ecf4", background: "#ffffff", color: "#0f172a" }}
                   >
                     <option value="ASK_EXPERT">Request review and follow-up</option>
                     <option value="CUSTOMIZE">Need plan customization</option>
@@ -477,7 +479,7 @@ export default function PlanDetails() {
                     onChange={(event) => setRequestNotes(event.target.value)}
                     rows={4}
                     placeholder="Tell us what you need next from this plan..."
-                    style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#111827", color: "#fff", resize: "vertical" }}
+                    style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid #e6ecf4", background: "#ffffff", color: "#0f172a", resize: "vertical" }}
                   />
                   {requestState.text ? (
                     <div style={{
@@ -521,7 +523,7 @@ export default function PlanDetails() {
               ].filter((r) => r.value).map(({ label, value }) => (
                 <div key={label} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
                   <span style={{ color: "#6b7280" }}>{label}</span>
-                  <span style={{ color: "var(--color-text-primary, #fff)", fontWeight: 600 }}>{value}</span>
+                  <span style={{ color: "#0f172a", fontWeight: 600 }}>{value}</span>
                 </div>
               ))}
             </div>

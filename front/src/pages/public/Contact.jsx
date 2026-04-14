@@ -105,21 +105,21 @@ export default function Contact() {
           )}
         </form>
 
-        <div style={{ border: "1px solid #1a1a1a", borderRadius: 16, padding: 16, background: "#0a0a0a" }}>
-          <div style={{ fontWeight: 950, color: "#ffffff", marginBottom: 10 }}>Quick options</div>
-          <ul style={{ margin: 0, paddingLeft: 18, display: "grid", gap: 10, color: "#a0a0a0", fontWeight: 650 }}>
+        <div style={{ border: "1px solid #e8eef5", borderRadius: 16, padding: 16, background: "#ffffff", boxShadow: "0 12px 26px rgba(15,23,42,0.05)" }}>
+          <div style={{ fontWeight: 950, color: "#0f172a", marginBottom: 10 }}>Quick options</div>
+          <ul style={{ margin: 0, paddingLeft: 18, display: "grid", gap: 10, color: "#64748b", fontWeight: 650 }}>
             <li>Request site visit for a property/land</li>
             <li>Upload your plan and request estimation</li>
             <li>Ask about verified engineers/contractors</li>
             <li>Permits &amp; compliance guidance</li>
           </ul>
 
-          <div style={{ height: 1, background: "#1a1a1a", margin: "14px 0" }} />
+          <div style={{ height: 1, background: "#edf2f8", margin: "14px 0" }} />
 
-          <div style={{ display: "grid", gap: 8, color: "#a0a0a0", fontWeight: 650 }}>
-            <div><b style={{ color: "#ffffff" }}>Email:</b> support@civilbridge.rw</div>
-            <div><b style={{ color: "#ffffff" }}>Office:</b> Kigali (Pilot launch)</div>
-            <div><b style={{ color: "#ffffff" }}>Response time:</b> Within 1 business day</div>
+          <div style={{ display: "grid", gap: 8, color: "#64748b", fontWeight: 650 }}>
+            <div><b style={{ color: "#0f172a" }}>Email:</b> support@civilbridge.rw</div>
+            <div><b style={{ color: "#0f172a" }}>Office:</b> Kigali (Pilot launch)</div>
+            <div><b style={{ color: "#0f172a" }}>Response time:</b> Within 1 business day</div>
           </div>
         </div>
       </div>

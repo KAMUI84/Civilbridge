@@ -137,8 +137,8 @@ export default function AIAssistant() {
       {/* Quick Actions */}
       <div style={{
         padding: '12px 20px',
-        background: '#0a0a0a',
-        borderBottom: '1px solid #1a1a1a'
+        background: '#ffffff',
+        borderBottom: '1px solid #e8eef5'
       }}>
         <div style={{ fontSize: '12px', fontWeight: '600', color: '#a0a0a0', marginBottom: '8px' }}>
           Quick Actions:
@@ -196,9 +196,9 @@ export default function AIAssistant() {
                 borderRadius: '16px',
                 background: message.type === 'user' 
                   ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' 
-                  : '#0a0a0a',
-                color: message.type === 'user' ? 'white' : '#ffffff',
-                border: message.type === 'user' ? 'none' : '1px solid #1a1a1a',
+                  : '#ffffff',
+                color: message.type === 'user' ? 'white' : '#0f172a',
+                border: message.type === 'user' ? 'none' : '1px solid #e8eef5',
                 fontSize: '14px',
                 lineHeight: '1.5',
                 whiteSpace: 'pre-wrap'
@@ -214,8 +214,8 @@ export default function AIAssistant() {
             <div style={{
               padding: '12px 16px',
               borderRadius: '16px',
-              background: '#0a0a0a',
-              border: '1px solid #1a1a1a',
+              background: '#ffffff',
+              border: '1px solid #e8eef5',
               display: 'flex',
               alignItems: 'center',
               gap: '8px'
@@ -253,8 +253,8 @@ export default function AIAssistant() {
       {/* Input */}
       <div style={{
         padding: '16px 20px',
-        background: '#0a0a0a',
-        borderTop: '1px solid #1a1a1a'
+        background: '#ffffff',
+        borderTop: '1px solid #e8eef5'
       }}>
         <div style={{ display: 'flex', gap: '12px' }}>
           <input

@@ -131,7 +131,7 @@ const styles = {
   },
   contentArea: {
     flex: 1,
-    padding: 24,
+    padding: 18,
     overflow: 'auto',
     background: 'transparent',
     position: 'relative',
@@ -139,7 +139,7 @@ const styles = {
   rightPanelBackdrop: {
     position: 'fixed',
     inset: 0,
-    background: 'rgba(0, 0, 0, 0.36)',
+    background: 'rgba(148, 163, 184, 0.16)',
     zIndex: 1100,
   },
 };

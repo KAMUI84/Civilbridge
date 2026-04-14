@@ -38,9 +38,9 @@ export default function About() {
 
 function Section({ title, children }) {
   return (
-    <div style={{ border: "1px solid #1a1a1a", borderRadius: 16, padding: 16, background: "#0a0a0a" }}>
-      <div style={{ fontWeight: 950, color: "#ffffff", marginBottom: 6 }}>{title}</div>
-      <div style={{ color: "#a0a0a0", lineHeight: 1.6, fontWeight: 650 }}>{children}</div>
+    <div style={{ border: "1px solid #e8eef5", borderRadius: 16, padding: 14, background: "#ffffff", boxShadow: "0 12px 26px rgba(15,23,42,0.05)" }}>
+      <div style={{ fontWeight: 950, color: "#0f172a", marginBottom: 6 }}>{title}</div>
+      <div style={{ color: "#64748b", lineHeight: 1.6, fontWeight: 650 }}>{children}</div>
     </div>
   );
 }
@@ -49,9 +49,9 @@ function Grid3({ items }) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12 }}>
       {items.map((x) => (
-        <div key={x.t} style={{ border: "1px solid #1a1a1a", borderRadius: 16, padding: 16, background: "#0a0a0a" }}>
-          <div style={{ fontWeight: 950, color: "#ffffff", marginBottom: 6 }}>{x.t}</div>
-          <div style={{ color: "#a0a0a0", lineHeight: 1.55, fontWeight: 650 }}>{x.d}</div>
+        <div key={x.t} style={{ border: "1px solid #e8eef5", borderRadius: 16, padding: 14, background: "#ffffff", boxShadow: "0 12px 26px rgba(15,23,42,0.05)" }}>
+          <div style={{ fontWeight: 950, color: "#0f172a", marginBottom: 6 }}>{x.t}</div>
+          <div style={{ color: "#64748b", lineHeight: 1.55, fontWeight: 650 }}>{x.d}</div>
         </div>
       ))}
       <style>{`@media (max-width: 960px){ div[style*="repeat(3,1fr)"]{ grid-template-columns: 1fr !important; } }`}</style>

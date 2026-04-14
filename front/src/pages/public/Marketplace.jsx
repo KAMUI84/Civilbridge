@@ -82,18 +82,19 @@ export default function Marketplace() {
   }, [district, listings, priceRange]);
 
   const inputStyle = {
-    padding: "8px 12px",
-    border: "1px solid #1a1a1a",
-    borderRadius: 6,
-    background: "#0a0a0a",
-    color: "#ffffff",
+    padding: "9px 12px",
+    border: "1px solid #e6ecf4",
+    borderRadius: 10,
+    background: "#ffffff",
+    color: "#0f172a",
     fontSize: 13,
+    boxShadow: "0 6px 16px rgba(15,23,42,0.04)",
   };
 
   // ── Loading ────────────────────────────────────────────────────────────────
   if (state.loading) {
     return (
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "26px 18px" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "22px 18px" }}>
         <SEO title="Marketplace" description="Browse property and land listings across Rwanda." />
         <SkeletonGrid count={6} />
       </div>
@@ -103,11 +104,11 @@ export default function Marketplace() {
   // ── Error ──────────────────────────────────────────────────────────────────
   if (state.error) {
     return (
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "26px 18px", color: "#ffffff" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "22px 18px", color: "#0f172a" }}>
         <div style={{ textAlign: "center", padding: "80px 0" }}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>⚠️</div>
           <div style={{ color: "#ef4444", fontWeight: 600, marginBottom: 8 }}>Failed to load listings</div>
-          <div style={{ color: "#a0a0a0", marginBottom: 16 }}>{state.error}</div>
+          <div style={{ color: "#64748b", marginBottom: 16 }}>{state.error}</div>
           <button
             onClick={() => setState({ loading: true, error: "" })}
             style={{ padding: "8px 20px", background: "#3b82f6", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}
@@ -120,23 +121,23 @@ export default function Marketplace() {
   }
 
   return (
-    <div style={{ maxWidth: 1200, margin: "0 auto", padding: "26px 18px" }}>
+    <div style={{ maxWidth: 1200, margin: "0 auto", padding: "22px 18px", background: "#ffffff" }}>
       <SEO
         title="Marketplace"
         description="Browse property and land listings across Rwanda. Find residential, commercial, and industrial properties in Kigali and all provinces."
       />
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
         <div>
-          <h1 style={{ margin: 0, color: "#ffffff", fontSize: 28, fontWeight: 800 }}>Marketplace</h1>
-          <p style={{ color: "#a0a0a0", fontWeight: 650 }}>
+          <h1 style={{ margin: 0, color: "#0f172a", fontSize: 28, fontWeight: 800 }}>Marketplace</h1>
+          <p style={{ color: "#64748b", fontWeight: 650 }}>
             Browse property and land listings across Rwanda.
           </p>
         </div>
       </div>
 
       {/* Filters */}
-      <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap", alignItems: "center" }}>
+      <div style={{ display: "flex", gap: 10, marginBottom: 18, flexWrap: "wrap", alignItems: "center" }}>
         <input
           type="text"
           placeholder="Search listings..."
@@ -167,7 +168,7 @@ export default function Marketplace() {
         </select>
         <button
           onClick={() => { setType(""); setProvince(""); setDistrict(""); setSearch(""); setPriceRange(""); }}
-          style={{ padding: "8px 14px", background: "#1a1a1a", color: "#ffffff", border: "1px solid #333", borderRadius: 6, cursor: "pointer", fontSize: 13 }}
+          style={{ padding: "9px 14px", background: "#ffffff", color: "#0f172a", border: "1px solid #e6ecf4", borderRadius: 10, cursor: "pointer", fontSize: 13, boxShadow: "0 6px 16px rgba(15,23,42,0.04)" }}
         >
           Clear
         </button>
@@ -175,29 +176,29 @@ export default function Marketplace() {
 
       {/* Result count */}
       {filtered.length > 0 && (
-        <div style={{ color: "#a0a0a0", fontSize: 13, marginBottom: 14 }}>
+        <div style={{ color: "#64748b", fontSize: 13, marginBottom: 12 }}>
           {filtered.length} listing{filtered.length !== 1 ? "s" : ""} found
         </div>
       )}
 
       {/* Empty state */}
       {filtered.length === 0 && (
-        <div style={{ padding: 32, border: "1px solid #1a1a1a", borderRadius: 16, background: "#0a0a0a", color: "#ffffff", textAlign: "center" }}>
+        <div style={{ padding: 24, border: "1px solid #e8eef5", borderRadius: 16, background: "#ffffff", color: "#0f172a", textAlign: "center", boxShadow: "0 12px 30px rgba(15,23,42,0.05)" }}>
           <div style={{ fontSize: 40, marginBottom: 10 }}>🏠</div>
           <div style={{ fontWeight: 600, marginBottom: 6 }}>No listings found</div>
-          <div style={{ color: "#a0a0a0", fontSize: 14 }}>
+          <div style={{ color: "#64748b", fontSize: 14 }}>
             Adjust your filters or check back later for new listings.
           </div>
         </div>
       )}
 
       {/* Grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 14 }}>
         {filtered.map((listing) => (
           <Link
             key={listing.id}
             to={`/marketplace/${listing.id}`}
-            style={{ textDecoration: "none", border: "1px solid #1a1a1a", borderRadius: 16, overflow: "hidden", background: "#0a0a0a", color: "#ffffff" }}
+            style={{ textDecoration: "none", border: "1px solid #e8eef5", borderRadius: 16, overflow: "hidden", background: "#ffffff", color: "#0f172a", boxShadow: "0 12px 28px rgba(15,23,42,0.05)" }}
           >
             {listing.images?.[0]?.imageUrl ? (
               <div
@@ -211,10 +212,10 @@ export default function Marketplace() {
               <div
                 style={{
                   height: 200,
-                  background: "linear-gradient(135deg, rgba(37,99,235,0.22), rgba(15,23,42,0.92))",
+                  background: "linear-gradient(135deg, rgba(37,99,235,0.12), rgba(248,251,255,1))",
                   display: "grid",
                   placeItems: "center",
-                  color: "#dbeafe",
+                  color: "#2563eb",
                   fontWeight: 700,
                   letterSpacing: "0.02em",
                   textAlign: "center",
@@ -226,14 +227,14 @@ export default function Marketplace() {
             )}
             <div style={{ padding: 16, display: "grid", gap: 8 }}>
               <div style={{ fontWeight: 700, fontSize: 18 }}>{listing.title}</div>
-              <div style={{ color: "#a0a0a0", fontWeight: 500, fontSize: 14 }}>
+              <div style={{ color: "#64748b", fontWeight: 500, fontSize: 14 }}>
                 {listing.region?.name || listing.locationText || "—"}
                 {listing.price
                   ? ` · ${listing.currency || "RWF"} ${Number(listing.price).toLocaleString()}`
                   : " · Price on request"}
               </div>
               {listing.sizeM2 && (
-                <div style={{ color: "#a0a0a0", fontSize: 13 }}>Size: {listing.sizeM2} m²</div>
+                <div style={{ color: "#64748b", fontSize: 13 }}>Size: {listing.sizeM2} m²</div>
               )}
               <div style={{ fontSize: 12, color: listing.status === "ACTIVE" ? "#22c55e" : "#f59e0b", fontWeight: 600 }}>
                 {listing.status}

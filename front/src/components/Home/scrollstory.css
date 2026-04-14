@@ -9,16 +9,16 @@
   --blue: #3b82f6;
   --blue-deep: #2563eb;
   --blue-dark: #1e40af;
-  --ink: #e8eaed;
-  --ink-soft: #94a3b8;
-  --ink-faint: rgba(255, 255, 255, .04);
-  --white: #171717;
-  --off-white: #111318;
-  --border: #1e293b;
+  --ink: #ffffff;
+  --ink-soft: #64748b;
+  --ink-faint: rgba(15, 23, 42, .04);
+  --white: #0f172a;
+  --off-white: #f8fbff;
+  --border: #e5edf6;
   --radius-lg: 22px;
   --radius-md: 16px;
   --radius-sm: 10px;
-  --shadow-card: 0 14px 40px rgba(0, 0, 0, .25);
+  --shadow-card: 0 14px 32px rgba(15, 23, 42, .08);
   --shadow-btn: 0 8px 20px rgba(59, 130, 246, .15);
   --font-head: 'Sora', sans-serif;
   --font-body: 'DM Sans', sans-serif;
@@ -39,7 +39,7 @@
 
 /* ── TRUST BAR ── */
 .cb-trustBar {
-  background: #0d1117;
+  background: #ffffff;
   border-bottom: 1px solid var(--border);
   padding: 18px 0;
   overflow: hidden;
@@ -151,7 +151,7 @@
 .cb-bandSoft {
   background:
     radial-gradient(900px 400px at 10% 0%, rgba(59, 130, 246, .06), transparent 55%),
-    linear-gradient(180deg, #111318 0%, #0a0a0a 100%);
+    linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
 }
 
 .cb-bandDark {
@@ -261,13 +261,13 @@
 }
 
 .cb-light {
-  background: linear-gradient(180deg, #0d1117 0%, #0a0a0a 100%);
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
 }
 
 .cb-blue {
   background:
     radial-gradient(900px 500px at 5% 25%, rgba(59, 130, 246, .05), transparent 55%),
-    linear-gradient(180deg, #111318 0%, #0a0a0a 70%);
+    linear-gradient(180deg, #ffffff 0%, #f8fbff 70%);
 }
 
 .cb-dark {
@@ -455,7 +455,7 @@
 .cb-howWorks {
   background:
     radial-gradient(700px 500px at 90% 20%, rgba(59, 130, 246, .04), transparent 60%),
-    linear-gradient(180deg, #0d1117 0%, #0a0a0a 100%);
+    linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
   padding: 100px 0;
 }
 
@@ -506,7 +506,7 @@
   margin-bottom: 20px;
   position: relative;
   z-index: 1;
-  border: 3px solid #0a0a0a;
+  border: 3px solid #ffffff;
 }
 
 .cb-step:nth-child(even) .cb-stepNum {
@@ -531,7 +531,7 @@
 
 /* ── FEATURE GRID ── */
 .cb-featureGrid {
-  background: #0a0a0a;
+  background: #ffffff;
   padding: 100px 0;
   border-top: 1px solid var(--border);
 }

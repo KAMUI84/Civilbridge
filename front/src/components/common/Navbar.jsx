@@ -14,7 +14,7 @@ function Logo() {
         height: 32,
         borderRadius: 9,
         background: 'linear-gradient(135deg, #2563eb, #38bdf8)',
-        boxShadow: '0 6px 18px rgba(37,99,235,0.18)',
+        boxShadow: '0 8px 18px rgba(37,99,235,0.14)',
         display: 'grid',
         placeItems: 'center',
         color: '#fff',
@@ -23,7 +23,7 @@ function Logo() {
       }}>
         CB
       </div>
-      <span style={{ fontSize: 15, fontWeight: 750, color: '#f0f0f0', letterSpacing: '-0.02em' }}>
+      <span style={{ fontSize: 15, fontWeight: 750, color: '#0f172a', letterSpacing: '-0.02em' }}>
         Civil<span style={{ color: '#38bdf8' }}>Bridge</span>
       </span>
     </Link>
@@ -51,8 +51,8 @@ export default function Navbar() {
 
   if (onAuth) return null;
 
-  const bg = scrolled ? 'rgba(5,5,5,0.92)' : 'rgba(5,5,5,0.5)';
-  const border = scrolled ? '#1e293b' : 'transparent';
+  const bg = scrolled ? 'rgba(255,255,255,0.96)' : 'rgba(255,255,255,0.88)';
+  const border = '#edf2f7';
 
   const handleLogout = async () => {
     try {
@@ -73,12 +73,13 @@ export default function Navbar() {
       backdropFilter: 'blur(16px)',
       WebkitBackdropFilter: 'blur(16px)',
       borderBottom: `1px solid ${border}`,
+      boxShadow: scrolled ? '0 10px 26px rgba(15,23,42,0.05)' : 'none',
       transition: 'all .25s ease',
     }}>
       <div style={{
         maxWidth: 1200,
         margin: '0 auto',
-        padding: '12px 20px',
+        padding: '10px 18px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -103,10 +104,10 @@ export default function Navbar() {
                 textDecoration: 'none',
                 fontWeight: 650,
                 fontSize: 13,
-                color: isActive ? '#f0f0f0' : '#94a3b8',
-                padding: '8px 12px',
+                color: isActive ? '#0f172a' : '#64748b',
+                padding: '7px 11px',
                 borderRadius: 8,
-                background: isActive ? 'rgba(255,255,255,.06)' : 'transparent',
+                background: isActive ? '#f4f8fd' : 'transparent',
                 transition: 'all .15s ease',
               })}
             >
@@ -142,34 +143,35 @@ const styles = {
     textDecoration: 'none',
     fontWeight: 700,
     fontSize: 13,
-    padding: '9px 16px',
+    padding: '8px 14px',
     borderRadius: 9,
-    border: '1px solid #262626',
-    background: 'transparent',
-    color: '#d4d4d8',
+    border: '1px solid #e7edf5',
+    background: '#ffffff',
+    color: '#334155',
     cursor: 'pointer',
+    boxShadow: '0 4px 16px rgba(15,23,42,0.04)',
   },
   primaryButton: {
     textDecoration: 'none',
     fontWeight: 700,
     fontSize: 13,
-    padding: '9px 16px',
+    padding: '8px 14px',
     borderRadius: 9,
     background: 'linear-gradient(135deg, #2563eb, #38bdf8)',
     color: '#ffffff',
     border: 'none',
-    boxShadow: '0 4px 14px rgba(37,99,235,.18)',
+    boxShadow: '0 8px 18px rgba(37,99,235,.14)',
   },
   avatarChip: {
     width: 34,
     height: 34,
     borderRadius: 12,
-    border: '1px solid #1e293b',
-    background: 'linear-gradient(135deg, rgba(37,99,235,.18), rgba(56,189,248,.18))',
+    border: '1px solid #e6ecf4',
+    background: 'linear-gradient(135deg, rgba(37,99,235,.12), rgba(56,189,248,.08))',
     display: 'grid',
     placeItems: 'center',
     fontWeight: 800,
     fontSize: 13,
-    color: '#f0f0f0',
+    color: '#1e3a8a',
   },
 };

@@ -629,7 +629,7 @@ export default function PlanLibraryEnhanced() {
 const styles = {
   container: {
     minHeight: '100vh',
-    background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%)',
+    background: 'linear-gradient(135deg, #ffffff 0%, #f8fbff 100%)',
     color: 'var(--text-color)',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     display: 'flex',

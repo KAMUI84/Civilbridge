@@ -9,7 +9,7 @@ function BellIcon({ active = false }) {
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
         d="M8 18h8m-7 0a3 3 0 0 0 6 0m6-2H3c1.2-1.1 2-2.7 2-4.4V10a7 7 0 1 1 14 0v1.6c0 1.7.8 3.3 2 4.4Z"
-        stroke={active ? "#00f2ff" : "currentColor"}
+        stroke={active ? "#2563eb" : "currentColor"}
         strokeWidth="1.7"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -131,7 +131,7 @@ export default function NotificationInbox({ compact = false, dark = false }) {
           border: "1px solid transparent",
           background: "transparent",
           borderRadius: compact ? 10 : 12,
-          color: dark ? "#d4d4d8" : "#0c1220",
+          color: dark ? "#334155" : "#0c1220",
           width: compact ? 40 : 42,
           height: compact ? 40 : 42,
           display: "flex",
@@ -216,7 +216,7 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    border: "2px solid rgba(5,5,5,0.9)",
+    border: "2px solid #ffffff",
   },
   dropdown: {
     position: "absolute",
@@ -225,14 +225,14 @@ const styles = {
     width: 360,
     maxWidth: "calc(100vw - 24px)",
     borderRadius: 16,
-    border: "1px solid #1a1a1a",
-    boxShadow: "0 20px 48px rgba(0,0,0,0.28)",
+    border: "1px solid #e6ebf4",
+    boxShadow: "0 18px 36px rgba(15,23,42,0.08)",
     overflow: "hidden",
     zIndex: 1200,
   },
   dropdownDark: {
-    background: "#0f0f0f",
-    color: "#e5e7eb",
+    background: "#ffffff",
+    color: "#0c1220",
   },
   dropdownLight: {
     background: "#ffffff",

@@ -278,8 +278,8 @@ export default function UserManagement() {
             </thead>
             <tbody>
               {visibleUsers.map((user) => {
-                const roleStyle = roleColors[user.role] || { bg: '#111', color: '#888' };
-                const statusStyle = statusColors[user.verificationStatus] || { bg: '#111', color: '#888' };
+                const roleStyle = roleColors[user.role] || { bg: '#f8fbff', color: '#64748b' };
+                const statusStyle = statusColors[user.verificationStatus] || { bg: '#f8fbff', color: '#64748b' };
                 return (
                   <tr key={user.id} style={styles.tr}>
                     <td style={styles.td}>
@@ -455,12 +455,12 @@ const styles = {
     color: '#e5e5e5', fontSize: 14, outline: 'none', cursor: 'pointer',
   },
   tableContainer: {
-    background: '#070707', border: '1px solid #111', borderRadius: 12, overflow: 'hidden',
+    background: '#ffffff', border: '1px solid #e8eef5', borderRadius: 12, overflow: 'hidden', boxShadow: '0 12px 26px rgba(15,23,42,0.05)',
   },
   table: { width: '100%', borderCollapse: 'collapse' },
   th: {
     padding: '14px 16px', textAlign: 'left', fontSize: 12, fontWeight: 700,
-    color: '#555', background: '#0a0a0a', borderBottom: '1px solid #111',
+    color: '#64748b', background: '#f8fbff', borderBottom: '1px solid #edf2f8',
     textTransform: 'uppercase', letterSpacing: '0.06em',
   },
   tr: { borderBottom: '1px solid #0f0f0f' },
@@ -484,8 +484,8 @@ const styles = {
   },
   actionRow: { display: 'flex', gap: 8 },
   actionBtn: {
-    background: '#111', border: '1px solid #1f1f1f', borderRadius: 7,
-    padding: '6px 12px', fontSize: 12, color: '#aaa', cursor: 'pointer',
+    background: '#ffffff', border: '1px solid #e6ecf4', borderRadius: 7,
+    padding: '6px 12px', fontSize: 12, color: '#0f172a', cursor: 'pointer',
   },
   loadingRow: {
     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -496,7 +496,7 @@ const styles = {
     height: 54,
     borderRadius: 8,
     background: 'linear-gradient(90deg, rgba(255,255,255,0.03), rgba(255,255,255,0.06), rgba(255,255,255,0.03))',
-    border: '1px solid #111',
+    border: '1px solid #e8eef5',
   },
   spinner: {
     width: 22, height: 22, border: '2px solid #1f1f1f', borderTop: '2px solid #6366f1',
@@ -520,8 +520,8 @@ const styles = {
   modalDesc: { margin: '0 0 16px', fontSize: 14, color: '#888', lineHeight: 1.6 },
   currentRole: { margin: '0 0 14px', fontSize: 13, color: '#666' },
   modalSelect: {
-    width: '100%', padding: '11px 14px', background: '#111',
-    border: '1px solid #1f1f1f', borderRadius: 9, color: '#e5e5e5',
+    width: '100%', padding: '11px 14px', background: '#ffffff',
+    border: '1px solid #e6ecf4', borderRadius: 9, color: '#0f172a',
     fontSize: 14, marginBottom: 12, outline: 'none',
   },
   modalActions: { display: 'flex', gap: 10, justifyContent: 'flex-end' },

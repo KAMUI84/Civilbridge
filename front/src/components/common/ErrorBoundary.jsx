@@ -28,25 +28,25 @@ export default class ErrorBoundary extends React.Component {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "var(--color-background, #0a0a0a)",
+        background: "#ffffff",
         padding: 24,
       }}>
-        <div style={{ maxWidth: 480, textAlign: "center" }}>
+        <div style={{ maxWidth: 480, textAlign: "center", padding: 28, borderRadius: 22, border: "1px solid #e8eef5", background: "#ffffff", boxShadow: "0 16px 34px rgba(15,23,42,0.06)" }}>
           <div style={{ fontSize: 64, marginBottom: 16 }}>💥</div>
-          <h1 style={{ fontSize: 24, fontWeight: 800, color: "var(--color-text-primary, #fff)", marginBottom: 8 }}>
+          <h1 style={{ fontSize: 24, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>
             Something went wrong
           </h1>
-          <p style={{ fontSize: 15, color: "#9ca3af", marginBottom: 8, lineHeight: 1.6 }}>
+          <p style={{ fontSize: 15, color: "#64748b", marginBottom: 8, lineHeight: 1.6 }}>
             An unexpected error occurred. The team has been notified.
           </p>
           {this.state.error?.message && (
             <pre style={{
-              fontSize: 12, color: "#6b7280",
-              background: "rgba(255,255,255,0.04)",
+              fontSize: 12, color: "#64748b",
+              background: "#f8fbff",
               borderRadius: 8, padding: "10px 14px",
               textAlign: "left", overflowX: "auto",
               marginBottom: 24, whiteSpace: "pre-wrap",
-              border: "1px solid rgba(255,255,255,0.08)",
+              border: "1px solid #e8eef5",
             }}>
               {this.state.error.message}
             </pre>
@@ -67,8 +67,8 @@ export default class ErrorBoundary extends React.Component {
               onClick={this.handleReset}
               style={{
                 padding: "10px 24px", borderRadius: 10,
-                border: "1px solid rgba(255,255,255,0.1)",
-                color: "#9ca3af", fontWeight: 600,
+                border: "1px solid #e6ecf4",
+                color: "#0f172a", fontWeight: 600,
                 fontSize: 14, textDecoration: "none",
                 display: "inline-block",
               }}

@@ -49,20 +49,20 @@ function Success({ text }) {
 
 function UploadList({ title, items, emptyText, renderMeta, hrefPrefix }) {
   return (
-    <section style={{ border: "1px solid rgba(255,255,255,0.08)", borderRadius: 18, padding: 18, background: "rgba(255,255,255,0.03)", display: "grid", gap: 14 }}>
-      <h3 style={{ margin: 0, color: "var(--color-text-primary, #fff)", fontSize: 18 }}>{title}</h3>
+    <section style={{ border: "1px solid #e8eef5", borderRadius: 18, padding: 16, background: "#ffffff", display: "grid", gap: 12, boxShadow: "0 12px 26px rgba(15,23,42,0.05)" }}>
+      <h3 style={{ margin: 0, color: "#0f172a", fontSize: 18 }}>{title}</h3>
       {!items.length ? (
-        <div style={{ color: "var(--color-text-secondary, #94a3b8)", lineHeight: 1.6 }}>{emptyText}</div>
+        <div style={{ color: "#64748b", lineHeight: 1.6 }}>{emptyText}</div>
       ) : (
         <div style={{ display: "grid", gap: 12 }}>
           {items.slice(0, 6).map((item) => (
             <Link
               key={item.id}
               to={`${hrefPrefix}/${item.id}`}
-              style={{ textDecoration: "none", color: "inherit", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: 14, background: "rgba(7,12,18,0.6)", display: "grid", gap: 6 }}
+              style={{ textDecoration: "none", color: "inherit", border: "1px solid #e8eef5", borderRadius: 14, padding: 13, background: "#f8fbff", display: "grid", gap: 6 }}
             >
-              <strong style={{ color: "var(--color-text-primary, #fff)" }}>{item.title}</strong>
-              <span style={{ color: "var(--color-text-secondary, #94a3b8)", fontSize: 13 }}>{renderMeta(item)}</span>
+              <strong style={{ color: "#0f172a" }}>{item.title}</strong>
+              <span style={{ color: "#64748b", fontSize: 13 }}>{renderMeta(item)}</span>
             </Link>
           ))}
         </div>
@@ -370,9 +370,9 @@ export default function UploadsReal() {
   if (!isAuthed) {
     return (
       <PageShell title="Upload Center" subtitle="Publishing on CivilBridge is reserved for authorized team roles.">
-        <div style={{ display: "grid", gap: 16, padding: 24, borderRadius: 22, border: "1px solid rgba(255,255,255,0.08)", background: "linear-gradient(135deg, rgba(8,16,24,0.96), rgba(14,28,37,0.82))" }}>
-          <h2 style={{ margin: 0, color: "var(--color-text-primary, #fff)" }}>Sign in to publish plans or marketplace items</h2>
-          <p style={{ margin: 0, color: "var(--color-text-secondary, #94a3b8)", lineHeight: 1.7 }}>
+        <div style={{ display: "grid", gap: 14, padding: 20, borderRadius: 22, border: "1px solid #e8eef5", background: "#ffffff", boxShadow: "0 14px 30px rgba(15,23,42,0.05)" }}>
+          <h2 style={{ margin: 0, color: "#0f172a" }}>Sign in to publish plans or marketplace items</h2>
+          <p style={{ margin: 0, color: "#64748b", lineHeight: 1.7 }}>
             Engineers can publish plans. Admins and super admins can publish plans, properties, and land listings for visitors to browse.
           </p>
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
@@ -388,9 +388,9 @@ export default function UploadsReal() {
   if (!tabs.length) {
     return (
       <PageShell title="Upload Center" subtitle="This space is for the public catalog only.">
-        <div style={{ display: "grid", gap: 16, padding: 24, borderRadius: 22, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)" }}>
-          <h2 style={{ margin: 0, color: "var(--color-text-primary, #fff)" }}>Your account cannot publish public catalog items</h2>
-          <p style={{ margin: 0, color: "var(--color-text-secondary, #94a3b8)", lineHeight: 1.7 }}>
+        <div style={{ display: "grid", gap: 14, padding: 20, borderRadius: 22, border: "1px solid #e8eef5", background: "#ffffff", boxShadow: "0 14px 30px rgba(15,23,42,0.05)" }}>
+          <h2 style={{ margin: 0, color: "#0f172a" }}>Your account cannot publish public catalog items</h2>
+          <p style={{ margin: 0, color: "#64748b", lineHeight: 1.7 }}>
             Clients and home builders browse what has already been uploaded, then start private follow-up from plans, land, or properties they are interested in.
           </p>
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
@@ -411,12 +411,12 @@ export default function UploadsReal() {
         : "Publish architectural plans for client follow-up, review, and stamping."}
     >
       <div style={{ display: "grid", gap: 20 }}>
-        <section style={{ display: "grid", gap: 12, padding: 22, borderRadius: 24, border: "1px solid rgba(255,255,255,0.08)", background: "linear-gradient(135deg, rgba(7,15,24,0.96), rgba(10,30,35,0.76))" }}>
-          <div style={{ color: "#fbbf24", fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.14em" }}>Publishing roles</div>
-          <h2 style={{ margin: 0, color: "var(--color-text-primary, #fff)" }}>
+        <section style={{ display: "grid", gap: 10, padding: 18, borderRadius: 24, border: "1px solid #e8eef5", background: "#f8fbff", boxShadow: "0 12px 26px rgba(15,23,42,0.04)" }}>
+          <div style={{ color: "#2563eb", fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.14em" }}>Publishing roles</div>
+          <h2 style={{ margin: 0, color: "#0f172a" }}>
             {role === "ENGINEER" ? "Engineer publishing desk" : "Admin publishing desk"}
           </h2>
-          <p style={{ margin: 0, color: "var(--color-text-secondary, #94a3b8)", lineHeight: 1.7 }}>
+          <p style={{ margin: 0, color: "#64748b", lineHeight: 1.7 }}>
             Engineers are limited to public plans. Admins and super admins can publish marketplace listings as well, so visitors can browse them and send tour or follow-up requests.
           </p>
         </section>
@@ -432,9 +432,10 @@ export default function UploadsReal() {
               style={{
                 ...ghostBtn,
                 borderRadius: 999,
-                background: activeTab === item.id ? "#0f172a" : "rgba(255,255,255,0.03)",
-                color: "#ffffff",
-                borderColor: activeTab === item.id ? "#38bdf8" : "rgba(255,255,255,0.08)",
+                background: activeTab === item.id ? "#2563eb" : "#ffffff",
+                color: activeTab === item.id ? "#ffffff" : "#0f172a",
+                borderColor: activeTab === item.id ? "#2563eb" : "#e8eef5",
+                boxShadow: activeTab === item.id ? "0 10px 22px rgba(37,99,235,0.16)" : "0 8px 18px rgba(15,23,42,0.04)",
               }}
             >
               {item.label}
@@ -442,8 +443,8 @@ export default function UploadsReal() {
           ))}
         </div>
 
-        <section style={{ border: "1px solid rgba(255,255,255,0.08)", borderRadius: 24, padding: 22, background: "rgba(255,255,255,0.03)" }}>
-          {loading ? <div style={{ color: "var(--color-text-secondary, #94a3b8)" }}>Loading publishing workspace...</div> : null}
+        <section style={{ border: "1px solid #e8eef5", borderRadius: 24, padding: 18, background: "#ffffff", boxShadow: "0 14px 30px rgba(15,23,42,0.05)" }}>
+          {loading ? <div style={{ color: "#64748b" }}>Loading publishing workspace...</div> : null}
           {!loading && activeTab === "property" ? <PropertyForm regions={regions} onSuccess={loadPublishingData} /> : null}
           {!loading && activeTab === "land" ? <LandForm regions={regions} onSuccess={loadPublishingData} /> : null}
           {!loading && activeTab === "plan" ? <PlanForm onSuccess={loadPublishingData} isAdminPublisher={isListingPublisher} /> : null}

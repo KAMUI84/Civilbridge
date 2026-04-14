@@ -116,7 +116,7 @@ export default function ListingDetail() {
     : (listing.region?.name || listing.locationText?.split(",")?.[0]?.trim() || "—");
 
   return (
-    <div style={{ maxWidth: 1100, margin: "0 auto", padding: "28px 20px", color: "var(--color-text-primary, #fff)" }}>
+    <div style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 20px", color: "#0f172a", background: "#ffffff" }}>
       <SEO
         title={listing.title}
         description={listing.description || `${listing.listingType} listing in ${listing.region?.name || "Rwanda"} — ${listing.price ? `${listing.currency || "RWF"} ${Number(listing.price).toLocaleString()}` : "Price on request"}`}
@@ -131,11 +131,11 @@ export default function ListingDetail() {
         ← Back to Marketplace
       </Link>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 32, alignItems: "start" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 24, alignItems: "start" }}>
         {/* ── Left ─────────────────────────────────────────────────── */}
         <div>
           {/* Image carousel */}
-          <div style={{ borderRadius: 16, overflow: "hidden", background: "#0a0a0a", height: 420, position: "relative" }}>
+          <div style={{ borderRadius: 16, overflow: "hidden", background: "#f8fbff", height: 420, position: "relative", border: "1px solid #e8eef5", boxShadow: "0 14px 30px rgba(15,23,42,0.05)" }}>
             {images.length > 0 ? (
               <img
                 src={images[activeImg]?.imageUrl}
@@ -145,7 +145,7 @@ export default function ListingDetail() {
             ) : (
               <div style={{
                 display: "flex", alignItems: "center", justifyContent: "center",
-                height: "100%", color: "#4b5563", fontSize: 14,
+                height: "100%", color: "#64748b", fontSize: 14,
               }}>
                 No images available
               </div>
@@ -157,7 +157,7 @@ export default function ListingDetail() {
                   onClick={prevImg}
                   style={{
                     position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)",
-                    background: "rgba(0,0,0,0.55)", border: "none", color: "#fff",
+                    background: "rgba(255,255,255,0.92)", border: "1px solid #e8eef5", color: "#0f172a",
                     width: 36, height: 36, borderRadius: "50%", cursor: "pointer", fontSize: 18,
                   }}
                 >‹</button>
@@ -165,7 +165,7 @@ export default function ListingDetail() {
                   onClick={nextImg}
                   style={{
                     position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)",
-                    background: "rgba(0,0,0,0.55)", border: "none", color: "#fff",
+                    background: "rgba(255,255,255,0.92)", border: "1px solid #e8eef5", color: "#0f172a",
                     width: 36, height: 36, borderRadius: "50%", cursor: "pointer", fontSize: 18,
                   }}
                 >›</button>
@@ -224,7 +224,7 @@ export default function ListingDetail() {
               {listing.listingType && (
                 <span style={{
                   padding: "3px 12px", borderRadius: 999, fontSize: 12, fontWeight: 600,
-                  color: "#9ca3af", border: "1px solid #374151",
+                  color: "#64748b", border: "1px solid #d9e3ef",
                 }}>
                   {listing.listingType}
                 </span>
@@ -242,7 +242,7 @@ export default function ListingDetail() {
             {/* Spec grid */}
             <div style={{
               display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
-              gap: 16, padding: 20, background: "rgba(255,255,255,0.04)", borderRadius: 12, marginBottom: 24,
+              gap: 14, padding: 16, background: "#f8fbff", borderRadius: 14, marginBottom: 20, border: "1px solid #e8eef5", boxShadow: "0 10px 24px rgba(15,23,42,0.04)",
             }}>
               {[
                 { label: "Type", value: listing.listingType },
@@ -273,7 +273,7 @@ export default function ListingDetail() {
             {listing.description && (
               <div>
                 <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 10 }}>Description</h2>
-                <p style={{ margin: 0, lineHeight: 1.7, color: "#9ca3af", fontSize: 14 }}>
+                <p style={{ margin: 0, lineHeight: 1.7, color: "#64748b", fontSize: 14 }}>
                   {listing.description}
                 </p>
               </div>
@@ -284,15 +284,16 @@ export default function ListingDetail() {
         {/* ── Right ─────────────────────────────────────────────────── */}
         <div style={{ position: "sticky", top: 20 }}>
           <div style={{
-            padding: 24, borderRadius: 16,
-            border: "1px solid #1a1a2e",
-            background: "#0a0a0a",
+            padding: 20, borderRadius: 16,
+            border: "1px solid #e8eef5",
+            background: "#ffffff",
+            boxShadow: "0 14px 30px rgba(15,23,42,0.05)",
           }}>
             {inquiryDone ? (
               <div style={{ textAlign: "center", padding: "20px 0" }}>
                 <div style={{ fontSize: 32, marginBottom: 12 }}>✓</div>
                 <div style={{ fontWeight: 700, color: "#22c55e", marginBottom: 8 }}>Inquiry sent!</div>
-                <div style={{ fontSize: 13, color: "#9ca3af" }}>
+                <div style={{ fontSize: 13, color: "#64748b" }}>
                   {submitMsg.text || "The seller will contact you shortly."}
                 </div>
               </div>
@@ -303,7 +304,7 @@ export default function ListingDetail() {
                 </h3>
 
                 {!isAuthed && (
-                  <div style={{ marginBottom: 16, padding: "10px 14px", borderRadius: 8, background: "rgba(255,255,255,0.04)", fontSize: 13, color: "#9ca3af" }}>
+                  <div style={{ marginBottom: 16, padding: "10px 14px", borderRadius: 8, background: "#f8fbff", border: "1px solid #e8eef5", fontSize: 13, color: "#64748b" }}>
                     <Link to="/login" style={{ color: "#60a5fa", textDecoration: "none", fontWeight: 600 }}>Sign in</Link> to have your details pre-filled and track your inquiries.
                   </div>
                 )}
@@ -319,8 +320,8 @@ export default function ListingDetail() {
                     value={form.requestType}
                     onChange={(e) => setForm({ ...form, requestType: e.target.value })}
                     style={{
-                      padding: "10px 12px", border: "1px solid #1a1a2e", borderRadius: 8,
-                      background: "#111", color: "#fff", fontSize: 14, width: "100%", boxSizing: "border-box",
+                      padding: "10px 12px", border: "1px solid #e6ecf4", borderRadius: 8,
+                      background: "#ffffff", color: "#0f172a", fontSize: 14, width: "100%", boxSizing: "border-box",
                     }}
                   >
                     <option value="SCHEDULE_VISIT">Request a property tour</option>
@@ -334,8 +335,8 @@ export default function ListingDetail() {
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
                     required
                     style={{
-                      padding: "10px 12px", border: "1px solid #1a1a2e", borderRadius: 8,
-                      background: "#111", color: "#fff", fontSize: 14, width: "100%", boxSizing: "border-box",
+                      padding: "10px 12px", border: "1px solid #e6ecf4", borderRadius: 8,
+                      background: "#ffffff", color: "#0f172a", fontSize: 14, width: "100%", boxSizing: "border-box",
                     }}
                   />
                   <input
@@ -345,8 +346,8 @@ export default function ListingDetail() {
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
                     required
                     style={{
-                      padding: "10px 12px", border: "1px solid #1a1a2e", borderRadius: 8,
-                      background: "#111", color: "#fff", fontSize: 14, width: "100%", boxSizing: "border-box",
+                      padding: "10px 12px", border: "1px solid #e6ecf4", borderRadius: 8,
+                      background: "#ffffff", color: "#0f172a", fontSize: 14, width: "100%", boxSizing: "border-box",
                     }}
                   />
                   <input
@@ -355,8 +356,8 @@ export default function ListingDetail() {
                     value={form.phone}
                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
                     style={{
-                      padding: "10px 12px", border: "1px solid #1a1a2e", borderRadius: 8,
-                      background: "#111", color: "#fff", fontSize: 14, width: "100%", boxSizing: "border-box",
+                      padding: "10px 12px", border: "1px solid #e6ecf4", borderRadius: 8,
+                      background: "#ffffff", color: "#0f172a", fontSize: 14, width: "100%", boxSizing: "border-box",
                     }}
                   />
                   <textarea
@@ -365,8 +366,8 @@ export default function ListingDetail() {
                     onChange={(e) => setForm({ ...form, message: e.target.value })}
                     rows={4}
                     style={{
-                      padding: "10px 12px", border: "1px solid #1a1a2e", borderRadius: 8,
-                      background: "#111", color: "#fff", fontSize: 14,
+                      padding: "10px 12px", border: "1px solid #e6ecf4", borderRadius: 8,
+                      background: "#ffffff", color: "#0f172a", fontSize: 14,
                       width: "100%", boxSizing: "border-box", resize: "vertical",
                     }}
                   />
@@ -375,7 +376,7 @@ export default function ListingDetail() {
                     disabled={submitting}
                     style={{
                       padding: "12px 0", borderRadius: 10, border: "none",
-                      background: submitting ? "#374151" : "#3b82f6",
+                      background: submitting ? "#94a3b8" : "#3b82f6",
                       color: "#fff", fontWeight: 700, fontSize: 15,
                       cursor: submitting ? "not-allowed" : "pointer",
                       width: "100%",
@@ -389,7 +390,7 @@ export default function ListingDetail() {
 
             {/* Listed by */}
             {listing.owner && (
-              <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #1a1a2e" }}>
+              <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #edf2f8" }}>
                 <div style={{ fontSize: 12, color: "#6b7280", fontWeight: 600, marginBottom: 4 }}>LISTED BY</div>
                 <div style={{ fontWeight: 700 }}>{listing.owner.fullName || "Anonymous"}</div>
               </div>

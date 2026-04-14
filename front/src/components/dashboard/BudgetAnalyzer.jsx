@@ -46,7 +46,7 @@ const inputStyle = {
   padding: '10px 12px',
   border: '1px solid var(--color-border, #2a2a3a)',
   borderRadius: 8,
-  background: 'var(--color-surface, #111)',
+  background: '#ffffff',
   color: 'var(--color-text-primary, #fff)',
   fontSize: 14,
   boxSizing: 'border-box',
@@ -235,7 +235,7 @@ export default function BudgetAnalyzer() {
       {/* Form */}
       <form onSubmit={handleAnalyze}>
         <div style={{
-          background: 'var(--color-surface, #111)',
+          background: '#ffffff',
           border: '1px solid var(--color-border, #2a2a3a)',
           borderRadius: 14, padding: 24, marginBottom: 20,
         }}>
@@ -383,7 +383,7 @@ export default function BudgetAnalyzer() {
           <div style={{
             padding: 24, borderRadius: 14,
             border: '1px solid var(--color-border, #2a2a3a)',
-            background: 'var(--color-surface, #111)',
+            background: '#ffffff',
           }}>
             <div style={{ marginBottom: 16 }}>
               <VerdictBadge verdict={analysis.verdict || (analysis.success ? 'ACHIEVABLE' : 'NOT_ACHIEVABLE')} />
@@ -427,7 +427,7 @@ export default function BudgetAnalyzer() {
                           : '1px solid var(--color-border, #2a2a3a)',
                         background: isTop
                           ? 'rgba(59,130,246,0.07)'
-                          : 'var(--color-surface, #111)',
+                          : '#ffffff',
                         position: 'relative',
                       }}
                     >
@@ -490,7 +490,7 @@ export default function BudgetAnalyzer() {
             <div style={{
               padding: 20, borderRadius: 14,
               border: '1px solid var(--color-border, #2a2a3a)',
-              background: 'var(--color-surface, #111)',
+              background: '#ffffff',
             }}>
               <h3 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 700, color: 'var(--color-text-primary, #fff)' }}>
                 Cost Breakdown

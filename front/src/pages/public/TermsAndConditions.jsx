@@ -112,9 +112,9 @@ export default function TermsAndConditions() {
 const styles = {
   page: {
     minHeight: '100vh',
-    background: '#050505',
+    background: '#ffffff',
     fontFamily: "'Inter', sans-serif",
-    color: '#f0f0f0'
+    color: '#0f172a'
   },
   container: {
     maxWidth: 800,
@@ -133,15 +133,16 @@ const styles = {
     width: 'auto'
   },
   content: {
-    background: '#0a0a0a',
-    border: '1px solid #1a1a1a',
-    borderRadius: 12,
-    padding: 40
+    background: '#ffffff',
+    border: '1px solid #e8eef5',
+    borderRadius: 16,
+    padding: 32,
+    boxShadow: '0 16px 34px rgba(15,23,42,0.06)'
   },
   title: {
     fontSize: 32,
     fontWeight: 700,
-    color: '#f0f0f0',
+    color: '#0f172a',
     marginBottom: 8
   },
   lastUpdated: {
@@ -155,12 +156,12 @@ const styles = {
   sectionTitle: {
     fontSize: 20,
     fontWeight: 600,
-    color: '#00f2ff',
+    color: '#2563eb',
     marginBottom: 12
   },
   text: {
     lineHeight: 1.6,
-    color: '#a1a1aa',
+    color: '#64748b',
     fontSize: 15
   },
   actions: {
@@ -170,8 +171,8 @@ const styles = {
   backButton: {
     display: 'inline-block',
     padding: '12px 24px',
-    background: '#00f2ff',
-    color: '#050505',
+    background: '#2563eb',
+    color: '#ffffff',
     textDecoration: 'none',
     borderRadius: 8,
     fontWeight: 600,

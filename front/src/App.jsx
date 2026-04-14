@@ -50,8 +50,9 @@ const PrivacyPolicy      = lazy(() => import("./pages/public/PrivacyPolicy"));
 // ─── Lazy auth pages ───────────────────────────────────────────────────────────
 const Login          = lazy(() => import("./pages/public/Login"));
 const Register       = lazy(() => import("./pages/public/Register"));
-const ForgotPassword = lazy(() => import("./pages/auth/ForgotPassword"));
-const ResetPassword  = lazy(() => import("./pages/auth/ResetPassword"));
+const ForgotPassword  = lazy(() => import("./pages/auth/ForgotPassword"));
+const ResetPassword   = lazy(() => import("./pages/auth/ResetPassword"));
+const AnimatedSignIn  = lazy(() => import("./pages/auth/AnimatedSignIn"));
 
 // ─── Lazy error pages ──────────────────────────────────────────────────────────
 const NotFound   = lazy(() => import("./pages/errors/NotFound"));
@@ -123,8 +124,9 @@ export default function App() {
           {/* 2. AUTH */}
           <Route path="/login"    element={<PT><Login /></PT>} />
           <Route path="/register" element={<PT><Register /></PT>} />
-          <Route path="/forgot-password" element={<PT><ForgotPassword /></PT>} />
-          <Route path="/reset-password"  element={<PT><ResetPassword /></PT>} />
+          <Route path="/forgot-password"  element={<PT><ForgotPassword /></PT>} />
+          <Route path="/reset-password"   element={<PT><ResetPassword /></PT>} />
+          <Route path="/animated-signin"  element={<PT><AnimatedSignIn /></PT>} />
 
           {/* 3. DASHBOARD */}
           <Route

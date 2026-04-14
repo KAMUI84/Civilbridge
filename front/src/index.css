@@ -3,6 +3,59 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Design Tokens (component CSS variables) ─────────────────── */
+@layer base {
+  :root {
+    --background: hsl(0, 0%, 100%);
+    --foreground: hsl(0, 0%, 0%);
+    --skeleton: hsl(0, 0%, 90%);
+    --border: hsl(220, 20%, 90%);
+    --btn-border: hsl(214deg, 31.8%, 91.4%);
+    --input: hsl(220, 20%, 90%);
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: hsl(222, 94%, 5%);
+    --foreground: hsl(0, 0%, 100%);
+    --skeleton: hsl(218, 36%, 16%);
+    --border: hsl(220, 20%, 90%);
+    --btn-border: hsl(217deg, 32.6%, 17.5%);
+    --input: hsl(219, 63%, 16%);
+    --radius: 0.5rem;
+  }
+}
+
+@layer components {
+  .g-button {
+    @apply rounded-[var(--radius)] border;
+    border-color: var(--btn-border);
+  }
+}
+
+/* ── Animation Keyframes ─────────────────────────────────────── */
+@keyframes ripple {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -50%) scale(0.9); }
+}
+
+@keyframes orbit {
+  0% {
+    transform: rotate(0deg) translateY(calc(var(--radius) * 1px)) rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg) translateY(calc(var(--radius) * 1px)) rotate(-360deg);
+  }
+}
+
+/* ── Tailwind animation fallbacks (for v4 compat) ───────────── */
+.animate-ripple {
+  animation: ripple 2s ease calc(var(--i, 0) * 0.2s) infinite;
+}
+.animate-orbit {
+  animation: orbit calc(var(--duration) * 1s) linear infinite;
+}
+
 /* ── Global reset & base ─────────────────────────────────── */
 *,
 *::before,
@@ -28,6 +81,7 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background-color: #ffffff;
+  color: #0f172a;
 }
 
 a {
@@ -66,8 +120,8 @@ button {
 .auth-spinner {
   width: 36px;
   height: 36px;
-  border: 3px solid #1e293b;
-  border-top-color: #00f2ff;
+  border: 3px solid #dbe4f0;
+  border-top-color: #2563eb;
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
@@ -78,7 +132,7 @@ textarea,
 select {
   color: #1a1a1a;
   background: #ffffff;
-  border: 1px solid #e5e5e5;
+  border: 1px solid #e8eef5;
   font-family: inherit;
 }
 
@@ -92,7 +146,7 @@ textarea:focus,
 select:focus {
   outline: none;
   border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, .12);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, .08);
 }
 
 /* ── Scrollbar ────────────────────────── */
@@ -101,14 +155,14 @@ select:focus {
 }
 
 ::-webkit-scrollbar-track {
-  background: #f5f5f5;
+  background: #f5f8fc;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #d1d5db;
+  background: #d6dfeb;
   border-radius: 99px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+  background: #b7c4d4;
 }

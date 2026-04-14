@@ -41,14 +41,6 @@ CivilBridge is Rwanda's leading construction management platform, providing AI-p
 - **Real-time**: WebSocket with Socket.io
 - **Security**: Helmet, CORS, CSRF protection
 
-### Mobile
-- **Framework**: React Native
-- **Navigation**: React Navigation
-- **UI**: React Native Paper
-- **State**: Redux Toolkit
-- **Storage**: AsyncStorage
-- **Maps**: React Native Maps
-
 ## 📋 Installation & Setup
 
 ### Prerequisites
@@ -93,27 +85,6 @@ cp .env.example .env
 
 # Start development server
 npm run dev
-```
-
-### Mobile Setup
-```bash
-# Navigate to mobile
-cd ../mobile
-
-# Install dependencies
-npm install
-
-# For iOS
-cd ios && pod install && cd ..
-
-# Start development server
-npm run start
-
-# Run on iOS
-npm run ios
-
-# Run on Android
-npm run android
 ```
 
 ## 🔧 Configuration
@@ -334,22 +305,6 @@ DELETE /api/uploads/:id
 4. **Receipt Generation**: Automatic receipt creation
 5. **Financial Reporting**: Export and analytics
 
-## 📱 Mobile Application
-
-### Features
-- **Project Management**: View and update projects
-- **Plan Submission**: Upload and track plans
-- **Messaging**: Real-time communication
-- **Notifications**: Push notifications for updates
-- **Offline Support**: Limited offline functionality
-
-### Development
-- **React Native**: Cross-platform development
-- **Navigation**: Tab-based navigation
-- **State Management**: Redux for complex state
-- **API Integration**: RESTful API consumption
-- **Authentication**: Secure token management
-
 ## 🔔 Real-time Features
 
 ### WebSocket Implementation
@@ -497,8 +452,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Engineer validation system
 - Real-time notifications
 
-### Phase 3: Mobile & Optimization (✅ Complete)
-- Mobile application
+### Phase 3: Optimization (✅ Complete)
 - Performance optimization
 - Comprehensive testing
 - Documentation

@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "civilbridge-front",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "cd front && npm run dev -- --port 5174"],
+      "port": 5174,
+      "autoPort": false
+    }
+  ]
+}

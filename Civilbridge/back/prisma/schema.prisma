@@ -1,0 +1,1195 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "mysql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  PROFESSIONAL
+  CLIENT
+  ENGINEER
+  CONTRACTOR
+  SUPPLIER
+  ARCHITECT
+  HOME_BUILDER
+  VIEWER
+  AUDITOR
+  FINANCE
+  STUDENT
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum ListingType {
+  PROPERTY
+  LAND
+}
+
+enum ListingStatus {
+  DRAFT
+  ACTIVE
+  PENDING
+  SOLD
+  INACTIVE
+  ARCHIVED
+}
+
+enum PlanCategory {
+  RESIDENTIAL
+  COMMERCIAL
+  INDUSTRIAL
+  INFRA
+}
+
+enum PlanTier {
+  FREE
+  PRO
+  PREMIUM
+}
+
+enum ProviderType {
+  CONTRACTOR
+  SUPPLIER
+  ENGINEER
+  ARCHITECT
+}
+
+enum ProviderVerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum ProjectType {
+  RESIDENTIAL
+  COMMERCIAL
+  INDUSTRIAL
+  INFRA
+}
+
+enum FinishLevel {
+  BASIC
+  STANDARD
+  PREMIUM
+}
+
+enum StructureType {
+  RC_FRAME
+  MASONRY
+  STEEL_FRAME
+}
+
+enum RoofType {
+  IRON_SHEETS
+  TILES
+  CONCRETE
+  OTHER
+}
+
+enum ProjectStatus {
+  DRAFT
+  ESTIMATED
+  DOCUMENTS
+  IN_PROGRESS
+  ON_HOLD
+  COMPLETED
+  ARCHIVED
+}
+
+enum BOQCategory {
+  FOUNDATION
+  STRUCTURE
+  ROOFING
+  FINISHES
+  PLUMBING
+  ELECTRICAL
+  LABOR
+  OTHER
+}
+
+enum DocumentType {
+  PLAN_UPLOAD
+  BOQ_PDF
+  BOQ_EXCEL
+  FEASIBILITY_PDF
+  ESTIMATE_PDF
+  CARBON_PDF
+  ROI_PDF
+  PERMIT_FILE
+  IMAGE
+  OTHER
+}
+
+enum PermitProjectType {
+  RESIDENTIAL
+  COMMERCIAL
+  INDUSTRIAL
+  INFRA
+}
+
+enum PlanRequestType {
+  CUSTOMIZE
+  BUY_FULL_PACKAGE
+  ASK_EXPERT
+}
+
+enum PlanRequestStatus {
+  NEW
+  IN_REVIEW
+  ACCEPTED
+  REJECTED
+  COMPLETED
+}
+
+enum LeadRequestType {
+  MORE_INFO
+  SCHEDULE_VISIT
+  CONNECT_AGENT
+}
+
+enum LeadRequestStatus {
+  NEW
+  CONTACTED
+  CLOSED
+}
+
+enum UploadEntityType {
+  LISTING
+  PLAN
+  PROJECT
+  PROFILE
+  OTHER
+}
+
+enum UploadFileType {
+  IMAGE
+  PDF
+  DOC
+  OTHER
+}
+
+enum OTPPurpose {
+  register
+  login
+  reset_password
+  verify_contact
+}
+
+enum ProjectStage {
+  FOUNDATION
+  STRUCTURE
+  ROOFING
+  FINISHES
+  PLUMBING
+  ELECTRICAL
+  OTHER
+}
+
+enum AIMessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+enum RegionMultiplierScope {
+  MATERIAL
+  LABOR
+  TRANSPORT
+  OVERALL
+}
+
+enum CalendarSlotStatus {
+  AVAILABLE
+  HELD
+  BOOKED
+  BLOCKED
+  CANCELLED
+}
+
+enum AppointmentStatus {
+  REQUESTED
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+enum NotificationStatus {
+  UNREAD
+  READ
+  ARCHIVED
+}
+
+enum ConversationStatus {
+  ACTIVE
+  ARCHIVED
+  BLOCKED
+}
+
+enum MessageStatus {
+  SENT
+  DELIVERED
+  READ
+  DELETED
+}
+
+enum PaymentProvider {
+  MTN_MOMO
+  AIRTEL_MONEY
+  STRIPE
+  MANUAL
+}
+
+enum PaymentStatus {
+  INITIATED
+  PENDING
+  PROCESSING
+  ESCROW_HELD
+  CONFIRMED
+  FAILED
+  CANCELLED
+  RELEASE_PENDING
+  RELEASED
+  REFUND_PENDING
+  REFUNDED
+}
+
+enum PaymentServiceType {
+  PLAN_DOWNLOAD
+  BOQ_EXPORT
+  ENGINEER_ASSIGNMENT
+  PROJECT_MILESTONE
+  OTHER
+}
+
+enum EscrowStatus {
+  NONE
+  HELD
+  RELEASE_PENDING
+  RELEASED
+  REFUND_PENDING
+  REFUNDED
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model User {
+  id                  BigInt             @id @default(autoincrement()) @db.UnsignedBigInt
+  fullName            String             @map("full_name") @db.VarChar(120)
+  email               String?            @unique @db.VarChar(190)
+  phone               String?            @unique @db.VarChar(40)
+  passwordHash        String?            @map("password_hash") @db.VarChar(255)
+  googleSub           String?            @unique @map("google_sub") @db.VarChar(64)
+  role                UserRole           @default(CLIENT)
+  regionId            BigInt?            @map("region_id") @db.UnsignedBigInt
+  verificationStatus  VerificationStatus @default(UNVERIFIED) @map("verification_status")
+  isActive            Boolean            @default(true) @map("is_active")
+  failedLoginAttempts Int                @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime?          @map("locked_until")
+  lastLoginAt         DateTime?          @map("last_login_at")
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+
+  region                        Region?           @relation(fields: [regionId], references: [id], onDelete: SetNull)
+  profile                       UserProfile?
+  sessions                      UserSession[]
+  ownedListings                 Listing[]         @relation("ListingOwner")
+  createdPlans                  Plan[]            @relation("PlanCreator")
+  providerProfile               ServiceProvider?
+  providerReviews               ProviderReview[]
+  projects                      Project[]
+  projectMemberships            ProjectMember[]
+  documents                     ProjectDocument[]
+  reviewedDocuments             ProjectDocument[] @relation("ProjectDocumentReviewer")
+  uploads                       Upload[]
+  aiConversations               AIConversation[]
+  auditLogs                     AuditLog[]
+  leadRequests                  LeadRequest[]
+  planRequests                  PlanRequest[]
+  transactions                  Transaction[]
+  calendarSlots                 CalendarSlot[]    @relation("CalendarSlotProvider")
+  appointmentsAsProvider        Appointment[]     @relation("AppointmentProvider")
+  appointmentsAsClient          Appointment[]     @relation("AppointmentClient")
+  notifications                 Notification[]
+  conversationsAsParticipantOne Conversation[]    @relation("ConversationParticipantOne")
+  conversationsAsParticipantTwo Conversation[]    @relation("ConversationParticipantTwo")
+  createdConversations          Conversation[]    @relation("ConversationCreator")
+  sentMessages                  Message[]         @relation("MessageSender")
+  receivedMessages              Message[]         @relation("MessageRecipient")
+  costBenchmarks                CostBenchmark[]   @relation("CostBenchmarkUpdater")
+  tasks                         Task[]
+
+  @@index([role])
+  @@index([regionId])
+  @@index([verificationStatus])
+  @@index([lockedUntil])
+  @@index([createdAt])
+  @@map("users")
+}
+
+model UserProfile {
+  id          BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  userId      BigInt   @unique @map("user_id") @db.UnsignedBigInt
+  profession  String?  @db.VarChar(120)
+  companyName String?  @map("company_name") @db.VarChar(160)
+  addressText String?  @map("address_text") @db.VarChar(255)
+  bio         String?  @db.Text
+  avatarUrl   String?  @map("avatar_url") @db.VarChar(255)
+  signatureUrl String? @map("signature_url") @db.VarChar(255)
+  licenseNumber String? @map("license_number") @db.VarChar(120)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@map("user_profiles")
+}
+
+model UserSession {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  userId     BigInt    @map("user_id") @db.UnsignedBigInt
+  tokenHash  String    @unique @map("token_hash") @db.VarChar(255)
+  deviceInfo String?   @map("device_info") @db.VarChar(255)
+  ipAddress  String?   @map("ip_address") @db.VarChar(64)
+  expiresAt  DateTime? @map("expires_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([createdAt])
+  @@map("user_sessions")
+}
+
+model OTPCode {
+  id        BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
+  target    String     @db.VarChar(255)
+  otpHash   String     @map("otp_hash") @db.VarChar(255)
+  purpose   OTPPurpose @default(register)
+  expiresAt DateTime   @map("expires_at")
+  attempts  Int        @default(0)
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  @@index([target])
+  @@index([expiresAt])
+  @@index([target, purpose])
+  @@index([createdAt])
+  @@map("otp_codes")
+}
+
+model Region {
+  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  name      String   @unique @db.VarChar(120)
+  country   String   @default("Rwanda") @db.VarChar(120)
+  currency  String   @default("RWF") @db.VarChar(20)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  users              User[]
+  listings           Listing[]
+  serviceProviders   ServiceProvider[]
+  projects           Project[]
+  permitRequirements PermitRequirement[]
+  multipliers        RegionMultiplier[]
+
+  @@index([createdAt])
+  @@map("regions")
+}
+
+model RegionMultiplier {
+  id         BigInt                @id @default(autoincrement()) @db.UnsignedBigInt
+  regionId   BigInt                @map("region_id") @db.UnsignedBigInt
+  scope      RegionMultiplierScope
+  multiplier Decimal               @default(1.0000) @db.Decimal(10, 4)
+  activeFrom DateTime              @map("active_from") @db.Date
+  activeTo   DateTime?             @map("active_to") @db.Date
+  createdAt  DateTime              @default(now()) @map("created_at")
+
+  region Region @relation(fields: [regionId], references: [id], onDelete: Cascade)
+
+  @@index([regionId])
+  @@index([createdAt])
+  @@map("region_multipliers")
+}
+
+model CostCatalogItem {
+  id                    BigInt      @id @default(autoincrement()) @db.UnsignedBigInt
+  code                  String      @unique @db.VarChar(60)
+  name                  String      @db.VarChar(190)
+  category              BOQCategory
+  unit                  String      @db.VarChar(40)
+  baseUnitCost          Decimal     @map("base_unit_cost") @db.Decimal(14, 2)
+  defaultWastagePercent Decimal     @default(0) @map("default_wastage_percent") @db.Decimal(6, 2)
+  isActive              Boolean     @default(true) @map("is_active")
+  createdAt             DateTime    @default(now()) @map("created_at")
+  updatedAt             DateTime    @updatedAt @map("updated_at")
+
+  boqItems       ProjectBOQItem[]
+  emissionFactor EmissionFactor?
+
+  @@index([category])
+  @@index([createdAt])
+  @@map("cost_catalog_items")
+}
+
+model Listing {
+  id           BigInt        @id @default(autoincrement()) @db.UnsignedBigInt
+  listingType  ListingType   @map("listing_type")
+  title        String        @db.VarChar(190)
+  description  String?       @db.Text
+  regionId     BigInt        @map("region_id") @db.UnsignedBigInt
+  locationText String?       @map("location_text") @db.VarChar(190)
+  price        Decimal?      @db.Decimal(16, 2)
+  currency     String        @default("RWF") @db.VarChar(20)
+  sizeM2       Decimal?      @map("size_m2") @db.Decimal(12, 2)
+  bedrooms     Int?
+  bathrooms    Int?
+  zoningInfo   String?       @map("zoning_info") @db.VarChar(190)
+  status       ListingStatus @default(ACTIVE)
+  ownerUserId  BigInt?       @map("owner_user_id") @db.UnsignedBigInt
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  region       Region         @relation(fields: [regionId], references: [id], onDelete: Restrict)
+  owner        User?          @relation("ListingOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  images       ListingImage[]
+  leadRequests LeadRequest[]
+
+  @@index([listingType])
+  @@index([regionId])
+  @@index([ownerUserId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("listings")
+}
+
+model ListingImage {
+  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  listingId BigInt   @map("listing_id") @db.UnsignedBigInt
+  imageUrl  String   @map("image_url") @db.VarChar(255)
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId])
+  @@index([createdAt])
+  @@map("listing_images")
+}
+
+model LeadRequest {
+  id              BigInt            @id @default(autoincrement()) @db.UnsignedBigInt
+  listingId       BigInt            @map("listing_id") @db.UnsignedBigInt
+  requesterUserId BigInt?           @map("requester_user_id") @db.UnsignedBigInt
+  name            String?           @db.VarChar(120)
+  phone           String?           @db.VarChar(40)
+  email           String?           @db.VarChar(190)
+  message         String?           @db.Text
+  requestType     LeadRequestType   @map("request_type")
+  status          LeadRequestStatus @default(NEW)
+  createdAt       DateTime          @default(now()) @map("created_at")
+
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  requester User?   @relation(fields: [requesterUserId], references: [id], onDelete: SetNull)
+
+  @@index([listingId])
+  @@index([requesterUserId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("lead_requests")
+}
+
+model Plan {
+  id               BigInt       @id @default(autoincrement()) @db.UnsignedBigInt
+  category         PlanCategory
+  title            String       @db.VarChar(190)
+  style            String?      @db.VarChar(120)
+  description      String?      @db.Text
+  builtAreaM2      Decimal      @map("built_area_m2") @db.Decimal(12, 2)
+  floors           Int          @default(1)
+  bedrooms         Int?
+  isVerified       Boolean      @default(false) @map("is_verified")
+  tier             PlanTier     @default(FREE)
+  estimatedCostMin Decimal?     @map("estimated_cost_min") @db.Decimal(16, 2)
+  estimatedCostMax Decimal?     @map("estimated_cost_max") @db.Decimal(16, 2)
+  createdByUserId  BigInt?      @map("created_by_user_id") @db.UnsignedBigInt
+  createdAt        DateTime     @default(now()) @map("created_at")
+
+  creator           User?             @relation("PlanCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  assets            PlanAsset[]
+  requests          PlanRequest[]
+  estimateSummaries EstimateSummary[]
+
+  @@index([category])
+  @@index([createdByUserId])
+  @@index([createdAt])
+  @@map("plans")
+}
+
+model PlanAsset {
+  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  planId    BigInt   @map("plan_id") @db.UnsignedBigInt
+  assetType String   @map("asset_type") @db.VarChar(40)
+  fileUrl   String   @map("file_url") @db.VarChar(255)
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([planId])
+  @@index([createdAt])
+  @@map("plan_assets")
+}
+
+model PlanRequest {
+  id              BigInt            @id @default(autoincrement()) @db.UnsignedBigInt
+  planId          BigInt            @map("plan_id") @db.UnsignedBigInt
+  requesterUserId BigInt            @map("requester_user_id") @db.UnsignedBigInt
+  requestType     PlanRequestType   @map("request_type")
+  notes           String?           @db.Text
+  status          PlanRequestStatus @default(NEW)
+  createdAt       DateTime          @default(now()) @map("created_at")
+
+  plan      Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  requester User @relation(fields: [requesterUserId], references: [id], onDelete: Cascade)
+
+  @@index([planId])
+  @@index([requesterUserId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("plan_requests")
+}
+
+model ServiceProvider {
+  id                 BigInt                     @id @default(autoincrement()) @db.UnsignedBigInt
+  userId             BigInt                     @unique @map("user_id") @db.UnsignedBigInt
+  providerType       ProviderType               @map("provider_type")
+  businessName       String                     @map("business_name") @db.VarChar(160)
+  specialtiesJson    Json?                      @map("specialties_json")
+  regionId           BigInt?                    @map("region_id") @db.UnsignedBigInt
+  verificationStatus ProviderVerificationStatus @default(PENDING) @map("verification_status")
+  verificationNotes  String?                    @map("verification_notes") @db.VarChar(255)
+  verifiedAt         DateTime?                  @map("verified_at")
+  rejectedAt         DateTime?                  @map("rejected_at")
+  avgRating          Decimal                    @default(0) @map("avg_rating") @db.Decimal(4, 2)
+  createdAt          DateTime                   @default(now()) @map("created_at")
+
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  region  Region?          @relation(fields: [regionId], references: [id], onDelete: SetNull)
+  reviews ProviderReview[]
+
+  @@index([providerType])
+  @@index([regionId])
+  @@index([verificationStatus])
+  @@index([createdAt])
+  @@map("service_providers")
+}
+
+model ProviderReview {
+  id             BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  providerId     BigInt   @map("provider_id") @db.UnsignedBigInt
+  reviewerUserId BigInt   @map("reviewer_user_id") @db.UnsignedBigInt
+  rating         Int
+  comment        String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  provider ServiceProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  reviewer User            @relation(fields: [reviewerUserId], references: [id], onDelete: Cascade)
+
+  @@index([providerId])
+  @@index([reviewerUserId])
+  @@index([createdAt])
+  @@map("provider_reviews")
+}
+
+model Project {
+  id            BigInt        @id @default(autoincrement()) @db.UnsignedBigInt
+  userId        BigInt        @map("user_id") @db.UnsignedBigInt
+  projectName   String        @map("project_name") @db.VarChar(160)
+  projectType   ProjectType   @default(RESIDENTIAL) @map("project_type")
+  regionId      BigInt        @map("region_id") @db.UnsignedBigInt
+  plotSizeM2    Decimal?      @map("plot_size_m2") @db.Decimal(10, 2)
+  builtAreaM2   Decimal       @map("built_area_m2") @db.Decimal(10, 2)
+  floors        Int           @default(1)
+  bedrooms      Int?
+  finishLevel   FinishLevel   @default(STANDARD) @map("finish_level")
+  structureType StructureType @default(RC_FRAME) @map("structure_type")
+  roofType      RoofType      @default(IRON_SHEETS) @map("roof_type")
+  status        ProjectStatus @default(DRAFT)
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  user            User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  region          Region                @relation(fields: [regionId], references: [id], onDelete: Restrict)
+  estimateSummary EstimateSummary?
+  boqItems        ProjectBOQItem[]
+  documents       ProjectDocument[]
+  progressLogs    ProjectProgressLog[]
+  roiReport       ProjectROIReport?
+  carbonSummary   ProjectCarbonSummary?
+  members         ProjectMember[]
+  appointments    Appointment[]
+
+  @@index([userId])
+  @@index([regionId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("projects")
+}
+
+model ProjectMember {
+  id         BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  projectId  BigInt   @map("project_id") @db.UnsignedBigInt
+  userId     BigInt   @map("user_id") @db.UnsignedBigInt
+  memberRole String   @map("member_role") @db.VarChar(50)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([projectId])
+  @@index([userId])
+  @@index([memberRole])
+  @@index([createdAt])
+  @@map("project_members")
+}
+
+model EstimateSummary {
+  id                 BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  projectId          BigInt   @unique @map("project_id") @db.UnsignedBigInt
+  planId             BigInt?  @map("plan_id") @db.UnsignedBigInt
+  estimatedTotalCost Decimal  @map("estimated_total_cost") @db.Decimal(16, 2)
+  costPerM2          Decimal  @map("cost_per_m2") @db.Decimal(16, 2)
+  riskBufferPercent  Decimal  @default(10.00) @map("risk_buffer_percent") @db.Decimal(6, 2)
+  riskBufferAmount   Decimal  @map("risk_buffer_amount") @db.Decimal(16, 2)
+  finalEstimatedCost Decimal  @map("final_estimated_cost") @db.Decimal(16, 2)
+  assumptionsJson    Json?    @map("assumptions_json")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  plan    Plan?   @relation(fields: [planId], references: [id], onDelete: SetNull)
+
+  @@index([planId])
+  @@index([createdAt])
+  @@map("estimate_summaries")
+}
+
+model ProjectBOQItem {
+  id            BigInt      @id @default(autoincrement()) @db.UnsignedBigInt
+  projectId     BigInt      @map("project_id") @db.UnsignedBigInt
+  catalogItemId BigInt?     @map("catalog_item_id") @db.UnsignedBigInt
+  customName    String?     @map("custom_name") @db.VarChar(190)
+  category      BOQCategory
+  unit          String      @db.VarChar(40)
+  quantity      Decimal     @db.Decimal(14, 3)
+  unitCost      Decimal     @map("unit_cost") @db.Decimal(14, 2)
+  totalCost     Decimal     @map("total_cost") @db.Decimal(16, 2)
+  notes         String?     @db.VarChar(255)
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  project     Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  catalogItem CostCatalogItem? @relation(fields: [catalogItemId], references: [id], onDelete: SetNull)
+
+  @@index([projectId])
+  @@index([catalogItemId])
+  @@index([createdAt])
+  @@map("project_boq_items")
+}
+
+model ProjectDocument {
+  id            BigInt       @id @default(autoincrement()) @db.UnsignedBigInt
+  projectId     BigInt       @map("project_id") @db.UnsignedBigInt
+  userId        BigInt?      @map("user_id") @db.UnsignedBigInt
+  docType       DocumentType @map("doc_type")
+  fileUrl       String       @map("file_url") @db.VarChar(255)
+  storageKey    String?      @map("storage_key") @db.VarChar(255)
+  originalName  String?      @map("original_name") @db.VarChar(190)
+  mimeType      String?      @map("mime_type") @db.VarChar(120)
+  fileSizeBytes BigInt?      @map("file_size_bytes") @db.UnsignedBigInt
+  reviewStatus  String       @default("PENDING") @map("review_status") @db.VarChar(30)
+  reviewedByUserId BigInt?   @map("reviewed_by_user_id") @db.UnsignedBigInt
+  reviewedAt    DateTime?    @map("reviewed_at")
+  reviewNotes   String?      @map("review_notes") @db.VarChar(255)
+  version       Int          @default(1)
+  createdAt     DateTime     @default(now()) @map("created_at")
+
+  project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user       User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  reviewedBy User?   @relation("ProjectDocumentReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([projectId])
+  @@index([userId])
+  @@index([reviewedByUserId])
+  @@index([reviewStatus])
+  @@index([createdAt])
+  @@map("project_documents")
+}
+
+model ProjectProgressLog {
+  id              BigInt       @id @default(autoincrement()) @db.UnsignedBigInt
+  projectId       BigInt       @map("project_id") @db.UnsignedBigInt
+  logDate         DateTime     @map("log_date") @db.Date
+  stage           ProjectStage
+  progressPercent Decimal      @map("progress_percent") @db.Decimal(6, 2)
+  amountSpent     Decimal      @default(0) @map("amount_spent") @db.Decimal(16, 2)
+  notes           String?      @db.VarChar(255)
+  createdAt       DateTime     @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([createdAt])
+  @@map("project_progress_logs")
+}
+
+model PermitRequirement {
+  id            BigInt            @id @default(autoincrement()) @db.UnsignedBigInt
+  regionId      BigInt            @map("region_id") @db.UnsignedBigInt
+  projectType   PermitProjectType @map("project_type")
+  permitName    String            @map("permit_name") @db.VarChar(190)
+  authorityName String?           @map("authority_name") @db.VarChar(190)
+  estimatedFee  Decimal?          @map("estimated_fee") @db.Decimal(16, 2)
+  estimatedDays Int?              @map("estimated_days")
+  stepsJson     Json?             @map("steps_json")
+  isActive      Boolean           @default(true) @map("is_active")
+  createdAt     DateTime          @default(now()) @map("created_at")
+
+  region Region @relation(fields: [regionId], references: [id], onDelete: Cascade)
+
+  @@index([regionId])
+  @@index([createdAt])
+  @@map("permit_requirements")
+}
+
+model ProjectROIReport {
+  id                   BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  projectId            BigInt   @unique @map("project_id") @db.UnsignedBigInt
+  expectedRentPerMonth Decimal? @map("expected_rent_per_month") @db.Decimal(16, 2)
+  expectedSalePrice    Decimal? @map("expected_sale_price") @db.Decimal(16, 2)
+  maintenancePerYear   Decimal? @map("maintenance_per_year") @db.Decimal(16, 2)
+  vacancyRatePercent   Decimal  @default(0) @map("vacancy_rate_percent") @db.Decimal(6, 2)
+  roiPercent           Decimal  @map("roi_percent") @db.Decimal(8, 3)
+  paybackYears         Decimal  @map("payback_years") @db.Decimal(8, 3)
+  breakEvenMonths      Int      @map("break_even_months")
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@map("project_roi_reports")
+}
+
+model EmissionFactor {
+  id            BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  catalogItemId BigInt    @unique @map("catalog_item_id") @db.UnsignedBigInt
+  co2PerUnit    Decimal   @map("co2_per_unit") @db.Decimal(14, 6)
+  unit          String    @db.VarChar(40)
+  sourceNote    String?   @map("source_note") @db.VarChar(255)
+  activeFrom    DateTime  @map("active_from") @db.Date
+  activeTo      DateTime? @map("active_to") @db.Date
+
+  catalogItem CostCatalogItem @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
+
+  @@map("emission_factors")
+}
+
+model ProjectCarbonSummary {
+  id                  BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  projectId           BigInt   @unique @map("project_id") @db.UnsignedBigInt
+  totalCo2Kg          Decimal  @map("total_co2_kg") @db.Decimal(16, 3)
+  co2PerM2            Decimal  @map("co2_per_m2") @db.Decimal(16, 3)
+  transportDistanceKm Decimal? @map("transport_distance_km") @db.Decimal(10, 2)
+  notesJson           Json?    @map("notes_json")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@map("project_carbon_summaries")
+}
+
+model AIConversation {
+  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  userId    BigInt?  @map("user_id") @db.UnsignedBigInt
+  guestId   String?  @map("guest_id") @db.VarChar(80)
+  title     String?  @db.VarChar(190)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user     User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages AIMessage[]
+
+  @@index([userId])
+  @@index([guestId])
+  @@index([createdAt])
+  @@map("ai_conversations")
+}
+
+model AIMessage {
+  id             BigInt        @id @default(autoincrement()) @db.UnsignedBigInt
+  conversationId BigInt        @map("conversation_id") @db.UnsignedBigInt
+  role           AIMessageRole
+  content        String        @db.Text
+  metaJson       Json?         @map("meta_json")
+  createdAt      DateTime      @default(now()) @map("created_at")
+
+  conversation AIConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([createdAt])
+  @@map("ai_messages")
+}
+
+model GuestChatLimit {
+  id           BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  guestId      String   @unique @map("guest_id") @db.VarChar(80)
+  messageCount Int      @default(0) @map("message_count")
+  firstSeenAt  DateTime @default(now()) @map("first_seen_at")
+  lastSeenAt   DateTime @updatedAt @map("last_seen_at")
+
+  @@map("guest_chat_limits")
+}
+
+model Upload {
+  id           BigInt           @id @default(autoincrement()) @db.UnsignedBigInt
+  uploadedById BigInt           @map("uploaded_by_id") @db.UnsignedBigInt
+  entityType   UploadEntityType @map("entity_type")
+  entityId     BigInt?          @map("entity_id") @db.UnsignedBigInt
+  fileType     UploadFileType   @map("file_type")
+  mimeType     String?          @map("mime_type") @db.VarChar(120)
+  filename     String           @db.VarChar(255)
+  url          String           @db.VarChar(600)
+  sizeBytes    BigInt?          @map("size_bytes") @db.UnsignedBigInt
+  createdAt    DateTime         @default(now()) @map("created_at")
+
+  uploadedBy User @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+
+  @@index([uploadedById])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("uploads")
+}
+
+model AuditLog {
+  id         BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  userId     BigInt?  @map("user_id") @db.UnsignedBigInt
+  action     String   @db.VarChar(80)
+  entityType String?  @map("entity_type") @db.VarChar(60)
+  entityId   BigInt?  @map("entity_id") @db.UnsignedBigInt
+  ipAddress  String?  @map("ip_address") @db.VarChar(64)
+  userAgent  String?  @map("user_agent") @db.VarChar(255)
+  metaJson   Json?    @map("meta_json")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model Permission {
+  id          BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  name        String   @unique @db.VarChar(100)
+  description String?  @db.VarChar(255)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  roleMappings RolePermission[]
+
+  @@index([createdAt])
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  role         UserRole
+  permissionId BigInt   @map("permission_id") @db.UnsignedBigInt
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([role, permissionId])
+  @@index([role])
+  @@index([permissionId])
+  @@index([createdAt])
+  @@map("role_permissions")
+}
+
+model Transaction {
+  id                    BigInt             @id @default(autoincrement()) @db.UnsignedBigInt
+  userId                BigInt             @map("user_id") @db.UnsignedBigInt
+  provider              PaymentProvider    @default(MANUAL)
+  reference             String?            @unique @db.VarChar(120)
+  invoiceNumber         String?            @unique @map("invoice_number") @db.VarChar(80)
+  amount                Decimal            @db.Decimal(16, 2)
+  currency              String             @default("RWF") @db.VarChar(20)
+  type                  String             @db.VarChar(50)
+  serviceType           PaymentServiceType @default(OTHER) @map("service_type")
+  serviceReference      String?            @map("service_reference") @db.VarChar(120)
+  serviceLabel          String?            @map("service_label") @db.VarChar(160)
+  description           String?            @db.VarChar(255)
+  phoneNumber           String?            @map("phone_number") @db.VarChar(30)
+  providerTransactionId String?            @map("provider_transaction_id") @db.VarChar(191)
+  redirectUrl           String?            @map("redirect_url") @db.VarChar(500)
+  ussdPrompt            String?            @map("ussd_prompt") @db.VarChar(255)
+  status                PaymentStatus      @default(INITIATED)
+  providerStatus        String?            @map("provider_status") @db.VarChar(60)
+  webhookStatus         String?            @map("webhook_status") @db.VarChar(40)
+  escrowStatus          EscrowStatus       @default(NONE) @map("escrow_status")
+  metadata              Json?
+  heldAt                DateTime?          @map("held_at")
+  settledAt             DateTime?          @map("settled_at")
+  receiptIssuedAt       DateTime?          @map("receipt_issued_at")
+  releaseRequestedAt    DateTime?          @map("release_requested_at")
+  releasedAt            DateTime?          @map("released_at")
+  milestoneStage        ProjectStage?      @map("milestone_stage")
+  milestoneApprovedAt   DateTime?          @map("milestone_approved_at")
+  refundReference       String?            @map("refund_reference") @db.VarChar(120)
+  refundReason          String?            @map("refund_reason") @db.VarChar(255)
+  refundRequestedAt     DateTime?          @map("refund_requested_at")
+  refundedAt            DateTime?          @map("refunded_at")
+  failureReason         String?            @map("failure_reason") @db.VarChar(255)
+  createdAt             DateTime           @default(now()) @map("created_at")
+  updatedAt             DateTime           @updatedAt @map("updated_at")
+
+  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  webhookEvents PaymentWebhookEvent[]
+
+  @@index([userId])
+  @@index([provider])
+  @@index([status])
+  @@index([serviceType])
+  @@index([serviceReference])
+  @@index([escrowStatus])
+  @@index([createdAt])
+  @@map("transactions")
+}
+
+model PaymentWebhookEvent {
+  id              BigInt          @id @default(autoincrement()) @db.UnsignedBigInt
+  transactionId   BigInt?         @map("transaction_id") @db.UnsignedBigInt
+  provider        PaymentProvider
+  eventType       String          @map("event_type") @db.VarChar(120)
+  externalEventId String?         @map("external_event_id") @db.VarChar(191)
+  signatureValid  Boolean         @default(false) @map("signature_valid")
+  payload         Json
+  receivedAt      DateTime        @default(now()) @map("received_at")
+  processedAt     DateTime?       @map("processed_at")
+  processingError String?         @map("processing_error") @db.VarChar(255)
+
+  transaction Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+
+  @@index([transactionId])
+  @@index([provider])
+  @@index([receivedAt])
+  @@map("payment_webhook_events")
+}
+
+model CalendarSlot {
+  id             BigInt             @id @default(autoincrement()) @db.UnsignedBigInt
+  providerUserId BigInt             @map("provider_user_id") @db.UnsignedBigInt
+  startsAt       DateTime           @map("starts_at")
+  endsAt         DateTime           @map("ends_at")
+  status         CalendarSlotStatus @default(AVAILABLE)
+  notes          String?            @db.VarChar(255)
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+
+  provider    User         @relation("CalendarSlotProvider", fields: [providerUserId], references: [id], onDelete: Cascade)
+  appointment Appointment?
+
+  @@unique([providerUserId, startsAt, endsAt])
+  @@index([providerUserId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("calendar_slots")
+}
+
+model Appointment {
+  id             BigInt            @id @default(autoincrement()) @db.UnsignedBigInt
+  providerUserId BigInt            @map("provider_user_id") @db.UnsignedBigInt
+  clientUserId   BigInt            @map("client_user_id") @db.UnsignedBigInt
+  projectId      BigInt?           @map("project_id") @db.UnsignedBigInt
+  calendarSlotId BigInt?           @unique @map("calendar_slot_id") @db.UnsignedBigInt
+  startsAt       DateTime          @map("starts_at")
+  endsAt         DateTime          @map("ends_at")
+  status         AppointmentStatus @default(REQUESTED)
+  meetingType    String?           @map("meeting_type") @db.VarChar(30)
+  notes          String?           @db.Text
+  cancelReason   String?           @map("cancel_reason") @db.VarChar(255)
+  reminder24hSentAt DateTime?      @map("reminder_24h_sent_at")
+  reminder1hSentAt DateTime?       @map("reminder_1h_sent_at")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+
+  provider     User          @relation("AppointmentProvider", fields: [providerUserId], references: [id], onDelete: Cascade)
+  client       User          @relation("AppointmentClient", fields: [clientUserId], references: [id], onDelete: Cascade)
+  project      Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  calendarSlot CalendarSlot? @relation(fields: [calendarSlotId], references: [id], onDelete: SetNull)
+
+  @@index([providerUserId])
+  @@index([clientUserId])
+  @@index([projectId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("appointments")
+}
+
+model Notification {
+  id          BigInt             @id @default(autoincrement()) @db.UnsignedBigInt
+  userId      BigInt             @map("user_id") @db.UnsignedBigInt
+  type        String             @db.VarChar(60)
+  title       String             @db.VarChar(190)
+  body        String             @db.Text
+  actionUrl   String?            @map("action_url") @db.VarChar(255)
+  payloadJson Json?              @map("payload_json")
+  status      NotificationStatus @default(UNREAD)
+  readAt      DateTime?          @map("read_at")
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model Conversation {
+  id               BigInt             @id @default(autoincrement()) @db.UnsignedBigInt
+  participantOneId BigInt             @map("participant_one_id") @db.UnsignedBigInt
+  participantTwoId BigInt             @map("participant_two_id") @db.UnsignedBigInt
+  createdById      BigInt?            @map("created_by_id") @db.UnsignedBigInt
+  subject          String?            @db.VarChar(190)
+  status           ConversationStatus @default(ACTIVE)
+  lastMessageAt    DateTime?          @map("last_message_at")
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+
+  participantOne User      @relation("ConversationParticipantOne", fields: [participantOneId], references: [id], onDelete: Cascade)
+  participantTwo User      @relation("ConversationParticipantTwo", fields: [participantTwoId], references: [id], onDelete: Cascade)
+  createdBy      User?     @relation("ConversationCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  messages       Message[]
+
+  @@unique([participantOneId, participantTwoId])
+  @@index([participantOneId])
+  @@index([participantTwoId])
+  @@index([createdById])
+  @@index([status])
+  @@index([lastMessageAt])
+  @@index([createdAt])
+  @@map("conversations")
+}
+
+model Message {
+  id             BigInt        @id @default(autoincrement()) @db.UnsignedBigInt
+  conversationId BigInt        @map("conversation_id") @db.UnsignedBigInt
+  senderId       BigInt        @map("sender_id") @db.UnsignedBigInt
+  recipientId    BigInt        @map("recipient_id") @db.UnsignedBigInt
+  body           String        @db.Text
+  attachmentUrl      String?   @map("attachment_url") @db.VarChar(600)
+  attachmentName     String?   @map("attachment_name") @db.VarChar(255)
+  attachmentMimeType String?   @map("attachment_mime_type") @db.VarChar(120)
+  attachmentSizeBytes BigInt?  @map("attachment_size_bytes") @db.UnsignedBigInt
+  status         MessageStatus @default(SENT)
+  deliveredAt    DateTime?     @map("delivered_at")
+  readAt         DateTime?     @map("read_at")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient    User         @relation("MessageRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([recipientId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("messages")
+}
+
+// ─── Cost Benchmarks ──────────────────────────────────────────────────────────
+// Admin-managed reference table: cost per sqm by Province/District + building type.
+// Used by the estimator module and the analytics API.
+// Apply with: prisma db push  (or prisma migrate dev --name add_cost_benchmarks)
+
+model CostBenchmark {
+  id           BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  province     String   @db.VarChar(120)
+  district     String   @default("") @db.VarChar(120)
+  buildingType String   @map("building_type") @db.VarChar(60)
+  minCostPerM2 Decimal  @map("min_cost_per_m2") @db.Decimal(16, 2)
+  maxCostPerM2 Decimal  @map("max_cost_per_m2") @db.Decimal(16, 2)
+  currency     String   @default("RWF") @db.VarChar(20)
+  notes        String?  @db.VarChar(255)
+  updatedById  BigInt?  @map("updated_by_id") @db.UnsignedBigInt
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  updatedBy User? @relation("CostBenchmarkUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([province, district, buildingType], name: "province_district_buildingType")
+  @@index([province])
+  @@index([updatedById])
+  @@index([createdAt])
+  @@map("cost_benchmarks")
+}
+
+model Task {
+  id          BigInt       @id @default(autoincrement()) @db.UnsignedBigInt
+  userId      BigInt       @map("user_id") @db.UnsignedBigInt
+  title       String       @db.VarChar(255)
+  description String?      @db.Text
+  status      TaskStatus   @default(TODO)
+  priority    TaskPriority @default(MEDIUM)
+  assignee    String?      @db.VarChar(120)
+  projectName String?      @map("project_name") @db.VarChar(160)
+  dueDate     DateTime?    @map("due_date")
+  tags        String?      @db.VarChar(500)
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("tasks")
+}
+
+model ContactMessage {
+  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  name      String   @db.VarChar(120)
+  email     String   @db.VarChar(190)
+  message   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([email])
+  @@index([createdAt])
+  @@map("contact_messages")
+}

@@ -1,3 +1,7 @@
+<<<<<<< HEAD:Civilbridge/front/src/utils/storage.js
+<<<<<<<< HEAD:Civilbridge/front/src/utils/storage.js
+=======
+>>>>>>> 4ea07cd40f419356d8c89a657b9422e051f7b224:front/src/utils/storage.js
 const KEYS = {
   FAV_LISTINGS: "cb_fav_listings",
   FAV_PLANS: "cb_fav_plans",
@@ -31,3 +35,9 @@ export function toggleInSet(key, id) {
 
 export { KEYS };
 
+<<<<<<< HEAD:Civilbridge/front/src/utils/storage.js
+========
+// Legacy file kept temporarily so the repo can migrate cleanly to `storage.js`.
+>>>>>>>> 4ea07cd40f419356d8c89a657b9422e051f7b224:front/src/utils/storage.jsx
+=======
+>>>>>>> 4ea07cd40f419356d8c89a657b9422e051f7b224:front/src/utils/storage.js

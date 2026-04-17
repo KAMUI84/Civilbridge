@@ -1,7 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(grep -r \"router\\\\.\" /e/Projects/CivilBridge/Civilbridge/back/src/modules/*/\\\\*.routes.js)"
-    ]
-  }
-}

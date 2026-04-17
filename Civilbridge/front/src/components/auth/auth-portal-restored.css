@@ -1,0 +1,269 @@
+.portalPage {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px;
+  background:
+    radial-gradient(circle at top left, rgba(16, 185, 129, 0.12), transparent 24%),
+    radial-gradient(circle at bottom right, rgba(15, 118, 110, 0.08), transparent 22%),
+    #f6f8fb;
+}
+
+.portalBackground {
+  display: none;
+}
+
+.authPortalCard {
+  width: min(1100px, 100%);
+  border-radius: 28px;
+  border: 1px solid #dbe3ee;
+  background: #ffffff;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+}
+
+.portalSplit {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+  min-height: 680px;
+}
+
+.authPortalCard.register .portalSplit {
+  grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+}
+
+.portalAction,
+.portalStoryPanel {
+  padding: 36px 32px;
+}
+
+.portalAction {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  background: #ffffff;
+}
+
+.portalStoryPanel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, #0f766e 0%, #064e3b 100%);
+}
+
+.portalSectionHeader {
+  display: grid;
+  gap: 10px;
+}
+
+.portalTag {
+  display: inline-flex;
+  width: fit-content;
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: #047857;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.portalSectionHeader h1 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 2.6rem);
+  line-height: 1.05;
+  color: #0f172a;
+}
+
+.portalLead {
+  margin: 0;
+  color: #475569;
+  line-height: 1.7;
+}
+
+.portalHint,
+.portalHintCompact {
+  color: #475569;
+  font-size: 0.95rem;
+}
+
+.portalHint {
+  margin: 0;
+}
+
+.portalError {
+  border-radius: 16px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  padding: 14px 16px;
+  font-size: 0.95rem;
+}
+
+.portalChoices,
+.portalForm {
+  display: grid;
+  gap: 14px;
+}
+
+.portalGoogleWrap {
+  border-radius: 18px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  padding: 16px;
+}
+
+.portalSeparator {
+  position: relative;
+  height: 1px;
+  background: #e2e8f0;
+  margin: 6px 0 2px;
+}
+
+.portalSeparator::after {
+  content: "or continue with details";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: #ffffff;
+  padding: 0 12px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.portalForm label,
+.portalTermsLabel {
+  display: grid;
+  gap: 8px;
+  color: #0f172a;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.portalInput {
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
+  padding: 14px 15px;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.portalInput:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.12);
+}
+
+.portalBtnPrimary,
+.portalBtnSecondary,
+.portalMethodButton {
+  min-height: 48px;
+  border-radius: 14px;
+  border: 1px solid transparent;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.portalBtnPrimary,
+.portalMethodButton {
+  background: #059669;
+  color: #ffffff;
+}
+
+.portalBtnPrimary:hover,
+.portalMethodButton:hover,
+.portalBtnSecondary:hover {
+  transform: translateY(-1px);
+}
+
+.portalBtnSecondary {
+  background: #ffffff;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+.portalSwitchBtn,
+.portalLink,
+.portalFooterText a {
+  border: none;
+  background: transparent;
+  color: #047857;
+  padding: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.portalSwitchBtn:hover,
+.portalLink:hover,
+.portalFooterText a:hover {
+  text-decoration: underline;
+}
+
+.portalUtilityRow {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.portalTermsLabel {
+  grid-template-columns: 20px 1fr;
+  align-items: start;
+  gap: 12px;
+}
+
+.portalTermsCheckbox {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: #059669;
+}
+
+.portalResendRow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+
+.portalFooterText {
+  margin-top: auto;
+  color: #64748b;
+  font-size: 0.95rem;
+}
+
+@media (max-width: 900px) {
+  .portalSplit,
+  .authPortalCard.register .portalSplit {
+    grid-template-columns: 1fr;
+  }
+
+  .portalStoryPanel {
+    order: 2;
+  }
+}
+
+@media (max-width: 640px) {
+  .portalPage {
+    padding: 20px 12px;
+  }
+
+  .portalAction,
+  .portalStoryPanel {
+    padding: 26px 20px;
+  }
+
+  .portalUtilityRow,
+  .portalResendRow {
+    justify-content: flex-start;
+  }
+}

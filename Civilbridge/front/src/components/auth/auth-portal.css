@@ -1,0 +1,992 @@
+.portalPage {
+  min-height: 100vh;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  background: radial-gradient(circle at top left, rgba(133, 52, 255, 0.18), transparent 22%),
+    radial-gradient(circle at 82% 15%, rgba(0, 212, 255, 0.14), transparent 18%),
+    radial-gradient(circle at 50% 80%, rgba(96, 165, 250, 0.08), transparent 18%),
+    #09050f;
+}
+
+.portalPage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 20% 20%, rgba(86, 85, 255, 0.24), transparent 22%),
+    radial-gradient(circle at 75% 12%, rgba(0, 212, 255, 0.18), transparent 18%);
+  filter: blur(32px);
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.portalBackground {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(18, 6, 44, 0.92), rgba(7, 2, 23, 0.96));
+  overflow: hidden;
+}
+
+.portalBackground::after {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  background: radial-gradient(circle at 50% 20%, rgba(79, 70, 229, 0.16), transparent 24%),
+    radial-gradient(circle at 25% 75%, rgba(16, 185, 129, 0.12), transparent 20%),
+    radial-gradient(circle at 80% 40%, rgba(0, 212, 255, 0.12), transparent 18%);
+  opacity: 0.75;
+  animation: portalFlow 14s ease-in-out infinite;
+}
+
+@keyframes portalFlow {
+  0% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-6%, 5%) scale(1.03); }
+  66% { transform: translate(7%, -4%) scale(1.02); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+
+.authPortalCard {
+  position: relative;
+  width: min(1080px, 100%);
+  min-height: 680px;
+  border-radius: 36px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: linear-gradient(180deg, rgba(15, 8, 43, 0.95), rgba(6, 3, 20, 0.92));
+  box-shadow: 0 40px 120px rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1.02fr 0.98fr;
+  grid-template-areas: "action story";
+  gap: 0;
+  z-index: 1;
+}
+
+.authPortalCard.register {
+  grid-template-columns: 0.98fr 1.02fr;
+  grid-template-areas: "story action";
+}
+
+.authPortalCard::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 43%);
+  pointer-events: none;
+}
+
+.authPortalCard::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 36px;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(125, 47, 255, 0.35), rgba(0, 210, 255, 0.24));
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  -webkit-mask-composite: destination-out;
+  pointer-events: none;
+}
+
+.portalSplit {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-areas: "action story";
+  min-height: 680px;
+}
+
+.authPortalCard.register .portalSplit {
+  grid-template-areas: "story action";
+}
+
+.portalAction,
+.portalStoryPanel {
+  position: relative;
+  padding: 42px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.portalAction {
+  grid-area: action;
+  background: rgba(8, 5, 24, 0.95);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.authPortalCard.register .portalAction {
+  border-right: none;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.portalStoryPanel {
+  grid-area: story;
+  background: radial-gradient(circle at top right, rgba(139, 92, 246, 0.22), transparent 26%),
+    radial-gradient(circle at 28% 20%, rgba(59, 130, 246, 0.18), transparent 22%),
+    linear-gradient(180deg, rgba(70, 12, 135, 0.96), rgba(20, 5, 55, 0.98));
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+.portalStoryPanel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.08), transparent 20%),
+    radial-gradient(circle at 80% 18%, rgba(0, 212, 255, 0.1), transparent 18%);
+  opacity: 0.85;
+}
+
+.portalStory {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 20px;
+  width: 100%;
+  max-width: 420px;
+}
+
+.portalStoryIntro {
+  padding: 26px 28px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.storyBadge {
+  display: inline-flex;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #e9d7ff;
+  font-size: 0.78rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+
+.portalStoryIntro h2 {
+  margin: 0;
+  font-size: clamp(2.8rem, 3.6vw, 4.5rem);
+  line-height: 0.95;
+  letter-spacing: 0.04em;
+  color: #ffffff;
+}
+
+.portalStoryIntro p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 1rem;
+  line-height: 1.8;
+}
+
+.portalSlides {
+  position: relative;
+  min-height: 300px;
+}
+
+.portalSlide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transform: translateY(20px) scale(0.98);
+  transition: opacity 0.75s ease, transform 0.75s ease;
+  border-radius: 28px;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  padding: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03), 0 28px 80px rgba(0, 0, 0, 0.26);
+  background-color: rgba(5, 8, 27, 0.7);
+}
+
+.portalSlide.active {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.portalSlideInner {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 16px;
+}
+
+.slideNumber {
+  font-size: 0.9rem;
+  letter-spacing: 0.2em;
+  color: rgba(164, 202, 255, 0.82);
+  text-transform: uppercase;
+  font-weight: 800;
+}
+
+.portalSlideInner h3 {
+  margin: 0;
+  font-size: clamp(1.75rem, 2.4vw, 2.4rem);
+  line-height: 1.05;
+  color: #fff;
+}
+
+.portalSlideInner p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.72);
+  line-height: 1.7;
+}
+
+.portalSlide-foundations {
+  background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.22), transparent 28%),
+    linear-gradient(180deg, rgba(18, 14, 84, 0.96), rgba(10, 5, 28, 0.9));
+}
+
+.portalSlide-action {
+  background: radial-gradient(circle at 20% 20%, rgba(139, 92, 246, 0.24), transparent 24%),
+    linear-gradient(180deg, rgba(23, 10, 85, 0.95), rgba(12, 6, 26, 0.9));
+}
+
+.portalSlide-evolution {
+  background: radial-gradient(circle at 70% 15%, rgba(0, 212, 255, 0.16), transparent 18%),
+    linear-gradient(180deg, rgba(14, 8, 46, 0.96), rgba(6, 3, 18, 0.92));
+}
+
+.portalSlideNavigation {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.slideDot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: transparent;
+  cursor: pointer;
+}
+
+.slideDot.active {
+  background: rgba(0, 212, 255, 0.95);
+  box-shadow: 0 0 0 6px rgba(0, 212, 255, 0.14);
+}
+
+.portalChoices,
+.portalForm {
+  display: grid;
+  gap: 16px;
+}
+
+.portalBtnPrimary,
+.portalMethodButton {
+  width: 100%;
+  min-height: 52px;
+  border-radius: 999px;
+  border: none;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #fff;
+  cursor: pointer;
+  background: linear-gradient(90deg, #7c3aed, #9333ea, #00d4ff, #0ea5e9);
+  background-size: 300% 100%;
+  animation: slideGradient 6s linear infinite;
+  box-shadow: 0 18px 28px rgba(30, 40, 120, 0.35);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+@keyframes slideGradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.portalBtnPrimary:hover,
+.portalMethodButton:hover,
+.portalBtnSecondary:hover,
+.portalSwitchBtn:hover {
+  transform: translateY(-2px);
+}
+
+.portalBtnSecondary {
+  width: 100%;
+  min-height: 52px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  color: #e7f2ff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.portalSwitchBtn {
+  width: fit-content;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #c2e9ff;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  align-self: flex-start;
+}
+
+.portalForm label,
+.portalTermsLabel {
+  display: grid;
+  gap: 10px;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.portalInput {
+  width: 100%;
+  height: 52px;
+  padding: 14px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+  outline: none;
+  font-size: 0.95rem;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.portalInput:focus {
+  border-color: rgba(96, 165, 250, 0.78);
+  transform: translateY(-1px);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+.portalHint,
+.portalHintCompact {
+  color: rgba(255, 255, 255, 0.76);
+}
+
+.portalHint {
+  padding: 18px 20px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.portalHintCompact {
+  font-size: 0.92rem;
+}
+
+.portalError {
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: rgba(255, 17, 141, 0.16);
+  color: #ffd6ed;
+  border: 1px solid rgba(255, 113, 213, 0.22);
+  font-size: 0.95rem;
+}
+
+.portalFooterText {
+  margin-top: auto;
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.76);
+}
+
+.portalFooterText a,
+.portalLink {
+  color: #a78bfa;
+  text-decoration: none;
+  font-weight: 800;
+}
+
+.portalFooterText a:hover,
+.portalLink:hover {
+  text-decoration: underline;
+}
+
+.portalUtilityRow {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.portalSeparator {
+  width: 100%;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.portalTermsLabel {
+  grid-template-columns: 24px 1fr;
+  align-items: start;
+  gap: 12px;
+}
+
+.portalTermsCheckbox {
+  width: 20px;
+  height: 20px;
+  accent-color: #7c3aed;
+  border-radius: 6px;
+  margin-top: 4px;
+}
+
+.portalResendRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+@media (max-width: 900px) {
+  .authPortalCard {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .authPortalCard.register {
+    grid-template-areas: "action" "story";
+  }
+
+  .portalSplit {
+    grid-template-areas: "action" "story";
+  }
+
+  .portalAction,
+  .portalStoryPanel {
+    padding: 28px 22px;
+  }
+}
+
+@media (max-width: 640px) {
+  .portalPage {
+    padding: 24px 14px;
+  }
+
+  .portalStoryIntro h2 {
+    font-size: 2.4rem;
+  }
+
+  .portalBtnPrimary,
+  .portalMethodButton,
+  .portalBtnSecondary {
+    min-height: 48px;
+  }
+}
+"""
+
+story_content = r"""import { useEffect, useMemo, useState } from "react";
+
+const STORY_SETS = {
+  login: [
+    {
+      title: "Built on trust and reliability.",
+      caption: "Access your space with confidence, clarity, and premium speed.",
+      variant: "foundations",
+    },
+    {
+      title: "Accelerating your potential.",
+      caption: "Every sign-in begins a smoother, more powerful workflow.",
+      variant: "action",
+    },
+    {
+      title: "Bringing the evolution you deserve.",
+      caption: "A refined portal experience for teams and builders alike.",
+      variant: "evolution",
+    },
+  ],
+  register: [
+    {
+      title: "Built on trust and reliability.",
+      caption: "Create your account on a secure, professional foundation.",
+      variant: "foundations",
+    },
+    {
+      title: "Accelerating your potential.",
+      caption: "Sign-up is seamless, fast, and ready for your next project.",
+      variant: "action",
+    },
+    {
+      title: "Bringing the evolution you deserve.",
+      caption: "Start with a premium onboarding flow designed for growth.",
+      variant: "evolution",
+    },
+  ],
+};
+
+const HERO_BANNERS = {
+  login: {
+    badge: "WELCOME BACK!",
+    headline: "Your portal awaits",
+    subtext: "Sign in to continue your project journey with premium access and momentum.",
+  },
+  register: {
+    badge: "WELCOME BACK!",
+    headline: "Build your future",
+    subtext: "Create your account and join the next evolution of trusted construction workflows.",
+  },
+};
+
+export default function AuthPortalStory({ variant = "login" }) {
+  const slides = useMemo(() => STORY_SETS[variant] || STORY_SETS.login, [variant]);
+  const [activeSlide, setActiveSlide] = useState(0);
+  const hero = HERO_BANNERS[variant] || HERO_BANNERS.login;
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % slides.length);
+    }, 7000);
+    return () => clearInterval(timer);
+  }, [slides.length]);
+
+  return (
+    <div className="portalStory">
+      <div className="portalStoryIntro">
+        <span className="storyBadge">{hero.badge}</span>
+        <h2>{hero.headline}</h2>
+        <p>{hero.subtext}</p>
+      </div>
+
+      <div className="portalSlides">
+        {slides.map((slide, index) => (
+          <div
+            key={slide.title}
+            className={`portalSlide portalSlide-${slide.variant} ${index === activeSlide ? "active" : ""}`}
+            aria-hidden={index !== activeSlide}
+          >
+            <div className="portalSlideInner">
+              <span className="slideNumber">0{index + 1}</span>
+              <h3>{slide.title}</h3>
+              <p>{slide.caption}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="portalSlideNavigation">
+        {slides.map((_, index) => (
+          <button
+            key={index}
+            type="button"
+            className={index === activeSlide ? "slideDot active" : "slideDot"}
+            onClick={() => setActiveSlide(index)}
+            aria-label={`Show slide ${index + 1}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+"""
+
+login_content = r"""import { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "../../context/useAuth";
+import GoogleButton from "../../components/auth/GoogleButton";
+import AuthPortalStory from "../../components/auth/AuthPortalStory";
+import SEO from "../../components/seo/SEO";
+import "../../components/auth/auth-portal.css";
+
+export default function Login() {
+  const { login, googleLogin } = useAuth();
+  const location = useLocation();
+  const returnTo = location.state?.from?.pathname || null;
+  const [authMethod, setAuthMethod] = useState("choice");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function onSubmit(e) {
+    e.preventDefault();
+    setErr("");
+    setLoading(true);
+
+    try {
+      if (!email || !password) throw new Error("Enter email and password.");
+      await login({ email, password }, returnTo);
+    } catch (error) {
+      setErr(error?.message || "Login failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleGoogleLogin(credential) {
+    setErr("");
+    setLoading(true);
+
+    try {
+      await googleLogin(credential, returnTo);
+    } catch (error) {
+      setErr(error?.message || "Google login failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="portalPage">
+      <div className="portalBackground" />
+      <SEO title="Login" description="Sign in to your CivilBridge account." noindex />
+
+      <div className="authPortalCard login">
+        <div className="portalSplit">
+          <section className="portalAction">
+            <div className="portalSectionHeader">
+              <span className="portalTag">Login</span>
+              <h1>Login</h1>
+              <p className="portalLead">
+                {returnTo
+                  ? "Sign in to continue and return to your workspace."
+                  : "Enter your credentials and access your CivilBridge dashboard."}
+              </p>
+            </div>
+
+            {err && <div className="portalError">{err}</div>}
+
+            {authMethod === "choice" && (
+              <div className="portalChoices">
+                <button type="button" className="portalMethodButton" onClick={() => setAuthMethod("google")}>Continue with Google</button>
+                <button type="button" className="portalBtnSecondary" onClick={() => setAuthMethod("email")}>Sign in with email</button>
+              </div>
+            )}
+
+            {authMethod === "google" && (
+              <>
+                <div className="portalHint">Secure access with Google authentication for faster sign-in.</div>
+                <GoogleButton onCredential={handleGoogleLogin} />
+                <button type="button" className="portalSwitchBtn" onClick={() => setAuthMethod("email")}>Use email instead</button>
+              </>
+            )}
+
+            {authMethod === "email" && (
+              <>
+                <div className="portalHint">Sign in with your registered email and password.</div>
+                <form onSubmit={onSubmit} className="portalForm">
+                  <label>
+                    Username
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      className="portalInput"
+                      required
+                      autoComplete="email"
+                    />
+                  </label>
+                  <label>
+                    Password
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="portalInput"
+                      required
+                      autoComplete="current-password"
+                    />
+                  </label>
+
+                  <div className="portalUtilityRow">
+                    <Link to="/forgot-password" className="portalLink">Forgot password?</Link>
+                  </div>
+
+                  <button type="submit" disabled={loading} className="portalBtnPrimary">
+                    {loading ? "Signing in…" : "Login"}
+                  </button>
+                </form>
+                <button type="button" className="portalSwitchBtn" onClick={() => setAuthMethod("google")}>Use Google instead</button>
+              </>
+            )}
+
+            <div className="portalFooterText">
+              Don&apos;t have an account? <Link to="/register">Sign Up</Link>
+            </div>
+          </section>
+
+          <section className="portalStoryPanel">
+            <AuthPortalStory variant="login" />
+          </section>
+        </div>
+      </div>
+    </div>
+  );
+}
+"""
+
+register_content = r"""import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/useAuth";
+import GoogleButton from "../../components/auth/GoogleButton";
+import AuthPortalStory from "../../components/auth/AuthPortalStory";
+import { api } from "../../services/apiClientService";
+import SEO from "../../components/seo/SEO";
+import "../../components/auth/auth-portal.css";
+
+const STEP_DETAILS = 1;
+const STEP_OTP = 2;
+
+export default function Register() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const returnTo = location.state?.from?.pathname || null;
+  const { googleLogin } = useAuth();
+  const [step, setStep] = useState(STEP_DETAILS);
+  const [fullName, setFullName] = useState("");
+  const [emailOrPhone, setEmailOrPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState("");
+  const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown((value) => Math.max(value - 1, 0)), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [countdown]);
+
+  async function requestOtp(e) {
+    e.preventDefault();
+    setErr("");
+    setLoading(true);
+
+    try {
+      if (!fullName || !emailOrPhone || !password) throw new Error("Fill all fields.");
+      if (!termsAccepted) throw new Error("You must accept the Terms & Conditions to continue.");
+
+      const isEmail = emailOrPhone.includes("@");
+      const payload = isEmail
+        ? { email: emailOrPhone.toLowerCase().trim() }
+        : { phone: emailOrPhone.trim() };
+
+      const data = await api.post("/api/auth/register/request-otp", payload);
+
+      if (data.success) {
+        setStep(STEP_OTP);
+        setErr("");
+        setCountdown(60);
+      } else {
+        throw new Error(data.message || "Failed to send OTP.");
+      }
+    } catch (error) {
+      setErr(error?.message || "Failed to send OTP.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function resendOtp() {
+    if (countdown > 0) return;
+    setErr("");
+    setResendLoading(true);
+
+    try {
+      const isEmail = emailOrPhone.includes("@");
+      const payload = isEmail
+        ? { email: emailOrPhone.toLowerCase().trim() }
+        : { phone: emailOrPhone.trim() };
+
+      const data = await api.post("/api/auth/register/request-otp", payload);
+
+      if (data.success) {
+        setCountdown(60);
+        setOtp("");
+      } else {
+        throw new Error(data.message || "Failed to resend OTP.");
+      }
+    } catch (error) {
+      setErr(error?.message || "Failed to resend OTP.");
+    } finally {
+      setResendLoading(false);
+    }
+  }
+
+  async function verifyAndRegister(e) {
+    e.preventDefault();
+    setErr("");
+    setLoading(true);
+
+    try {
+      if (!otp) throw new Error("Enter OTP code.");
+      if (!fullName || !password || !emailOrPhone) throw new Error("Missing registration details. Please go back.");
+
+      const isEmail = emailOrPhone.includes("@");
+      const payload = {
+        fullname: fullName,
+        password,
+        otp: otp.trim(),
+        email: isEmail ? emailOrPhone.toLowerCase().trim() : undefined,
+        phone: !isEmail ? emailOrPhone.trim() : undefined,
+      };
+
+      const data = await api.post("/api/auth/register", payload);
+
+      if (data.success && data.user) {
+        navigate(returnTo || "/dashboard", { replace: true, state: { newUser: true } });
+      } else {
+        throw new Error(data.message || "Registration failed.");
+      }
+    } catch (error) {
+      setErr(error?.message || "Registration failed.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleGoogleCredential(credential) {
+    setErr("");
+    setLoading(true);
+
+    try {
+      await googleLogin(credential, returnTo);
+    } catch (error) {
+      setErr(error?.message || "Google signup failed.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="portalPage">
+      <div className="portalBackground" />
+      <SEO title="Sign Up" description="Create your CivilBridge account." noindex />
+
+      <div className="authPortalCard register">
+        <div className="portalSplit">
+          <section className="portalAction">
+            <div className="portalSectionHeader">
+              <span className="portalTag">Sign Up</span>
+              <h1>Sign Up</h1>
+              <p className="portalLead">
+                Create your account and start building with the CivilBridge platform.
+              </p>
+            </div>
+
+            {err && <div className="portalError">{err}</div>}
+
+            {step === STEP_DETAILS ? (
+              <>
+                <div className="portalHint">Use Google for quick signup, or create an account with email/phone and OTP verification.</div>
+                <GoogleButton onCredential={handleGoogleCredential} />
+                <div className="portalSeparator" />
+                <form onSubmit={requestOtp} className="portalForm">
+                  <label>
+                    Username
+                    <input
+                      type="text"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="John Doe"
+                      className="portalInput"
+                      required
+                    />
+                  </label>
+                  <label>
+                    Email or Phone
+                    <input
+                      type="text"
+                      value={emailOrPhone}
+                      onChange={(e) => setEmailOrPhone(e.target.value)}
+                      placeholder="you@example.com"
+                      className="portalInput"
+                      required
+                    />
+                  </label>
+                  <label>
+                    Password
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="portalInput"
+                      required
+                    />
+                  </label>
+
+                  <label className="portalTermsLabel">
+                    <input
+                      type="checkbox"
+                      checked={termsAccepted}
+                      onChange={(e) => setTermsAccepted(e.target.checked)}
+                      className="portalTermsCheckbox"
+                    />
+                    <span>
+                      I agree to the <Link to="/terms">Terms & Conditions</Link> and <Link to="/privacy">Privacy Policy</Link>.
+                    </span>
+                  </label>
+
+                  <button type="submit" disabled={loading || !termsAccepted} className="portalBtnPrimary">
+                    {loading ? "Sending code…" : "Register"}
+                  </button>
+                </form>
+                <div className="portalFooterText">
+                  Already have an account? <Link to="/login">Login</Link>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="portalHint">Enter the verification code sent to <strong>{emailOrPhone}</strong> to finish registration.</div>
+                <form onSubmit={verifyAndRegister} className="portalForm">
+                  <label>
+                    Verification Code
+                    <input
+                      type="text"
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value)}
+                      placeholder="123456"
+                      className="portalInput"
+                      required
+                      maxLength={6}
+                      autoFocus
+                    />
+                  </label>
+
+                  <button type="submit" disabled={loading} className="portalBtnPrimary">
+                    {loading ? "Verifying…" : "Verify & Create Account"}
+                  </button>
+
+                  <div className="portalResendRow">
+                    <span className="portalHintCompact">Didn't receive the code?</span>
+                    <button
+                      type="button"
+                      className="portalBtnSecondary"
+                      onClick={resendOtp}
+                      disabled={countdown > 0 || resendLoading}
+                    >
+                      {resendLoading ? "Sending…" : countdown > 0 ? `Resend in ${countdown}s` : "Resend Code"}
+                    </button>
+                  </div>
+
+                  <button type="button" className="portalSwitchBtn" onClick={() => setStep(STEP_DETAILS)}>
+                    Go back to details
+                  </button>
+                </form>
+              </>
+            )}
+          </section>
+
+          <section className="portalStoryPanel">
+            <AuthPortalStory variant="register" />
+          </section>
+        </div>
+      </div>
+    </div>
+  );
+}
+"""
+
+Path('front/src/components/auth/auth-portal.new.css').write_text(css_content, encoding='utf-8')
+Path('front/src/components/auth/AuthPortalStory.new.jsx').write_text(story_content, encoding='utf-8')
+Path('front/src/pages/public/Login.new.jsx').write_text(login_content, encoding='utf-8')
+Path('front/src/pages/public/Register.new.jsx').write_text(register_content, encoding='utf-8')
+'@
+Set-Content -Path 'front/src/pages/public/write_auth_updates.py' -Value $py -Encoding utf8
+python 'front/src/pages/public/write_auth_updates.py'
+Remove-Item 'front/src/pages/public/write_auth_updates.py'

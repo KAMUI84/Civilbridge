@@ -49,16 +49,16 @@ function pickRange(meta) {
   const current = meta.currentRange || meta.newRange || null;
   if (current) {
     return {
-      minCostPerM2: toNumber(current.minCostPerM2),
-      maxCostPerM2: toNumber(current.maxCostPerM2),
+      minCostPerM2: toDecimalSafe(current.minCostPerM2),
+      maxCostPerM2: toDecimalSafe(current.maxCostPerM2),
       currency: current.currency || meta.currency || "RWF",
     };
   }
 
   if (meta.minCostPerM2 != null && meta.maxCostPerM2 != null) {
     return {
-      minCostPerM2: toNumber(meta.minCostPerM2),
-      maxCostPerM2: toNumber(meta.maxCostPerM2),
+      minCostPerM2: toDecimalSafe(meta.minCostPerM2),
+      maxCostPerM2: toDecimalSafe(meta.maxCostPerM2),
       currency: meta.currency || "RWF",
     };
   }
@@ -85,18 +85,20 @@ function buildHistorySeries(logs, benchmark) {
     .filter(Boolean)
     .sort((left, right) => new Date(left.recordedAt) - new Date(right.recordedAt));
 
-  const currentMidpoint = midpoint(benchmark.minCostPerM2, benchmark.maxCostPerM2);
+  const safeMinCost = toDecimalSafe(benchmark.minCostPerM2);
+  const safeMaxCost = toDecimalSafe(benchmark.maxCostPerM2);
+  const currentMidpoint = midpoint(safeMinCost, safeMaxCost);
   const hasCurrent = entries.some(
     (entry) =>
-      entry.minCostPerM2 === toNumber(benchmark.minCostPerM2) &&
-      entry.maxCostPerM2 === toNumber(benchmark.maxCostPerM2),
+      entry.minCostPerM2 === safeMinCost &&
+      entry.maxCostPerM2 === safeMaxCost,
   );
 
   if (!hasCurrent && currentMidpoint !== null) {
     entries.push({
       recordedAt: benchmark.updatedAt || benchmark.createdAt,
-      minCostPerM2: toNumber(benchmark.minCostPerM2),
-      maxCostPerM2: toNumber(benchmark.maxCostPerM2),
+      minCostPerM2: safeMinCost,
+      maxCostPerM2: safeMaxCost,
       midpoint: currentMidpoint,
       currency: benchmark.currency || "RWF",
     });
@@ -168,8 +170,14 @@ export async function getCostBenchmarkHistory(benchmark) {
     return [];
   }
 
-  const benchmarkId =
-    typeof benchmark.id === "bigint" ? benchmark.id : BigInt(benchmark.id);
+  // Safely convert ID to BigInt for Prisma query
+  let benchmarkId;
+  try {
+    benchmarkId = typeof benchmark.id === "bigint" ? benchmark.id : BigInt(benchmark.id);
+  } catch {
+    // If conversion fails, return empty history
+    return [];
+  }
 
   const logs = await prisma.auditLog.findMany({
     where: {
@@ -191,15 +199,21 @@ export async function buildBenchmarkSnapshot(benchmark) {
   const history = await getCostBenchmarkHistory(benchmark);
   const volatility = calculateBenchmarkVolatility(history);
 
+  // Safely convert BigInt ID to string
+  const idString = benchmark.id?.toString ? benchmark.id.toString() : String(benchmark.id);
+
   return {
-    id: benchmark.id.toString(),
+    id: idString,
     province: benchmark.province,
     district: benchmark.district || "",
     buildingType: benchmark.buildingType,
     currency: benchmark.currency || "RWF",
-    minCostPerM2: toNumber(benchmark.minCostPerM2),
-    maxCostPerM2: toNumber(benchmark.maxCostPerM2),
-    midpointCostPerM2: midpoint(benchmark.minCostPerM2, benchmark.maxCostPerM2),
+    minCostPerM2: toDecimalSafe(benchmark.minCostPerM2),
+    maxCostPerM2: toDecimalSafe(benchmark.maxCostPerM2),
+    midpointCostPerM2: midpoint(
+      toDecimalSafe(benchmark.minCostPerM2),
+      toDecimalSafe(benchmark.maxCostPerM2)
+    ),
     notes: benchmark.notes || "",
     updatedAt: benchmark.updatedAt,
     updatedBy: benchmark.updatedBy?.fullName || "",

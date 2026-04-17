@@ -10,7 +10,7 @@ import * as Sentry from "@sentry/node";
 import { protect, requireRole } from "./middlewares/auth.js";
 import { csrfGuard } from "./middlewares/csrf.js";
 import prisma from "./config/prisma.js";
-import emailService from "./services/emailService.js";
+import { emailService } from "./services/email.service.js";
 import { buildRuntimeReport, getHealthStatusCode } from "./config/runtime.js";
 
 // Patch BigInt serialization for Prisma

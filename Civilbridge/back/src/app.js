@@ -8,7 +8,7 @@ import { csrfGuard } from "./middlewares/csrf.js";
 import { httpsRedirect } from "./middlewares/httpsRedirect.js";
 import { requestId } from "./middlewares/requestId.js";
 import { sanitizeBody } from "./middlewares/sanitize.js";
-import emailService from "./services/emailService.js";
+import { emailService } from "./services/email.service.js";
 import prisma from "./config/prisma.js";
 import logger from "./config/logger.js";
 import { buildRuntimeReport, getHealthStatusCode } from "./config/runtime.js";

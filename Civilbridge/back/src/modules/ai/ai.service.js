@@ -257,7 +257,139 @@ function formatBenchmarkPromptValue(benchmarkContext) {
   };
 }
 
-function buildHumanReviewSummary(planReviewFlags = [], boq = [], overallConfidence = 0) {
+// Rwanda market constraints (RWF per m²) - hard limits
+const MARKET_CONSTRAINTS = {
+  // Minimum realistic costs (below this is suspicious)
+  minCostPerM2: 150000,    // ~150K RWF/m² for basic construction
+  // Maximum realistic costs (above this needs verification)
+  maxCostPerM2: 1500000,   // ~1.5M RWF/m² for premium
+  // Typical ranges by building type (RWF/m²)
+  buildingTypeRanges: {
+    RESIDENTIAL: { min: 150000, max: 800000, typical: 350000 },
+    COMMERCIAL: { min: 300000, max: 1200000, typical: 600000 },
+    INDUSTRIAL: { min: 250000, max: 1000000, typical: 500000 },
+    HOSPITAL: { min: 500000, max: 1500000, typical: 800000 },
+    SCHOOL: { min: 300000, max: 800000, typical: 500000 },
+    MIXED_USE: { min: 300000, max: 1000000, typical: 550000 },
+    APARTMENT: { min: 200000, max: 900000, typical: 450000 },
+  },
+  // Safety margin multiplier - AI estimates must be within this range of benchmarks
+  benchmarkTolerance: 0.40, // 40% deviation allowed
+  // Maximum total project cost cap (RWF) - 2 billion
+  maxTotalProjectValue: 2000000000,
+};
+
+function getBuildingTypeRange(buildingType) {
+  const normalized = String(buildingType || "RESIDENTIAL").toUpperCase();
+  for (const [type, range] of Object.entries(MARKET_CONSTRAINTS.buildingTypeRanges)) {
+    if (normalized.includes(type)) return range;
+  }
+  return MARKET_CONSTRAINTS.buildingTypeRanges.RESIDENTIAL;
+}
+
+function validateCostsAgainstMarket(boq = [], benchmark = null, buildingType = "RESIDENTIAL") {
+  const flags = [];
+  const validatedBoq = [];
+  let totalCost = 0;
+  const buildingRange = getBuildingTypeRange(buildingType);
+
+  // Calculate average unit cost from BOQ
+  for (const item of boq) {
+    const unitCost = toNumber(item.unitCost);
+    const quantity = toNumber(item.quantity);
+    const lineTotal = toNumber(item.totalCost) || (unitCost * quantity);
+    totalCost += lineTotal;
+
+    // Check for suspiciously low unit costs
+    if (unitCost > 0 && unitCost < 100) {
+      flags.push({
+        item: item.item,
+        reason: `Unit cost (${unitCost} RWF) seems unrealistically low. Minimum expected: 100 RWF`,
+        severity: "high",
+        type: "IMPOSSIBLE_PRICE",
+      });
+    }
+
+    // Check for extremely high unit costs
+    if (unitCost > 10000000) {
+      flags.push({
+        item: item.item,
+        reason: `Unit cost (${unitCost.toLocaleString()} RWF) is extremely high and needs verification`,
+        severity: "medium",
+        type: "HIGH_PRICE",
+      });
+    }
+
+    validatedBoq.push({ ...item, totalCost: lineTotal });
+  }
+
+  // Check against benchmark if available
+  if (benchmark && benchmark.minCostPerM2 && benchmark.maxCostPerM2) {
+    // Estimate total area from BOQ (rough approximation)
+    const estimatedArea = totalCost / ((benchmark.minCostPerM2 + benchmark.maxCostPerM2) / 2);
+
+    if (estimatedArea > 0) {
+      const calculatedCostPerM2 = totalCost / estimatedArea;
+      const benchmarkMidpoint = (benchmark.minCostPerM2 + benchmark.maxCostPerM2) / 2;
+      const deviation = Math.abs(calculatedCostPerM2 - benchmarkMidpoint) / benchmarkMidpoint;
+
+      if (deviation > MARKET_CONSTRAINTS.benchmarkTolerance) {
+        flags.push({
+          item: "Overall Project",
+          reason: `Calculated cost per m² (${Math.round(calculatedCostPerM2).toLocaleString()} RWF) deviates ${(deviation * 100).toFixed(0)}% from market benchmark (${Math.round(benchmarkMidpoint).toLocaleString()} RWF). Results may be inaccurate.`,
+          severity: deviation > 0.6 ? "high" : "medium",
+          type: "BENCHMARK_DEVIATION",
+          deviation,
+        });
+      }
+    }
+  }
+
+  // Check building type range
+  if (totalCost > 0) {
+    // Rough area estimate for validation
+    const assumedArea = 100; // m² - minimal viable area
+    const costPerM2 = totalCost / assumedArea;
+
+    if (costPerM2 < buildingRange.min) {
+      flags.push({
+        item: "Overall Project",
+        reason: `Total cost appears below minimum market rates for ${buildingType} construction in Rwanda. Expected minimum: ${buildingRange.min.toLocaleString()} RWF/m²`,
+        severity: "high",
+        type: "BELOW_MARKET_MINIMUM",
+      });
+    }
+
+    if (costPerM2 > MARKET_CONSTRAINTS.maxCostPerM2) {
+      flags.push({
+        item: "Overall Project",
+        reason: `Total cost exceeds maximum realistic market rates. Please verify with a quantity surveyor.`,
+        severity: "high",
+        type: "ABOVE_MARKET_MAXIMUM",
+      });
+    }
+  }
+
+  // Cap check
+  if (totalCost > MARKET_CONSTRAINTS.maxTotalProjectValue) {
+    flags.push({
+      item: "Overall Project",
+      reason: `Total project value (${(totalCost / 1000000).toFixed(0)}M RWF) exceeds maximum threshold. Requires manual review.`,
+      severity: "high",
+      type: "EXCEEDS_VALUE_CAP",
+    });
+  }
+
+  return {
+    flags,
+    validatedBoq,
+    totalCost,
+    requiresManualReview: flags.some(f => f.severity === "high"),
+    marketStatus: flags.length === 0 ? "WITHIN_RANGE" : "OUTSIDE_RANGE",
+  };
+}
+
+function buildHumanReviewSummary(planReviewFlags = [], boq = [], overallConfidence = 0, marketValidation = null) {
   const lowConfidenceItems = boq
     .filter((item) => toNumber(item.confidence) < 0.85)
     .map((item) => ({
@@ -266,15 +398,31 @@ function buildHumanReviewSummary(planReviewFlags = [], boq = [], overallConfiden
       severity: toNumber(item.confidence) < 0.65 ? "high" : "medium",
     }));
 
-  const flaggedItems = [...planReviewFlags, ...lowConfidenceItems];
+  const marketFlags = marketValidation?.flags || [];
+  const flaggedItems = [...planReviewFlags, ...lowConfidenceItems, ...marketFlags];
+
+  // Require review if: low confidence OR market validation failed
+  const requiresReview = flaggedItems.length > 0
+    || overallConfidence < 0.85
+    || marketValidation?.requiresManualReview
+    || marketValidation?.marketStatus === "OUTSIDE_RANGE";
+
+  let status = "READY_FOR_REVIEW";
+  if (marketValidation?.requiresManualReview || overallConfidence < 0.7) {
+    status = "CHECKER_REQUIRED";
+  } else if (requiresReview) {
+    status = "NEEDS_VERIFICATION";
+  }
 
   return {
-    required: flaggedItems.length > 0 || overallConfidence < 0.85,
-    status:
-      flaggedItems.length > 0 || overallConfidence < 0.7
-        ? "CHECKER_REQUIRED"
-        : "READY_FOR_REVIEW",
+    required: requiresReview,
+    status,
     flaggedItems,
+    marketValidation: marketValidation ? {
+      totalCost: marketValidation.totalCost,
+      marketStatus: marketValidation.marketStatus,
+      flagCount: marketFlags.length,
+    } : null,
   };
 }
 
@@ -682,10 +830,18 @@ export async function analyzePlanDocument({
       },
     });
 
+    // Validate extracted costs against Rwanda market benchmarks
+    const marketValidation = validateCostsAgainstMarket(
+      extraction.data.boq,
+      marketBenchmark,
+      projectType,
+    );
+
     const humanReview = buildHumanReviewSummary(
       planning.data.reviewFlags,
       extraction.data.boq,
       extraction.data.confidence.overall,
+      marketValidation,
     );
 
     return {
@@ -695,6 +851,17 @@ export async function analyzePlanDocument({
         measurementPlan: planning.data.measurementPlan,
         requiredInputs: planning.data.requiredInputs,
         humanReview,
+        marketValidation: {
+          status: marketValidation.marketStatus,
+          totalCost: marketValidation.totalCost,
+          flags: marketValidation.flags,
+          benchmarkUsed: marketBenchmark ? {
+            province: marketBenchmark.province,
+            buildingType: marketBenchmark.buildingType,
+            minCostPerM2: marketBenchmark.minCostPerM2,
+            maxCostPerM2: marketBenchmark.maxCostPerM2,
+          } : null,
+        },
       },
     };
   };
@@ -729,7 +896,7 @@ export async function generatePlanSpecification({
     projectType: preferences,
   });
 
-  return runStructuredTask(
+  const result = await runStructuredTask(
     AI_TASKS.PLAN_GENERATION,
     {
       budget,
@@ -748,6 +915,44 @@ export async function generatePlanSpecification({
       },
     }
   );
+
+  // Validate generated costs against market benchmarks
+  const marketValidation = validateCostsAgainstMarket(
+    result.data?.boq || [],
+    marketBenchmark,
+    preferences,
+  );
+
+  // Add budget fit validation
+  const estimatedTotal = result.data?.totals?.estimatedTotal || 0;
+  const budgetFit = budget ? {
+    withinBudget: estimatedTotal <= budget,
+    budget: Number(budget),
+    estimatedTotal,
+    difference: estimatedTotal - Number(budget),
+    percentOverUnder: budget > 0 ? ((estimatedTotal - budget) / budget * 100).toFixed(1) : 0,
+  } : null;
+
+  return {
+    ...result,
+    data: {
+      ...result.data,
+      marketValidation: {
+        status: marketValidation.marketStatus,
+        totalCost: marketValidation.totalCost,
+        flags: marketValidation.flags,
+        requiresManualReview: marketValidation.requiresManualReview,
+        benchmarkUsed: marketBenchmark ? {
+          province: marketBenchmark.province,
+          buildingType: marketBenchmark.buildingType,
+          minCostPerM2: marketBenchmark.minCostPerM2,
+          maxCostPerM2: marketBenchmark.maxCostPerM2,
+          midpointCostPerM2: marketBenchmark.midpointCostPerM2,
+        } : null,
+      },
+      budgetAnalysis: budgetFit,
+    },
+  };
 }
 
 export async function estimateProjectOptions({
@@ -766,7 +971,7 @@ export async function estimateProjectOptions({
     projectType: buildingType || idea,
   });
 
-  return runStructuredTask(
+  const result = await runStructuredTask(
     AI_TASKS.CONVERSATIONAL_ESTIMATION,
     {
       idea,
@@ -789,4 +994,53 @@ export async function estimateProjectOptions({
       },
     }
   );
+
+  // Validate estimates against market benchmarks
+  const buildingRange = getBuildingTypeRange(buildingType || idea);
+  const flaggedOptions = [];
+
+  // Check each feasible option against market rates
+  if (result.data?.feasibleOptions) {
+    for (const option of result.data.feasibleOptions) {
+      // Extract numeric cost from string (e.g., "15,000,000 RWF" -> 15000000)
+      const costMatch = option.estimatedCost?.match(/[\d,]+/);
+      if (costMatch) {
+        const cost = parseInt(costMatch[0].replace(/,/g, ""), 10);
+        const roughArea = 100; // Assume minimum 100m² if not specified
+        const costPerM2 = cost / roughArea;
+
+        if (costPerM2 < buildingRange.min * 0.5) {
+          flaggedOptions.push({
+            option: option.option,
+            reason: `Cost estimate (${option.estimatedCost}) appears significantly below market rates for ${buildingType || "this project type"} in Rwanda`,
+            severity: "high",
+          });
+        } else if (costPerM2 > buildingRange.max * 1.5) {
+          flaggedOptions.push({
+            option: option.option,
+            reason: `Cost estimate (${option.estimatedCost}) appears significantly above typical market rates`,
+            severity: "medium",
+          });
+        }
+      }
+    }
+  }
+
+  return {
+    ...result,
+    data: {
+      ...result.data,
+      marketValidation: {
+        benchmarkUsed: marketBenchmark ? {
+          province: marketBenchmark.province,
+          buildingType: marketBenchmark.buildingType,
+          expectedRange: buildingRange,
+        } : null,
+        flaggedOptions,
+        disclaimer: marketBenchmark
+          ? "Estimates are based on available market data. Actual costs may vary by 20-40%."
+          : "Limited market data available for this location/type. Estimates may be inaccurate - consult a quantity surveyor.",
+      },
+    },
+  };
 }

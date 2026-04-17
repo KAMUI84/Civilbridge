@@ -225,19 +225,32 @@ export async function deleteListing(req, res) {
   }
 }
 
-// Protected: get my listings
+// Protected: get my listings with pagination
 export async function getMyListings(req, res) {
   try {
-    const listings = await prisma.listing.findMany({
-      where: { ownerUserId: BigInt(req.user.id) },
-      include: {
-        region: { select: { name: true } },
-        images: { orderBy: { sortOrder: "asc" } },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    const { page = 1, limit = 20 } = req.query;
+    const skip = (Number(page) - 1) * Number(limit);
 
-    res.json(listings.map(serializeListing));
+    const [listings, total] = await Promise.all([
+      prisma.listing.findMany({
+        where: { ownerUserId: BigInt(req.user.id) },
+        include: {
+          region: { select: { name: true } },
+          images: { orderBy: { sortOrder: "asc" } },
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: Number(limit),
+      }),
+      prisma.listing.count({ where: { ownerUserId: BigInt(req.user.id) } }),
+    ]);
+
+    res.json({
+      listings: listings.map(serializeListing),
+      total,
+      page: Number(page),
+      limit: Number(limit),
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Failed to fetch your listings" });

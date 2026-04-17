@@ -292,15 +292,28 @@ export async function deletePlan(req, res) {
 
 export async function getMyPlans(req, res) {
   try {
-    const plans = await prisma.plan.findMany({
-      where: { createdByUserId: BigInt(req.user.id) },
-      include: {
-        assets: { orderBy: { sortOrder: "asc" }, take: 3 },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    const { page = 1, limit = 20 } = req.query;
+    const skip = (Number(page) - 1) * Number(limit);
 
-    res.json(plans.map(serializePlan));
+    const [plans, total] = await Promise.all([
+      prisma.plan.findMany({
+        where: { createdByUserId: BigInt(req.user.id) },
+        include: {
+          assets: { orderBy: { sortOrder: "asc" }, take: 3 },
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: Number(limit),
+      }),
+      prisma.plan.count({ where: { createdByUserId: BigInt(req.user.id) } }),
+    ]);
+
+    res.json({
+      plans: plans.map(serializePlan),
+      total,
+      page: Number(page),
+      limit: Number(limit),
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Failed to fetch your plans" });

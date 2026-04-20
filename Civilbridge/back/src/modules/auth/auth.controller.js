@@ -781,59 +781,116 @@ export const facebookLogin = async (req, res) => {
 // X (Twitter) Login using OAuth 2.0 Access Token
 export const xLogin = async (req, res) => {
   try {
-    const { accessToken } = req.body;
+    const { code, codeVerifier, redirectUri } = req.body;
 
-    if (!accessToken) {
-      return res.status(400).json({ message: "X access token required" });
+    // ── Validate required fields ──────────────────────────────────────────────
+    if (!code) {
+      return res.status(400).json({ message: "Authorization code is required" });
+    }
+    if (!codeVerifier) {
+      return res.status(400).json({ message: "Code verifier is required for PKCE flow" });
+    }
+    if (!redirectUri) {
+      return res.status(400).json({ message: "Redirect URI is required" });
     }
 
-    if (!process.env.X_CLIENT_ID || !process.env.X_CLIENT_SECRET) {
+    // ── Validate environment variables ────────────────────────────────────────
+    const { X_CLIENT_ID, X_CLIENT_SECRET } = process.env;
+    if (!X_CLIENT_ID || !X_CLIENT_SECRET) {
+      console.error("X OAuth credentials not configured");
       return res.status(501).json({
-        message: "X Login not configured. Please add X_CLIENT_ID and X_CLIENT_SECRET to environment variables.",
+        message: "X Login not configured on server. Please add X_CLIENT_ID and X_CLIENT_SECRET.",
         docs: "https://developer.twitter.com/en/docs/authentication/oauth-2-0"
       });
     }
 
-    // Verify token with X API v2
-    const xResponse = await fetch('https://api.twitter.com/2/me?user.fields=email', {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
+    // ── Exchange authorization code for access token ──────────────────────────
+    let tokenResponse;
+    try {
+      const params = new URLSearchParams();
+      params.append('code', code);
+      params.append('grant_type', 'authorization_code');
+      params.append('client_id', X_CLIENT_ID);
+      params.append('code_verifier', codeVerifier);
+      params.append('redirect_uri', redirectUri);
+
+      tokenResponse = await fetch('https://api.twitter.com/2/oauth2/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': `Basic ${Buffer.from(`${X_CLIENT_ID}:${X_CLIENT_SECRET}`).toString('base64')}`,
+        },
+        body: params.toString(),
+      });
+
+      if (!tokenResponse.ok) {
+        const errorData = await tokenResponse.json();
+        console.error("X token exchange failed:", errorData);
+        return res.status(401).json({
+          message: "Failed to exchange authorization code with X",
+          details: errorData?.error_description || errorData?.error
+        });
       }
-    });
-
-    if (!xResponse.ok) {
-      const error = await xResponse.json();
-      console.error("X token verification failed:", error);
-      return res.status(401).json({ message: "Invalid X access token" });
+    } catch (err) {
+      console.error("X token exchange error:", err.message);
+      return res.status(500).json({ message: "Token exchange failed", error: err.message });
     }
 
-    const xData = await xResponse.json();
-    const { id: xId, username, email } = xData.data || {};
+    const tokenData = await tokenResponse.json();
+    const { access_token } = tokenData;
 
-    if (!email) {
-      return res.status(400).json({ message: "Email not provided by X. Please ensure email permission is granted in your X app settings." });
+    if (!access_token) {
+      return res.status(401).json({ message: "No access token received from X" });
     }
 
-    // Check for existing user
+    // ── Fetch user info from X API ───────────────────────────────────────────
+    let xUserData;
+    try {
+      const userResponse = await fetch(
+        'https://api.twitter.com/2/users/me?user.fields=id,name,username,email,profile_image_url,verified',
+        {
+          headers: {
+            'Authorization': `Bearer ${access_token}`,
+          }
+        }
+      );
+
+      if (!userResponse.ok) {
+        const error = await userResponse.json();
+        console.error("X user fetch failed:", error);
+        return res.status(401).json({ message: "Failed to retrieve X profile" });
+      }
+
+      xUserData = await userResponse.json();
+    } catch (err) {
+      console.error("Failed to fetch X user data:", err.message);
+      return res.status(401).json({ message: "Failed to retrieve X profile", error: err.message });
+    }
+
+    const { id: xId, username, name: xName, email } = xUserData?.data || {};
+
+    if (!xId) {
+      return res.status(401).json({ message: "Invalid X user data received" });
+    }
+
+    // ── Find or create user ───────────────────────────────────────────────────
     let user = await prisma.user.findFirst({
-      where: { OR: [{ email }, { xId }] }
+      where: { OR: [{ xId }, email ? { email } : undefined].filter(Boolean) }
     });
 
     if (user) {
-      // Update X ID if not set
-      if (!user.xId) {
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { xId, lastLoginAt: new Date() }
-        });
-      }
+      // Update X ID and last login
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { xId, lastLoginAt: new Date() }
+      });
     } else {
       // Create new user
       user = await prisma.$transaction(async (tx) => {
         const newUser = await tx.user.create({
           data: {
-            fullName: username || 'X User',
-            email,
+            fullName: xName || username || 'X User',
+            email: email || null,
             xId,
             role: "CLIENT",
             verificationStatus: "VERIFIED"
@@ -841,22 +898,64 @@ export const xLogin = async (req, res) => {
         });
 
         await tx.auditLog.create({
-          data: { userId: newUser.id, action: "X_REGISTER", ipAddress: req.ip }
+          data: {
+            userId: newUser.id,
+            action: "X_REGISTER",
+            details: `X (@${username}) OAuth registration`,
+            ipAddress: req.ip || req.connection.remoteAddress
+          }
         });
 
         return newUser;
       });
 
-      // Send welcome email
-      const firstName = (username || 'User').toString();
-      try {
-        await emailService.sendWelcomeEmail(email, firstName);
-      } catch (emailErr) {
-        console.error("X welcome email failed:", emailErr.message);
+      // Send welcome email if email is available
+      if (email) {
+        const firstName = (xName || username || 'User').split(' ')[0];
+        try {
+          await emailService.sendWelcomeEmail(email, firstName);
+        } catch (emailErr) {
+          console.error("X welcome email failed:", emailErr.message);
+        }
       }
     }
 
-    await createAuthResponse(res, user, req, 'x');
+    // ── Create auth response using existing helper ────────────────────────────
+    const csrfToken = generateCSRFToken();
+    const refreshToken = await createSession(user.id, req);
+
+    setAuthCookie(res, generateToken({ userId: user.id, role: user.role }));
+    setRefreshCookie(res, refreshToken);
+    res.cookie('csrf', csrfToken, {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 1000 * 60 * 60 * 24 * 7,
+      path: '/',
+    });
+
+    // Log the login event
+    await prisma.auditLog.create({
+      data: {
+        userId: user.id,
+        action: "X_LOGIN",
+        details: `X (@${username}) OAuth login`,
+        ipAddress: req.ip || req.connection.remoteAddress
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "X login successful",
+      user: {
+        id: user.id,
+        fullName: user.fullName,
+        email: user.email,
+        role: user.role,
+        xId,
+        xUsername: username
+      }
+    });
   } catch (err) {
     console.error("X login error:", err);
     res.status(500).json({ message: "X login failed", error: err.message });

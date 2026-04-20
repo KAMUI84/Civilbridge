@@ -301,6 +301,9 @@ model User {
   phone               String?            @unique @db.VarChar(40)
   passwordHash        String?            @map("password_hash") @db.VarChar(255)
   googleSub           String?            @unique @map("google_sub") @db.VarChar(64)
+  appleSub            String?            @unique @map("apple_sub") @db.VarChar(64)
+  facebookId        String?            @unique @map("facebook_id") @db.VarChar(64)
+  xId               String?            @unique @map("x_id") @db.VarChar(64)
   role                UserRole           @default(CLIENT)
   regionId            BigInt?            @map("region_id") @db.UnsignedBigInt
   verificationStatus  VerificationStatus @default(UNVERIFIED) @map("verification_status")

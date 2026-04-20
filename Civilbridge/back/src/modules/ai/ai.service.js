@@ -242,7 +242,7 @@ function toNumber(value) {
 
 function formatBenchmarkPromptValue(benchmarkContext) {
   if (!benchmarkContext) {
-    return "No current regional benchmark found.";
+    return "No internal estimate data available.";
   }
 
   return {
@@ -254,16 +254,19 @@ function formatBenchmarkPromptValue(benchmarkContext) {
     midpointCostPerM2: benchmarkContext.midpointCostPerM2,
     volatility: benchmarkContext.volatility,
     updatedAt: benchmarkContext.updatedAt,
+    disclaimer: "INTERNAL ESTIMATE ONLY - Not official pricing. Verify with contractors.",
   };
 }
 
-// Rwanda market constraints (RWF per m²) - hard limits
-const MARKET_CONSTRAINTS = {
+// Internal estimate constraints (RWF per m²) - not official market rates
+const ESTIMATE_CONSTRAINTS = {
+  // Disclaimer: These are CivilBridge internal estimates, NOT official Rwanda rates
+  disclaimer: "ESTIMATES ONLY - Not official or guaranteed prices. Actual costs require contractor quotes.",
   // Minimum realistic costs (below this is suspicious)
-  minCostPerM2: 150000,    // ~150K RWF/m² for basic construction
+  minCostPerM2: 150000,
   // Maximum realistic costs (above this needs verification)
-  maxCostPerM2: 1500000,   // ~1.5M RWF/m² for premium
-  // Typical ranges by building type (RWF/m²)
+  maxCostPerM2: 1500000,
+  // Typical internal estimate ranges by building type (RWF/m²)
   buildingTypeRanges: {
     RESIDENTIAL: { min: 150000, max: 800000, typical: 350000 },
     COMMERCIAL: { min: 300000, max: 1200000, typical: 600000 },
@@ -273,18 +276,18 @@ const MARKET_CONSTRAINTS = {
     MIXED_USE: { min: 300000, max: 1000000, typical: 550000 },
     APARTMENT: { min: 200000, max: 900000, typical: 450000 },
   },
-  // Safety margin multiplier - AI estimates must be within this range of benchmarks
-  benchmarkTolerance: 0.40, // 40% deviation allowed
-  // Maximum total project cost cap (RWF) - 2 billion
+  // Tolerance for deviation from internal benchmarks
+  benchmarkTolerance: 0.40,
+  // Maximum total project value before requiring review
   maxTotalProjectValue: 2000000000,
 };
 
 function getBuildingTypeRange(buildingType) {
   const normalized = String(buildingType || "RESIDENTIAL").toUpperCase();
-  for (const [type, range] of Object.entries(MARKET_CONSTRAINTS.buildingTypeRanges)) {
+  for (const [type, range] of Object.entries(ESTIMATE_CONSTRAINTS.buildingTypeRanges)) {
     if (normalized.includes(type)) return range;
   }
-  return MARKET_CONSTRAINTS.buildingTypeRanges.RESIDENTIAL;
+  return ESTIMATE_CONSTRAINTS.buildingTypeRanges.RESIDENTIAL;
 }
 
 function validateCostsAgainstMarket(boq = [], benchmark = null, buildingType = "RESIDENTIAL") {
@@ -323,7 +326,7 @@ function validateCostsAgainstMarket(boq = [], benchmark = null, buildingType = "
     validatedBoq.push({ ...item, totalCost: lineTotal });
   }
 
-  // Check against benchmark if available
+  // Check against internal benchmark if available
   if (benchmark && benchmark.minCostPerM2 && benchmark.maxCostPerM2) {
     // Estimate total area from BOQ (rough approximation)
     const estimatedArea = totalCost / ((benchmark.minCostPerM2 + benchmark.maxCostPerM2) / 2);
@@ -333,10 +336,10 @@ function validateCostsAgainstMarket(boq = [], benchmark = null, buildingType = "
       const benchmarkMidpoint = (benchmark.minCostPerM2 + benchmark.maxCostPerM2) / 2;
       const deviation = Math.abs(calculatedCostPerM2 - benchmarkMidpoint) / benchmarkMidpoint;
 
-      if (deviation > MARKET_CONSTRAINTS.benchmarkTolerance) {
+      if (deviation > ESTIMATE_CONSTRAINTS.benchmarkTolerance) {
         flags.push({
           item: "Overall Project",
-          reason: `Calculated cost per m² (${Math.round(calculatedCostPerM2).toLocaleString()} RWF) deviates ${(deviation * 100).toFixed(0)}% from market benchmark (${Math.round(benchmarkMidpoint).toLocaleString()} RWF). Results may be inaccurate.`,
+          reason: `Calculated cost deviates ${(deviation * 100).toFixed(0)}% from internal benchmark. ESTIMATE ONLY - Obtain actual contractor quotes.`,
           severity: deviation > 0.6 ? "high" : "medium",
           type: "BENCHMARK_DEVIATION",
           deviation,
@@ -354,29 +357,29 @@ function validateCostsAgainstMarket(boq = [], benchmark = null, buildingType = "
     if (costPerM2 < buildingRange.min) {
       flags.push({
         item: "Overall Project",
-        reason: `Total cost appears below minimum market rates for ${buildingType} construction in Rwanda. Expected minimum: ${buildingRange.min.toLocaleString()} RWF/m²`,
+        reason: `Cost estimate appears below typical range for ${buildingType}. ESTIMATE ONLY - Verify with contractors.`,
         severity: "high",
-        type: "BELOW_MARKET_MINIMUM",
+        type: "BELOW_TYPICAL_RANGE",
       });
     }
 
-    if (costPerM2 > MARKET_CONSTRAINTS.maxCostPerM2) {
+    if (costPerM2 > ESTIMATE_CONSTRAINTS.maxCostPerM2) {
       flags.push({
         item: "Overall Project",
-        reason: `Total cost exceeds maximum realistic market rates. Please verify with a quantity surveyor.`,
+        reason: `Cost estimate exceeds typical range. ESTIMATE ONLY - Professional quantity surveyor required.`,
         severity: "high",
-        type: "ABOVE_MARKET_MAXIMUM",
+        type: "ABOVE_TYPICAL_RANGE",
       });
     }
   }
 
   // Cap check
-  if (totalCost > MARKET_CONSTRAINTS.maxTotalProjectValue) {
+  if (totalCost > ESTIMATE_CONSTRAINTS.maxTotalProjectValue) {
     flags.push({
       item: "Overall Project",
-      reason: `Total project value (${(totalCost / 1000000).toFixed(0)}M RWF) exceeds maximum threshold. Requires manual review.`,
+      reason: `Large project (${(totalCost / 1000000).toFixed(0)}M RWF). ESTIMATE ONLY - Requires professional assessment.`,
       severity: "high",
-      type: "EXCEEDS_VALUE_CAP",
+      type: "LARGE_PROJECT",
     });
   }
 
@@ -995,11 +998,11 @@ export async function estimateProjectOptions({
     }
   );
 
-  // Validate estimates against market benchmarks
+  // Validate estimates against internal benchmarks
   const buildingRange = getBuildingTypeRange(buildingType || idea);
   const flaggedOptions = [];
 
-  // Check each feasible option against market rates
+  // Check each feasible option against typical ranges
   if (result.data?.feasibleOptions) {
     for (const option of result.data.feasibleOptions) {
       // Extract numeric cost from string (e.g., "15,000,000 RWF" -> 15000000)
@@ -1012,13 +1015,13 @@ export async function estimateProjectOptions({
         if (costPerM2 < buildingRange.min * 0.5) {
           flaggedOptions.push({
             option: option.option,
-            reason: `Cost estimate (${option.estimatedCost}) appears significantly below market rates for ${buildingType || "this project type"} in Rwanda`,
+            reason: `Cost estimate (${option.estimatedCost}) appears unusually low. ESTIMATE ONLY - Verify with contractors.`,
             severity: "high",
           });
         } else if (costPerM2 > buildingRange.max * 1.5) {
           flaggedOptions.push({
             option: option.option,
-            reason: `Cost estimate (${option.estimatedCost}) appears significantly above typical market rates`,
+            reason: `Cost estimate (${option.estimatedCost}) appears unusually high. ESTIMATE ONLY - Verify with contractors.`,
             severity: "medium",
           });
         }
@@ -1030,16 +1033,15 @@ export async function estimateProjectOptions({
     ...result,
     data: {
       ...result.data,
-      marketValidation: {
+      estimateValidation: {
         benchmarkUsed: marketBenchmark ? {
           province: marketBenchmark.province,
           buildingType: marketBenchmark.buildingType,
           expectedRange: buildingRange,
         } : null,
         flaggedOptions,
-        disclaimer: marketBenchmark
-          ? "Estimates are based on available market data. Actual costs may vary by 20-40%."
-          : "Limited market data available for this location/type. Estimates may be inaccurate - consult a quantity surveyor.",
+        disclaimer: "ESTIMATES ONLY - Not official pricing. Actual costs require contractor quotes and may vary 20-50%.",
+        legalNotice: "CivilBridge estimates are for planning purposes only and do not constitute legal offers, binding quotes, or guaranteed pricing. Always obtain multiple contractor quotes before making financial commitments.",
       },
     },
   };

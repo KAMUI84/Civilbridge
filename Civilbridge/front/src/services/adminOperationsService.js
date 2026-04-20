@@ -11,6 +11,9 @@ export const adminOperationsService = {
     return api.get(`/api/admin/cost-benchmarks${query ? `?${query}` : ""}`);
   },
   upsertCostBenchmark: (payload) => api.post("/api/admin/cost-benchmarks", payload),
+  getPricingReadiness: () => api.get("/api/admin/pricing/readiness"),
+  getPricingImportTemplate: () => api.get("/api/admin/pricing/template"),
+  importPricingData: (payload) => api.post("/api/admin/pricing/import", payload),
 
   // Plan approval queue
   getPlanRequests: (params = {}) => {

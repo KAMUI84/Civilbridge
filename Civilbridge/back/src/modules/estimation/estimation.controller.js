@@ -1,10 +1,30 @@
 import { pool } from "../../config/db.js";
-import { generateBOQ, checkBudgetFeasibility } from "./estimation.engine.js";
+import {
+    generateBOQ,
+    checkBudgetFeasibility,
+    PricingConfigurationError,
+} from "./estimation.engine.js";
 import { aiBudgetAnalysisService } from "../../services/aiBudgetAnalysis.service.js";
+import { marketDataService } from "../../services/marketData.service.js";
+
+function handleEstimationError(err, res, fallbackMessage) {
+    if (err instanceof PricingConfigurationError) {
+        return res.status(err.statusCode || 409).json({
+            success: false,
+            code: err.code,
+            message: err.message,
+            pricing_readiness: err.readiness,
+        });
+    }
+
+    console.error(err);
+    return res.status(500).json({ message: fallbackMessage });
+}
 
 // ─── POST /api/estimation/run ─────────────────────────────────────────────────
 export const runEstimation = async (req, res) => {
     try {
+        await marketDataService.ensureReady();
         const {
             title, area_sqm, floors = 1, building_quality = "standard",
             region_id = 1, project_id, plan_id, save = false,
@@ -52,14 +72,14 @@ export const runEstimation = async (req, res) => {
             message: save ? "Estimation saved" : "Estimation calculated (not saved)",
         });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Failed to run estimation" });
+        return handleEstimationError(err, res, "Failed to run estimation");
     }
 };
 
 // ─── POST /api/estimation/feasibility ────────────────────────────────────────
 export const checkFeasibility = async (req, res) => {
     try {
+        await marketDataService.ensureReady();
         const { budget, area_sqm, floors = 1, region_id = 1, location } = req.body;
         if (!budget || !area_sqm) {
             return res.status(400).json({ message: "budget and area_sqm are required" });
@@ -86,8 +106,7 @@ export const checkFeasibility = async (req, res) => {
             ai_analysis: aiResult,
         });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Failed to check feasibility" });
+        return handleEstimationError(err, res, "Failed to check feasibility");
     }
 };
 

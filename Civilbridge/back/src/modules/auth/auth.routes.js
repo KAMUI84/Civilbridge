@@ -8,6 +8,9 @@ import {
   refreshAccessToken,
   getGoogleNonce,
   changePassword,
+  appleLogin,
+  facebookLogin,
+  xLogin,
 } from "./auth.controller.js";
 import { protect } from "../../middlewares/auth.js";
 import { ipKeyGenerator, rateLimit } from "express-rate-limit";
@@ -47,5 +50,11 @@ router.post("/logout", logout);
 router.post("/refresh", refreshAccessToken);
 router.get("/google/nonce", getGoogleNonce);
 router.post("/change-password", protect, changePassword);
+
+// Additional social login providers
+router.post("/apple", appleLogin);
+router.post("/facebook", facebookLogin);
+router.post("/x", xLogin);
+router.post("/twitter", xLogin); // alias
 
 export default router;

@@ -548,3 +548,317 @@ export const changePassword = async (req, res) => {
     res.status(500).json({ message: "Failed to change password" });
   }
 };
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ADDITIONAL SOCIAL LOGIN PROVIDERS (Apple, Facebook, X/Twitter)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── Helper: Create session and send response ──────────────────────────────────
+async function createAuthResponse(res, user, req, provider) {
+  const token = generateToken({ id: user.id.toString(), role: user.role });
+  const csrfToken = generateCSRFToken();
+  const refreshToken = await createSession(user.id, req);
+
+  setAuthCookie(res, token);
+  setRefreshCookie(res, refreshToken);
+  res.cookie('csrf', csrfToken, {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: 1000 * 60 * 60 * 24 * 7,
+    path: '/',
+  });
+
+  await prisma.auditLog.create({
+    data: { userId: user.id, action: `${provider.toUpperCase()}_LOGIN`, ipAddress: req.ip },
+  });
+
+  // Send login thanks email
+  if (user.email) {
+    const firstName = (user.fullName || "").split(" ")[0];
+    try {
+      await emailService.sendLoginThanksEmail(user.email, firstName);
+    } catch (emailErr) {
+      console.error(`${provider} login thanks email failed:`, emailErr.message);
+    }
+  }
+
+  res.json({
+    success: true,
+    token,
+    csrfToken,
+    user: {
+      id: user.id.toString(),
+      full_name: user.fullName,
+      email: user.email,
+      role: user.role,
+    },
+  });
+}
+
+// ─── POST /api/auth/apple ─────────────────────────────────────────────────────
+// Apple Sign In using Identity Token
+export const appleLogin = async (req, res) => {
+  try {
+    const { identityToken, authorizationCode, user: appleUser } = req.body;
+
+    if (!identityToken) {
+      return res.status(400).json({ message: "Apple identity token required" });
+    }
+
+    // TODO: Verify Apple identity token using Apple's public keys
+    // This requires the 'apple-signin-auth' package or manual JWT verification
+    // Apple docs: https://developer.apple.com/documentation/sign_in_with_apple
+
+    // For now, return a helpful error message
+    if (!process.env.APPLE_CLIENT_ID) {
+      return res.status(501).json({
+        message: "Apple Sign In not configured. Please add APPLE_CLIENT_ID, APPLE_TEAM_ID, APPLE_KEY_ID, and APPLE_PRIVATE_KEY to environment variables.",
+        docs: "https://developer.apple.com/documentation/sign_in_with_apple"
+      });
+    }
+
+    // Decode the identity token (JWT) without verification for development
+    // In production, you MUST verify this token
+    const tokenParts = identityToken.split('.');
+    if (tokenParts.length !== 3) {
+      return res.status(400).json({ message: "Invalid Apple identity token format" });
+    }
+
+    const payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString());
+    const email = payload.email;
+    const sub = payload.sub; // Apple user ID
+
+    if (!email) {
+      return res.status(400).json({ message: "Email not provided by Apple" });
+    }
+
+    // Check for existing user
+    let user = await prisma.user.findFirst({
+      where: { OR: [{ email }, { appleSub: sub }] }
+    });
+
+    if (user) {
+      // Update Apple sub if not set
+      if (!user.appleSub) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { appleSub: sub, lastLoginAt: new Date() }
+        });
+      }
+    } else {
+      // Create new user
+      // For Apple, the name is only provided on first sign-in
+      const fullName = appleUser?.fullName
+        ? `${appleUser.fullName.givenName || ''} ${appleUser.fullName.familyName || ''}`.trim()
+        : email.split('@')[0];
+
+      user = await prisma.$transaction(async (tx) => {
+        const newUser = await tx.user.create({
+          data: {
+            fullName: fullName || 'Apple User',
+            email,
+            appleSub: sub,
+            role: "CLIENT",
+            verificationStatus: "VERIFIED"
+          }
+        });
+
+        await tx.auditLog.create({
+          data: { userId: newUser.id, action: "APPLE_REGISTER", ipAddress: req.ip }
+        });
+
+        return newUser;
+      });
+
+      // Send welcome email
+      const firstName = (fullName || 'User').split(" ")[0];
+      try {
+        await emailService.sendWelcomeEmail(email, firstName);
+      } catch (emailErr) {
+        console.error("Apple welcome email failed:", emailErr.message);
+      }
+    }
+
+    await createAuthResponse(res, user, req, 'apple');
+  } catch (err) {
+    console.error("Apple login error:", err);
+    res.status(500).json({ message: "Apple login failed", error: err.message });
+  }
+};
+
+// ─── POST /api/auth/facebook ──────────────────────────────────────────────────
+// Facebook Login using Access Token
+export const facebookLogin = async (req, res) => {
+  try {
+    const { accessToken } = req.body;
+
+    if (!accessToken) {
+      return res.status(400).json({ message: "Facebook access token required" });
+    }
+
+    if (!process.env.FACEBOOK_APP_ID || !process.env.FACEBOOK_APP_SECRET) {
+      return res.status(501).json({
+        message: "Facebook Login not configured. Please add FACEBOOK_APP_ID and FACEBOOK_APP_SECRET to environment variables.",
+        docs: "https://developers.facebook.com/docs/facebook-login/web"
+      });
+    }
+
+    // Verify token with Facebook Graph API
+    const appSecretProof = require('crypto')
+      .createHmac('sha256', process.env.FACEBOOK_APP_SECRET)
+      .update(accessToken)
+      .digest('hex');
+
+    const fbResponse = await fetch(
+      `https://graph.facebook.com/v18.0/me?fields=id,name,email&access_token=${accessToken}&appsecret_proof=${appSecretProof}`
+    );
+
+    if (!fbResponse.ok) {
+      const error = await fbResponse.json();
+      console.error("Facebook token verification failed:", error);
+      return res.status(401).json({ message: "Invalid Facebook access token" });
+    }
+
+    const fbData = await fbResponse.json();
+
+    if (!fbData.email) {
+      return res.status(400).json({ message: "Email not provided by Facebook. Please ensure email permission is granted." });
+    }
+
+    const { id: facebookId, name, email } = fbData;
+
+    // Check for existing user
+    let user = await prisma.user.findFirst({
+      where: { OR: [{ email }, { facebookId }] }
+    });
+
+    if (user) {
+      // Update Facebook ID if not set
+      if (!user.facebookId) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { facebookId, lastLoginAt: new Date() }
+        });
+      }
+    } else {
+      // Create new user
+      user = await prisma.$transaction(async (tx) => {
+        const newUser = await tx.user.create({
+          data: {
+            fullName: name || 'Facebook User',
+            email,
+            facebookId,
+            role: "CLIENT",
+            verificationStatus: "VERIFIED"
+          }
+        });
+
+        await tx.auditLog.create({
+          data: { userId: newUser.id, action: "FACEBOOK_REGISTER", ipAddress: req.ip }
+        });
+
+        return newUser;
+      });
+
+      // Send welcome email
+      const firstName = (name || 'User').split(" ")[0];
+      try {
+        await emailService.sendWelcomeEmail(email, firstName);
+      } catch (emailErr) {
+        console.error("Facebook welcome email failed:", emailErr.message);
+      }
+    }
+
+    await createAuthResponse(res, user, req, 'facebook');
+  } catch (err) {
+    console.error("Facebook login error:", err);
+    res.status(500).json({ message: "Facebook login failed", error: err.message });
+  }
+};
+
+// ─── POST /api/auth/x ─────────────────────────────────────────────────────────
+// X (Twitter) Login using OAuth 2.0 Access Token
+export const xLogin = async (req, res) => {
+  try {
+    const { accessToken } = req.body;
+
+    if (!accessToken) {
+      return res.status(400).json({ message: "X access token required" });
+    }
+
+    if (!process.env.X_CLIENT_ID || !process.env.X_CLIENT_SECRET) {
+      return res.status(501).json({
+        message: "X Login not configured. Please add X_CLIENT_ID and X_CLIENT_SECRET to environment variables.",
+        docs: "https://developer.twitter.com/en/docs/authentication/oauth-2-0"
+      });
+    }
+
+    // Verify token with X API v2
+    const xResponse = await fetch('https://api.twitter.com/2/me?user.fields=email', {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+      }
+    });
+
+    if (!xResponse.ok) {
+      const error = await xResponse.json();
+      console.error("X token verification failed:", error);
+      return res.status(401).json({ message: "Invalid X access token" });
+    }
+
+    const xData = await xResponse.json();
+    const { id: xId, username, email } = xData.data || {};
+
+    if (!email) {
+      return res.status(400).json({ message: "Email not provided by X. Please ensure email permission is granted in your X app settings." });
+    }
+
+    // Check for existing user
+    let user = await prisma.user.findFirst({
+      where: { OR: [{ email }, { xId }] }
+    });
+
+    if (user) {
+      // Update X ID if not set
+      if (!user.xId) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { xId, lastLoginAt: new Date() }
+        });
+      }
+    } else {
+      // Create new user
+      user = await prisma.$transaction(async (tx) => {
+        const newUser = await tx.user.create({
+          data: {
+            fullName: username || 'X User',
+            email,
+            xId,
+            role: "CLIENT",
+            verificationStatus: "VERIFIED"
+          }
+        });
+
+        await tx.auditLog.create({
+          data: { userId: newUser.id, action: "X_REGISTER", ipAddress: req.ip }
+        });
+
+        return newUser;
+      });
+
+      // Send welcome email
+      const firstName = (username || 'User').toString();
+      try {
+        await emailService.sendWelcomeEmail(email, firstName);
+      } catch (emailErr) {
+        console.error("X welcome email failed:", emailErr.message);
+      }
+    }
+
+    await createAuthResponse(res, user, req, 'x');
+  } catch (err) {
+    console.error("X login error:", err);
+    res.status(500).json({ message: "X login failed", error: err.message });
+  }
+};

@@ -1,6 +1,5 @@
 import { ai, MODEL } from '../ai/genaiclient.js';
 import { marketDataService } from './marketData.service.js';
-import { pool } from '../config/db.js';
 
 class AIBudgetAnalysisService {
   constructor() {
@@ -19,10 +18,10 @@ class AIBudgetAnalysisService {
       bathrooms: { min: 1, max: 2 },
       construction_time: { min: 3, max: 6 }, // months
       base_materials: [
-        { id: 1, quantity_per_m2: 0.15 }, // Cement bags per m2
-        { id: 2, quantity_per_m2: 8 }, // Steel rebar meters per m2
-        { id: 3, quantity_per_m2: 0.4 }, // Sand m3 per m2
-        { id: 4, quantity_per_m2: 0.3 }, // Aggregate m3 per m2
+        { ref: 'cement', quantity_per_m2: 0.15 }, // Cement bags per m2
+        { ref: 'rebar', quantity_per_m2: 8 }, // Steel rebar meters per m2
+        { ref: 'sand', quantity_per_m2: 0.4 }, // Sand m3 per m2
+        { ref: 'aggregate', quantity_per_m2: 0.3 }, // Aggregate m3 per m2
       ],
       labor_days_per_m2: 15
     });
@@ -36,10 +35,10 @@ class AIBudgetAnalysisService {
       bathrooms: { min: 2, max: 3 },
       construction_time: { min: 6, max: 9 },
       base_materials: [
-        { id: 1, quantity_per_m2: 0.18 },
-        { id: 2, quantity_per_m2: 10 },
-        { id: 3, quantity_per_m2: 0.45 },
-        { id: 4, quantity_per_m2: 0.35 },
+        { ref: 'cement', quantity_per_m2: 0.18 },
+        { ref: 'rebar', quantity_per_m2: 10 },
+        { ref: 'sand', quantity_per_m2: 0.45 },
+        { ref: 'aggregate', quantity_per_m2: 0.35 },
       ],
       labor_days_per_m2: 18
     });
@@ -53,10 +52,10 @@ class AIBudgetAnalysisService {
       bathrooms: { min: 3, max: 4 },
       construction_time: { min: 9, max: 12 },
       base_materials: [
-        { id: 1, quantity_per_m2: 0.2 },
-        { id: 2, quantity_per_m2: 12 },
-        { id: 3, quantity_per_m2: 0.5 },
-        { id: 4, quantity_per_m2: 0.4 },
+        { ref: 'cement', quantity_per_m2: 0.2 },
+        { ref: 'rebar', quantity_per_m2: 12 },
+        { ref: 'sand', quantity_per_m2: 0.5 },
+        { ref: 'aggregate', quantity_per_m2: 0.4 },
       ],
       labor_days_per_m2: 20
     });
@@ -265,11 +264,12 @@ Provide specific recommendations including:
 
     for (const material of plan.base_materials) {
       const quantity = material.quantity_per_m2 * size;
-      const unitPrice = marketDataService.getAdjustedPrice(material.id, regionId, 1);
+      const unitPrice = marketDataService.getAdjustedPrice(material.ref, regionId, 1);
       const materialTotal = unitPrice * quantity;
+      const catalogItem = marketDataService.resolveCatalogItem(material.ref);
       
-      breakdown[material.id] = {
-        name: (await marketDataService.materials.get(material.id))?.name || 'Unknown',
+      breakdown[material.ref] = {
+        name: catalogItem?.name || 'Unknown',
         quantity,
         unit_price: unitPrice,
         total: materialTotal
@@ -288,13 +288,13 @@ Provide specific recommendations including:
     const skilledDays = totalLaborDays * 0.7;
     const unskilledDays = totalLaborDays * 0.3;
 
-    const skilledCost = marketDataService.getAdjustedPrice(5, regionId, skilledDays); // ID 5: skilled labor
-    const unskilledCost = marketDataService.getAdjustedPrice(6, regionId, unskilledDays); // ID 6: unskilled labor
+    const skilledCost = marketDataService.getAdjustedPrice('skilled_labor', regionId, skilledDays, 'labor');
+    const unskilledCost = marketDataService.getAdjustedPrice('unskilled_labor', regionId, unskilledDays, 'labor');
 
     return {
       breakdown: {
-        skilled: { days: skilledDays, unit_price: marketDataService.getAdjustedPrice(5, regionId, 1), total: skilledCost },
-        unskilled: { days: unskilledDays, unit_price: marketDataService.getAdjustedPrice(6, regionId, 1), total: unskilledCost }
+        skilled: { days: skilledDays, unit_price: marketDataService.getAdjustedPrice('skilled_labor', regionId, 1, 'labor'), total: skilledCost },
+        unskilled: { days: unskilledDays, unit_price: marketDataService.getAdjustedPrice('unskilled_labor', regionId, 1, 'labor'), total: unskilledCost }
       },
       total: skilledCost + unskilledCost
     };
@@ -302,7 +302,7 @@ Provide specific recommendations including:
 
   calculateOtherCosts(materialCost, laborCost, regionId) {
     const transportMultiplier = marketDataService.getRegionalMultiplier(regionId, 'transport');
-    const permitMultiplier = marketDataService.getRegionalMultiplier(regionId, 'permits');
+    const permitMultiplier = marketDataService.getRegionalMultiplier(regionId, 'overall');
 
     const transportCost = (materialCost * 0.05) * transportMultiplier; // 5% of material cost
     const permitCost = (materialCost + laborCost) * 0.03 * permitMultiplier; // 3% of total

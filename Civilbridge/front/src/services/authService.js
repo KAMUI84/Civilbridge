@@ -25,6 +25,32 @@ const authService = {
     return response;
   },
 
+  // Apple Sign In
+  async appleLogin(identityToken, authorizationCode, user) {
+    const response = await api.post('/api/auth/apple', {
+      identityToken,
+      authorizationCode,
+      user,
+    });
+    return response;
+  },
+
+  // Facebook Login
+  async facebookLogin(accessToken) {
+    const response = await api.post('/api/auth/facebook', { accessToken });
+    return response;
+  },
+
+  // X (Twitter) Login
+  async xLogin(code, codeVerifier, redirectUri) {
+    const response = await api.post('/api/auth/x', {
+      code,
+      codeVerifier,
+      redirectUri,
+    });
+    return response;
+  },
+
   // Logout user
   async logout() {
     const response = await api.post('/api/auth/logout');

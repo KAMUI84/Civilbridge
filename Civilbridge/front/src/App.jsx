@@ -51,8 +51,7 @@ const TermsAndConditions = lazy(() => import("./pages/public/TermsLegal"));
 const PrivacyPolicy      = lazy(() => import("./pages/public/PrivacyPolicy"));
 
 // ─── Lazy auth pages ───────────────────────────────────────────────────────────
-const Login          = lazy(() => import("./pages/public/LoginPortal"));
-const Register       = lazy(() => import("./pages/public/RegisterPortal"));
+const AuthPage        = lazy(() => import("./pages/public/AuthPage"));
 const ForgotPassword  = lazy(() => import("./pages/auth/ForgotPassword"));
 const ResetPassword   = lazy(() => import("./pages/auth/ResetPassword"));
 const AnimatedSignIn  = lazy(() => import("./pages/auth/AnimatedSignIn"));
@@ -130,8 +129,8 @@ export default function App() {
           </Route>
 
           {/* 2. AUTH */}
-          <Route path="/login"    element={<PT><Login /></PT>} />
-          <Route path="/register" element={<PT><Register /></PT>} />
+          <Route path="/login"    element={<PT><AuthPage /></PT>} />
+          <Route path="/register" element={<PT><AuthPage /></PT>} />
           <Route path="/forgot-password"  element={<PT><ForgotPassword /></PT>} />
           <Route path="/reset-password"   element={<PT><ResetPassword /></PT>} />
           <Route path="/animated-signin"  element={<PT><AnimatedSignIn /></PT>} />

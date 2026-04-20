@@ -116,6 +116,27 @@ export function AuthProvider({ children }) {
         }
     }, [navigate, setAuth]);
 
+    // ── Facebook Login ─────────────────────────────────────────────────────────
+    const facebookLogin = useCallback(async (accessToken, redirectTo) => {
+        try {
+            const data = await authService.facebookLogin(accessToken);
+            const { csrfToken: newCsrf, user: newUser } = data;
+
+            localStorage.setItem("cb_user", JSON.stringify(newUser));
+
+            setUser(newUser);
+            setCsrfToken(newCsrf);
+            setAuth(newUser);
+
+            navigate(redirectTo || getPostLoginRoute(newUser.role), { replace: true });
+
+            return newUser;
+        } catch (error) {
+            console.error('Facebook login failed:', error);
+            throw error;
+        }
+    }, [navigate, setAuth]);
+
     // ── Register ─────────────────────────────────────────────────────────────
     const register = useCallback(async (userData) => {
         try {
@@ -151,6 +172,7 @@ export function AuthProvider({ children }) {
         loading,
         login,
         googleLogin,
+        facebookLogin,
         register,
         logout,
     };

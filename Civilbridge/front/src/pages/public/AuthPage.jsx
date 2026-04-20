@@ -69,7 +69,7 @@ const ABOUT_SLIDES = [
 export default function AuthPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, googleLogin } = useAuth();
+  const { login, googleLogin, facebookLogin } = useAuth();
   const returnTo = location.state?.from?.pathname || null;
 
   const isRegisterPath = location.pathname === "/register";
@@ -199,7 +199,7 @@ export default function AuthPage() {
         await loadScript('https://accounts.google.com/gsi/client');
       }
 
-      // Trigger Google One Tap or explicit sign-in
+      // Trigger Google sign-in flow
       if (window.google?.accounts?.id) {
         window.google.accounts.id.initialize({
           client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
@@ -212,12 +212,7 @@ export default function AuthPage() {
             }
           }
         });
-        
-        window.google.accounts.id.renderButton(
-          document.getElementById('google-button-container'),
-          { theme: 'outline', size: 'large' }
-        );
-        
+
         window.google.accounts.id.prompt();
       }
     } catch (error) {
@@ -294,21 +289,25 @@ export default function AuthPage() {
   // Facebook Login - Uses FB SDK
   async function handleFacebookLogin() {
     try {
-      // Check if FB SDK is available
+      const appId = import.meta.env.VITE_FACEBOOK_APP_ID;
+      if (!appId || appId === 'your_facebook_app_id') {
+        showToast("🔧 Facebook Login needs setup: Add VITE_FACEBOOK_APP_ID to your .env file", "info");
+        return;
+      }
+
+      // Load the FB SDK if needed
       if (typeof window.FB === 'undefined') {
-        // Initialize FB SDK
         await new Promise((resolve, reject) => {
           window.fbAsyncInit = function() {
             window.FB.init({
-              appId: import.meta.env.VITE_FACEBOOK_APP_ID || 'YOUR_FACEBOOK_APP_ID',
+              appId,
               cookie: true,
-              xfbml: true,
+              xfbml: false,
               version: 'v18.0',
             });
             resolve();
           };
 
-          // Load FB SDK
           const script = document.createElement('script');
           script.src = 'https://connect.facebook.net/en_US/sdk.js';
           script.async = true;
@@ -319,7 +318,7 @@ export default function AuthPage() {
         });
       }
 
-      // Request login
+      setLoading(true);
       const authResponse = await new Promise((resolve, reject) => {
         window.FB.login((response) => {
           if (response.authResponse) {
@@ -330,19 +329,10 @@ export default function AuthPage() {
         }, { scope: 'email,public_profile' });
       });
 
-      // Send access token to backend
-      setLoading(true);
-      const data = await api.post("/api/auth/facebook", {
-        accessToken: authResponse.accessToken,
-      });
-
-      if (data.success && data.user) {
-        localStorage.setItem("cb_user", JSON.stringify(data.user));
-        navigate(returnTo || "/dashboard", { replace: true });
-      }
+      await facebookLogin(authResponse.accessToken, returnTo);
     } catch (error) {
       if (error?.message?.includes('not configured')) {
-        showToast("🔧 Facebook Login needs setup: Add FACEBOOK_APP_ID to your .env file", "info");
+        showToast("🔧 Facebook Login needs setup: Add VITE_FACEBOOK_APP_ID to your .env file", "info");
       } else {
         showToast(error?.message || "Facebook Login failed", "error");
       }

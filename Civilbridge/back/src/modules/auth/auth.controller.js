@@ -1,4 +1,5 @@
 import prisma from "../../config/prisma.js";
+import crypto from "crypto";
 import { comparePassword, hashPassword } from "../../utils/password.js";
 import {
   generateToken,

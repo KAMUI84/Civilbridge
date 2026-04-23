@@ -24,6 +24,7 @@ import {
 import { buildInvoicePdfBuffer } from "./payments.invoice.js";
 import { sendPaymentReceiptEmail } from "./payments.mailer.js";
 import { verifyHmacSignature, verifyStripeSignature } from "./payments.signature.js";
+import { maybeCreatePayout } from "./payments.payout.js";
 import {
   getAirtelPaymentStatus,
   initiateAirtelPayment,
@@ -121,17 +122,23 @@ function resolveWebhookVerification(provider, { headers, rawBody }) {
 function normalizeWebhookPayload(provider, payload) {
   if (provider === PAYMENT_PROVIDERS.STRIPE) {
     const object = payload?.data?.object || {};
+    const isCheckoutSession = object.object === "checkout.session";
     const transactionReference =
       object.metadata?.transactionReference ||
       object.metadata?.transaction_reference ||
       object.client_reference_id ||
       null;
 
+    // Checkout Sessions use payment_status ("paid"/"unpaid"), PaymentIntents use status
+    const providerStatus = isCheckoutSession
+      ? (object.payment_status || null)
+      : (object.status || null);
+
     return {
       eventType: payload?.type || "stripe.event",
       transactionReference,
       providerTransactionId: object.id || null,
-      providerStatus: object.status || null,
+      providerStatus,
       externalEventId: payload?.id || object.id || null,
       raw: payload,
     };
@@ -315,6 +322,12 @@ async function syncTransactionState(transaction, providerUpdate, source) {
         status: updated.status,
       },
     );
+    // Auto-create payout for ENGINEER_ASSIGNMENT once payment is confirmed
+    if (updated.status === PAYMENT_STATUSES.CONFIRMED && updated.serviceType === SERVICE_TYPES.ENGINEER_ASSIGNMENT) {
+      await maybeCreatePayout(updated).catch((e) =>
+        console.error("Payout creation failed for ENGINEER_ASSIGNMENT:", e.message),
+      );
+    }
   }
 
   if (updated.status === PAYMENT_STATUSES.REFUNDED) {
@@ -358,9 +371,13 @@ export async function initiatePayment(input, actor) {
   const user = await getUserOrThrow(userId);
   const adapter = getProviderAdapter(provider);
 
+  // recipientId: the professional/contractor who will receive the net payout after platform fee
+  const recipientId = input.recipientId ? toBigIntId(input.recipientId, "recipientId") : null;
+
   const created = await prisma.transaction.create({
     data: {
       userId,
+      recipientId,
       provider,
       reference: generateTransactionReference(provider),
       invoiceNumber: generateInvoiceNumber(),
@@ -619,6 +636,11 @@ export async function releaseMilestonePayment(transactionId, actor, input = {}) 
     "Escrow released",
     `Milestone payment ${updated.reference} has been released after approval.`,
     { transactionId: updated.id.toString(), status: updated.status },
+  );
+
+  // Auto-create payout for the recipient (contractor/engineer) when milestone is released
+  await maybeCreatePayout(updated).catch((e) =>
+    console.error("Payout creation failed for PROJECT_MILESTONE release:", e.message),
   );
 
   return updated;

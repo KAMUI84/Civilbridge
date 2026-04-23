@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/useAuth";
 import SEO from "../../components/seo/SEO";
 import { api } from "../../services/apiClientService";
-import { Mail, Lock, User, Eye, EyeOff, X as XIcon, AlertCircle } from "lucide-react";
+import { Mail, Lock, User, Eye, EyeOff, AlertCircle } from "lucide-react";
 import "./auth-page.css";
 
 // Toast notification component
@@ -690,21 +690,11 @@ export default function AuthPage() {
                     aria-label="Sign in with Google"
                     onClick={handleGoogleLogin}
                   >
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <circle cx="12" cy="12" r="1" fill="#4285f4"/>
-                      <circle cx="19" cy="12" r="1" fill="#34a853"/>
-                      <circle cx="12" cy="19" r="1" fill="#fbbc04"/>
-                      <circle cx="5" cy="12" r="1" fill="#ea4335"/>
-                    </svg>
-                  </button>
-                  <button
-                    type="button"
-                    className="social-btn apple"
-                    aria-label="Sign in with Apple"
-                    onClick={handleAppleLogin}
-                  >
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+                    <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+                      <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.3-2.3H12v4.4h6.4c-.3 1.8-1.5 3.2-3.3 4v3.3h5.4c3.1-2.9 4.9-7 4.9-11.4z" />
+                      <path fill="#34A853" d="M12 24c3.2 0 5.9-1 7.9-2.7l-3.8-3.3c-1 .7-2.4 1.2-4.1 1.2-3.1 0-5.8-2.1-6.8-4.8H1.8v3.1C3.8 20.9 7.7 24 12 24z" />
+                      <path fill="#FBBC05" d="M5.2 14.4c-.2-.7-.3-1.4-.3-2.2s.1-1.5.3-2.2V6.9H1.8C.7 8.9 0 10.9 0 12.9s.7 4 1.8 6h3.4z" />
+                      <path fill="#EA4335" d="M12 4.8c1.8 0 3.4.6 4.7 1.7l3.5-3.5C17.8 1.2 15 0 12 0 7.7 0 3.8 3.1 1.8 6.9l3.4 2.6C6.2 6.9 8.9 4.8 12 4.8z" />
                     </svg>
                   </button>
                   <button
@@ -713,8 +703,8 @@ export default function AuthPage() {
                     aria-label="Sign in with Facebook"
                     onClick={handleFacebookLogin}
                   >
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                    <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+                      <path fill="currentColor" d="M15.117 8.2h-2.1V6c0-.5.3-.6.6-.6h1.5V2.1h-2.2c-2.4 0-3.9 1.5-3.9 3.9v1.8H7v3h1.1V22h3.3v-9.9h2.1l.3-3z" />
                     </svg>
                   </button>
                   <button
@@ -723,7 +713,9 @@ export default function AuthPage() {
                     aria-label="Sign in with X"
                     onClick={handleXLogin}
                   >
-                    <XIcon size={24} />
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M7 7l10 10M17 7l-10 10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                    </svg>
                   </button>
                 </div>
               </>

@@ -60,6 +60,7 @@ const ENGINEER_ASSIGNMENT_ROLES = new Set([
   "PROFESSIONAL",
   "ARCHITECT",
   "CONTRACTOR",
+  "SUPPLIER",
 ]);
 
 export function requireEngineerAssignmentPaymentIfNeeded() {

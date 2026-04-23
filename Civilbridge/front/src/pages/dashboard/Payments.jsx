@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../../services/apiClientService';
 import { SkeletonRow, SkeletonStats } from '../../components/common/Skeleton';
 import SEO from '../../components/seo/SEO';
+import { useAuthStore } from '../../store/authStore';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 const MotionDiv = motion.div;
@@ -136,8 +137,108 @@ function PaymentStepper({ currentStatus }) {
   );
 }
 
+// ── Payout status colour ────────────────────────────────────────────────────
+const PAYOUT_COLOR = { PENDING: '#f59e0b', PROCESSING: '#3b82f6', SETTLED: '#22c55e', CANCELLED: '#ef4444' };
+
+// ── Payouts panel (admin/finance/own) ────────────────────────────────────────
+function PayoutsPanel({ isAdmin }) {
+  const [payouts, setPayouts] = useState([]);
+  const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [settling, setSettling] = useState(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [pd, sd] = await Promise.all([
+        api.get('/api/payments/payouts'),
+        isAdmin ? api.get('/api/payments/payouts/summary').catch(() => null) : Promise.resolve(null),
+      ]);
+      setPayouts(pd?.items || []);
+      if (sd?.summary) setSummary(sd.summary);
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  }, [isAdmin]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleSettle = async (payoutId) => {
+    if (!window.confirm('Mark this payout as settled?')) return;
+    setSettling(payoutId);
+    try {
+      await api.post(`/api/payments/payouts/${payoutId}/settle`, {});
+      await load();
+    } catch (e) { alert(e.message); }
+    finally { setSettling(null); }
+  };
+
+  if (loading) return <div style={{ ...s.tabContent, color: '#9ca3af', textAlign: 'center', padding: '40px 0' }}>Loading payouts…</div>;
+
+  return (
+    <div style={s.tabContent}>
+      <h3 style={s.sectionTitle}>{isAdmin ? 'All Payouts' : 'My Payouts'}</h3>
+
+      {/* Summary cards — admin only */}
+      {isAdmin && summary && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 12, marginBottom: 24 }}>
+          {[
+            { label: 'Pending payable', value: `RWF ${summary.pending.netPayable.toLocaleString()}`, sub: `${summary.pending.count} payouts`, color: '#f59e0b' },
+            { label: 'Platform revenue (pending)', value: `RWF ${summary.pending.platformRevenue.toLocaleString()}`, sub: 'commission held', color: '#8b5cf6' },
+            { label: 'Total settled', value: `RWF ${summary.settled.netPaid.toLocaleString()}`, sub: `${summary.settled.count} paid out`, color: '#22c55e' },
+          ].map(c => (
+            <div key={c.label} style={{ ...s.revenueCard, borderColor: `${c.color}33` }}>
+              <div style={{ ...s.revenueTitle }}>{c.label}</div>
+              <div style={{ ...s.revenueAmount, color: c.color }}>{c.value}</div>
+              <div style={s.revenueSubtitle}>{c.sub}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {payouts.length === 0 ? (
+        <div style={s.empty}>No payouts yet.</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {payouts.map(p => (
+            <div key={p.id} style={{ ...s.txItem, flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 15 }}>
+                    {p.currency} {Number(p.netAmount).toLocaleString()}
+                    <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 8 }}>net (after {Number(p.feePercent)}% platform fee)</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>
+                    {isAdmin && p.recipient && <span>→ {p.recipient.fullName} ({p.recipient.role}) · </span>}
+                    {p.transaction?.serviceType?.replace(/_/g, ' ')} · {p.transaction?.reference}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+                    Gross: {p.currency} {Number(p.grossAmount).toLocaleString()} · Fee: {p.currency} {Number(p.platformFee).toLocaleString()}
+                    {p.settledBy && ` · Settled by ${p.settledBy.fullName}`}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <span style={{ ...s.badge, background: PAYOUT_COLOR[p.status] || '#6b7280' }}>{p.status}</span>
+                  {isAdmin && p.status === 'PENDING' && (
+                    <button style={{ ...s.actionButton, background: 'rgba(34,197,94,0.1)', borderColor: 'rgba(34,197,94,0.3)', color: '#22c55e' }}
+                      disabled={settling === p.id} onClick={() => handleSettle(p.id)}>
+                      {settling === p.id ? '…' : '✓ Settle'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main component ──────────────────────────────────────────────────────────
 export default function Payments() {
+  const user = useAuthStore(s => s.user);
+  const isAdmin = ['ADMIN', 'SUPER_ADMIN', 'FINANCE'].includes(user?.role);
+
   const [transactions, setTransactions] = useState([]);
   const [state,        setState]        = useState({ loading: true, error: '' });
   const [activeTab,    setActiveTab]    = useState('transactions');
@@ -203,6 +304,7 @@ export default function Payments() {
     { id: 'transactions', label: '💳 Transactions' },
     { id: 'invoices',     label: '📄 Invoices' },
     { id: 'initiate',     label: '🚀 New Payment' },
+    { id: 'payouts',      label: isAdmin ? '💰 Payouts' : '💰 My Payouts' },
     ...(pollingId ? [{ id: 'status', label: '⏳ Payment Status' }] : []),
   ];
 
@@ -330,6 +432,9 @@ export default function Payments() {
         <InitiatePaymentPanel onInitiated={onPaymentInitiated} onSuccess={() => { setActiveTab('transactions'); loadHistory(); }} />
       )}
 
+      {/* ── Payouts ────────────────────────────────────────────────── */}
+      {activeTab === 'payouts' && <PayoutsPanel isAdmin={isAdmin} />}
+
       {/* ── Polling status ─────────────────────────────────────────── */}
       {activeTab === 'status' && pollingId && (
         <PaymentStatusPanel transactionId={pollingId} onDone={() => { loadHistory(); setPollingId(null); setActiveTab('transactions'); }} />
@@ -339,8 +444,10 @@ export default function Payments() {
 }
 
 // ── Initiate payment panel ────────────────────────────────────────────────────
+const PAYOUT_SERVICE_TYPES = new Set(['ENGINEER_ASSIGNMENT', 'PROJECT_MILESTONE']);
+
 function InitiatePaymentPanel({ onInitiated, onSuccess }) {
-  const [form, setForm] = useState({ amount: '', currency: 'RWF', provider: 'MTN_MOMO', serviceType: 'OTHER', phoneNumber: '' });
+  const [form, setForm] = useState({ amount: '', currency: 'RWF', provider: 'MTN_MOMO', serviceType: 'OTHER', phoneNumber: '', recipientId: '' });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
@@ -436,12 +543,12 @@ function InitiatePaymentPanel({ onInitiated, onSuccess }) {
           </div>
         )}
 
-        {/* Stripe card placeholder */}
+        {/* Stripe redirect notice */}
         {form.provider === 'STRIPE' && (
-          <div style={{ padding: '16px', borderRadius: 10, border: '1px dashed rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.02)' }}>
-            <div style={{ fontSize: 13, color: '#9ca3af', textAlign: 'center' }}>
-              💳 Stripe card form will load here.<br />
-              <span style={{ fontSize: 12, color: '#6b7280' }}>A Stripe Elements integration is required — contact your developer.</span>
+          <div style={{ padding: '14px 16px', borderRadius: 10, border: '1px solid rgba(59,130,246,0.25)', background: 'rgba(59,130,246,0.06)' }}>
+            <div style={{ fontSize: 13, color: '#93c5fd', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+              <span style={{ fontSize: 18, lineHeight: 1 }}>💳</span>
+              <span>After clicking <strong>Pay</strong> you will be redirected to Stripe's secure payment page to enter your card details. All major credit and debit cards are accepted.</span>
             </div>
           </div>
         )}
@@ -457,6 +564,18 @@ function InitiatePaymentPanel({ onInitiated, onSuccess }) {
             <option value="OTHER">Other</option>
           </select>
         </div>
+
+        {/* Recipient (professional/contractor) — only for service types that trigger a payout */}
+        {PAYOUT_SERVICE_TYPES.has(form.serviceType) && (
+          <div>
+            <label style={s.formLabel}>Recipient User ID <span style={{ fontSize: 11, color: '#6b7280' }}>(engineer / contractor / professional)</span></label>
+            <input type="text" value={form.recipientId} onChange={e=>set('recipientId',e.target.value)}
+              style={s.formInput} placeholder="e.g. 42" />
+            <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+              The platform fee ({import.meta.env.VITE_PLATFORM_FEE_PERCENT || 15}%) will be deducted and the remainder will be queued as a payout to this person.
+            </div>
+          </div>
+        )}
 
         <button type="submit" disabled={submitting}
           style={{ padding: '13px 0', background: submitting?'#374151':'#3b82f6', color:'#fff', border:'none', borderRadius:10, fontWeight:700, fontSize:15, cursor:submitting?'not-allowed':'pointer' }}>

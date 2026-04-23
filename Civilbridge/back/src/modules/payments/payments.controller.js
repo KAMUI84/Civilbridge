@@ -7,6 +7,15 @@ import {
   refundPayment,
   releaseMilestonePayment,
 } from "./payments.service.js";
+import { getPayoutSummary, listPayouts, settlePayout } from "./payments.payout.js";
+
+function errorStatus(error) {
+  const msg = (error.message || "").toLowerCase();
+  if (msg.includes("not found") || msg.includes("no transaction") || msg.includes("no matching")) return 404;
+  if (msg.includes("not allowed") || msg.includes("not authorized") || msg.includes("cannot ")) return 403;
+  if (msg.includes("invalid webhook signature") || msg.includes("unauthorized")) return 401;
+  return 400;
+}
 
 function toPlainTransaction(transaction) {
   return {
@@ -29,7 +38,7 @@ export async function initiatePaymentHandler(req, res) {
       payment: payload,
     });
   } catch (error) {
-    res.status(400).json({ success: false, message: error.message });
+    res.status(errorStatus(error)).json({ success: false, message: error.message });
   }
 }
 
@@ -38,7 +47,7 @@ export async function pollPaymentStatusHandler(req, res) {
     const transaction = await pollPaymentStatus(req.params.transactionId, req.user);
     res.json({ success: true, transaction: toPlainTransaction(transaction) });
   } catch (error) {
-    res.status(400).json({ success: false, message: error.message });
+    res.status(errorStatus(error)).json({ success: false, message: error.message });
   }
 }
 
@@ -47,7 +56,7 @@ export async function paymentHistoryHandler(req, res) {
     const history = await getPaymentHistory(req.query, req.user);
     res.json({ success: true, ...history });
   } catch (error) {
-    res.status(400).json({ success: false, message: error.message });
+    res.status(errorStatus(error)).json({ success: false, message: error.message });
   }
 }
 
@@ -59,7 +68,7 @@ export async function invoiceHandler(req, res) {
     res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
     res.send(pdfBuffer);
   } catch (error) {
-    res.status(400).json({ success: false, message: error.message });
+    res.status(errorStatus(error)).json({ success: false, message: error.message });
   }
 }
 
@@ -99,7 +108,7 @@ export async function releaseMilestonePaymentHandler(req, res) {
     );
     res.json({ success: true, transaction: toPlainTransaction(transaction) });
   } catch (error) {
-    res.status(400).json({ success: false, message: error.message });
+    res.status(errorStatus(error)).json({ success: false, message: error.message });
   }
 }
 
@@ -112,6 +121,33 @@ export async function refundPaymentHandler(req, res) {
     );
     res.json({ success: true, transaction: toPlainTransaction(transaction) });
   } catch (error) {
-    res.status(400).json({ success: false, message: error.message });
+    res.status(errorStatus(error)).json({ success: false, message: error.message });
+  }
+}
+
+export async function listPayoutsHandler(req, res) {
+  try {
+    const result = await listPayouts(req.query, req.user);
+    res.json({ success: true, ...result });
+  } catch (error) {
+    res.status(errorStatus(error)).json({ success: false, message: error.message });
+  }
+}
+
+export async function settlePayoutHandler(req, res) {
+  try {
+    const payout = await settlePayout(req.params.payoutId, req.user, req.body?.notes);
+    res.json({ success: true, payout });
+  } catch (error) {
+    res.status(errorStatus(error)).json({ success: false, message: error.message });
+  }
+}
+
+export async function payoutSummaryHandler(req, res) {
+  try {
+    const summary = await getPayoutSummary(req.user);
+    res.json({ success: true, summary });
+  } catch (error) {
+    res.status(errorStatus(error)).json({ success: false, message: error.message });
   }
 }

@@ -14,7 +14,13 @@ function buildPath(path) {
   return `${getBaseUrl()}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
+let _airtelTokenCache = null;
+let _airtelTokenExpiry = 0;
+
 async function getAccessToken() {
+  const now = Date.now();
+  if (_airtelTokenCache && now < _airtelTokenExpiry) return _airtelTokenCache;
+
   const clientId = getRequiredEnv("AIRTEL_RW_CLIENT_ID");
   const clientSecret = getRequiredEnv("AIRTEL_RW_CLIENT_SECRET");
   const authPath = process.env.AIRTEL_RW_AUTH_PATH || "/auth/oauth2/token";
@@ -32,7 +38,11 @@ async function getAccessToken() {
     },
   );
 
-  return response.data.access_token || response.data.token;
+  const token = response.data.access_token || response.data.token;
+  const expiresIn = response.data.expires_in || 3600;
+  _airtelTokenCache = token;
+  _airtelTokenExpiry = now + (expiresIn - 60) * 1000; // refresh 60s before expiry
+  return token;
 }
 
 function getCountry() {

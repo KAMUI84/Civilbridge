@@ -5,14 +5,19 @@ import {
   airtelWebhookHandler,
   initiatePaymentHandler,
   invoiceHandler,
+  listPayoutsHandler,
   mtnWebhookHandler,
   paymentHistoryHandler,
+  payoutSummaryHandler,
   pollPaymentStatusHandler,
   refundPaymentHandler,
   releaseMilestonePaymentHandler,
+  settlePayoutHandler,
   stripeWebhookHandler,
 } from "./payments.controller.js";
 import { MILESTONE_APPROVER_ROLES, REFUND_ADMIN_ROLES } from "./payments.constants.js";
+
+const PAYOUT_ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN", "FINANCE"];
 
 const router = Router();
 
@@ -37,6 +42,18 @@ router.post(
   csrfGuard,
   requireRole(REFUND_ADMIN_ROLES),
   refundPaymentHandler,
+);
+
+// ── Payouts ──────────────────────────────────────────────────────────────────
+// Admins/Finance see all payouts; any other role sees only their own
+router.get("/payouts", protect, listPayoutsHandler);
+router.get("/payouts/summary", protect, requireRole(PAYOUT_ADMIN_ROLES), payoutSummaryHandler);
+router.post(
+  "/payouts/:payoutId/settle",
+  protect,
+  csrfGuard,
+  requireRole(PAYOUT_ADMIN_ROLES),
+  settlePayoutHandler,
 );
 
 export default router;

@@ -74,6 +74,11 @@ export const PROVIDER_STATUS_MAP = {
     PENDING: PAYMENT_STATUSES.PENDING,
   },
   STRIPE: {
+    // Checkout Session statuses
+    paid: PAYMENT_STATUSES.CONFIRMED,
+    unpaid: PAYMENT_STATUSES.PENDING,
+    no_payment_required: PAYMENT_STATUSES.CONFIRMED,
+    // PaymentIntent statuses (legacy / fallback)
     succeeded: PAYMENT_STATUSES.CONFIRMED,
     processing: PAYMENT_STATUSES.PROCESSING,
     requires_payment_method: PAYMENT_STATUSES.PENDING,

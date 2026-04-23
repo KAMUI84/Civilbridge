@@ -282,6 +282,13 @@ enum EscrowStatus {
   REFUNDED
 }
 
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  SETTLED
+  CANCELLED
+}
+
 enum TaskStatus {
   TODO
   IN_PROGRESS
@@ -331,6 +338,9 @@ model User {
   leadRequests                  LeadRequest[]
   planRequests                  PlanRequest[]
   transactions                  Transaction[]
+  receivedTransactions          Transaction[]     @relation("TransactionRecipient")
+  receivedPayouts               Payout[]          @relation("PayoutRecipient")
+  settledPayouts                Payout[]          @relation("PayoutSettler")
   calendarSlots                 CalendarSlot[]    @relation("CalendarSlotProvider")
   appointmentsAsProvider        Appointment[]     @relation("AppointmentProvider")
   appointmentsAsClient          Appointment[]     @relation("AppointmentClient")
@@ -944,6 +954,7 @@ model RolePermission {
 model Transaction {
   id                    BigInt             @id @default(autoincrement()) @db.UnsignedBigInt
   userId                BigInt             @map("user_id") @db.UnsignedBigInt
+  recipientId           BigInt?            @map("recipient_id") @db.UnsignedBigInt
   provider              PaymentProvider    @default(MANUAL)
   reference             String?            @unique @db.VarChar(120)
   invoiceNumber         String?            @unique @map("invoice_number") @db.VarChar(80)
@@ -979,9 +990,12 @@ model Transaction {
   updatedAt             DateTime           @updatedAt @map("updated_at")
 
   user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipient     User?                 @relation("TransactionRecipient", fields: [recipientId], references: [id], onDelete: SetNull)
   webhookEvents PaymentWebhookEvent[]
+  payout        Payout?
 
   @@index([userId])
+  @@index([recipientId])
   @@index([provider])
   @@index([status])
   @@index([serviceType])
@@ -1009,6 +1023,32 @@ model PaymentWebhookEvent {
   @@index([provider])
   @@index([receivedAt])
   @@map("payment_webhook_events")
+}
+
+model Payout {
+  id            BigInt       @id @default(autoincrement()) @db.UnsignedBigInt
+  transactionId BigInt       @unique @map("transaction_id") @db.UnsignedBigInt
+  recipientId   BigInt       @map("recipient_id") @db.UnsignedBigInt
+  grossAmount   Decimal      @map("gross_amount") @db.Decimal(16, 2)
+  platformFee   Decimal      @map("platform_fee") @db.Decimal(16, 2)
+  feePercent    Decimal      @map("fee_percent") @db.Decimal(5, 2)
+  netAmount     Decimal      @map("net_amount") @db.Decimal(16, 2)
+  currency      String       @default("RWF") @db.VarChar(20)
+  status        PayoutStatus @default(PENDING)
+  notes         String?      @db.VarChar(255)
+  settledAt     DateTime?    @map("settled_at")
+  settledById   BigInt?      @map("settled_by_id") @db.UnsignedBigInt
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  recipient   User        @relation("PayoutRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  settledBy   User?       @relation("PayoutSettler", fields: [settledById], references: [id], onDelete: SetNull)
+
+  @@index([recipientId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("payouts")
 }
 
 model CalendarSlot {

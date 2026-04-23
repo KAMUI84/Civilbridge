@@ -25,16 +25,6 @@ const authService = {
     return response;
   },
 
-  // Apple Sign In
-  async appleLogin(identityToken, authorizationCode, user) {
-    const response = await api.post('/api/auth/apple', {
-      identityToken,
-      authorizationCode,
-      user,
-    });
-    return response;
-  },
-
   // Facebook Login
   async facebookLogin(accessToken) {
     const response = await api.post('/api/auth/facebook', { accessToken });

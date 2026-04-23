@@ -234,57 +234,8 @@ export default function AuthPage() {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // SOCIAL LOGIN HANDLERS - Apple, Facebook, X
+  // SOCIAL LOGIN HANDLERS - Facebook, X
   // ═══════════════════════════════════════════════════════════════════════════
-
-  // Apple Sign In - Uses Apple JS SDK
-  async function handleAppleLogin() {
-    try {
-      // Check if Apple SDK is available
-      if (typeof window.AppleID === 'undefined') {
-        // Load Apple SDK if not available
-        await loadScript('https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js');
-      }
-
-      const authResponse = await new Promise((resolve, reject) => {
-        window.AppleID.auth.init({
-          clientId: import.meta.env.VITE_APPLE_CLIENT_ID || 'YOUR_APPLE_CLIENT_ID',
-          scope: 'name email',
-          redirectURI: `${window.location.origin}/api/auth/apple/callback`,
-          state: 'civilbridge_auth',
-          usePopup: true,
-        });
-
-        window.AppleID.auth.signIn()
-          .then(resolve)
-          .catch(reject);
-      });
-
-      // Send identity token to backend
-      const { identityToken, authorizationCode, user } = authResponse;
-
-      setLoading(true);
-      const data = await api.post("/api/auth/apple", {
-        identityToken,
-        authorizationCode,
-        user,
-      });
-
-      if (data.success && data.user) {
-        // Store auth state
-        localStorage.setItem("cb_user", JSON.stringify(data.user));
-        navigate(returnTo || "/dashboard", { replace: true });
-      }
-    } catch (error) {
-      if (error?.message?.includes('not configured')) {
-        showToast("🔧 Apple Sign In needs setup: Add APPLE_CLIENT_ID to your .env file", "info");
-      } else {
-        showToast(error?.message || "Apple Sign In failed", "error");
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
 
   // Facebook Login - Uses FB SDK
   async function handleFacebookLogin() {

@@ -551,7 +551,7 @@ export const changePassword = async (req, res) => {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// ADDITIONAL SOCIAL LOGIN PROVIDERS (Apple, Facebook, X/Twitter)
+// SOCIAL LOGIN PROVIDERS (Facebook, X/Twitter)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // ─── Helper: Create session and send response ──────────────────────────────────
@@ -596,97 +596,6 @@ async function createAuthResponse(res, user, req, provider) {
     },
   });
 }
-
-// ─── POST /api/auth/apple ─────────────────────────────────────────────────────
-// Apple Sign In using Identity Token
-export const appleLogin = async (req, res) => {
-  try {
-    const { identityToken, authorizationCode, user: appleUser } = req.body;
-
-    if (!identityToken) {
-      return res.status(400).json({ message: "Apple identity token required" });
-    }
-
-    // TODO: Verify Apple identity token using Apple's public keys
-    // This requires the 'apple-signin-auth' package or manual JWT verification
-    // Apple docs: https://developer.apple.com/documentation/sign_in_with_apple
-
-    // For now, return a helpful error message
-    if (!process.env.APPLE_CLIENT_ID) {
-      return res.status(501).json({
-        message: "Apple Sign In not configured. Please add APPLE_CLIENT_ID, APPLE_TEAM_ID, APPLE_KEY_ID, and APPLE_PRIVATE_KEY to environment variables.",
-        docs: "https://developer.apple.com/documentation/sign_in_with_apple"
-      });
-    }
-
-    // Decode the identity token (JWT) without verification for development
-    // In production, you MUST verify this token
-    const tokenParts = identityToken.split('.');
-    if (tokenParts.length !== 3) {
-      return res.status(400).json({ message: "Invalid Apple identity token format" });
-    }
-
-    const payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString());
-    const email = payload.email;
-    const sub = payload.sub; // Apple user ID
-
-    if (!email) {
-      return res.status(400).json({ message: "Email not provided by Apple" });
-    }
-
-    // Check for existing user
-    let user = await prisma.user.findFirst({
-      where: { OR: [{ email }, { appleSub: sub }] }
-    });
-
-    if (user) {
-      // Update Apple sub if not set
-      if (!user.appleSub) {
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { appleSub: sub, lastLoginAt: new Date() }
-        });
-      }
-    } else {
-      // Create new user
-      // For Apple, the name is only provided on first sign-in
-      const fullName = appleUser?.fullName
-        ? `${appleUser.fullName.givenName || ''} ${appleUser.fullName.familyName || ''}`.trim()
-        : email.split('@')[0];
-
-      user = await prisma.$transaction(async (tx) => {
-        const newUser = await tx.user.create({
-          data: {
-            fullName: fullName || 'Apple User',
-            email,
-            appleSub: sub,
-            role: "CLIENT",
-            verificationStatus: "VERIFIED"
-          }
-        });
-
-        await tx.auditLog.create({
-          data: { userId: newUser.id, action: "APPLE_REGISTER", ipAddress: req.ip }
-        });
-
-        return newUser;
-      });
-
-      // Send welcome email
-      const firstName = (fullName || 'User').split(" ")[0];
-      try {
-        await emailService.sendWelcomeEmail(email, firstName);
-      } catch (emailErr) {
-        console.error("Apple welcome email failed:", emailErr.message);
-      }
-    }
-
-    await createAuthResponse(res, user, req, 'apple');
-  } catch (err) {
-    console.error("Apple login error:", err);
-    res.status(500).json({ message: "Apple login failed", error: err.message });
-  }
-};
 
 // ─── POST /api/auth/facebook ──────────────────────────────────────────────────
 // Facebook Login using Access Token

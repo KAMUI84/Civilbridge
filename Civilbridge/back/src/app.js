@@ -22,8 +22,8 @@ BigInt.prototype.toJSON = function () {
 import authRoutes          from "./modules/auth/auth.routes.js";
 import otpRoutes           from "./routes/otp.route.js";
 import passwordResetRoutes from "./routes/passwordReset.route.js";
-import regionsRoutes       from "./routes/regions.route.js";
-import uploadsRoutes       from "./routes/uploads.route.js";
+import regionsRoutes       from "./modules/regions/regions.routes.js";
+import uploadsRoutes       from "./modules/uploads/uploads.routes.js";
 
 // ─── Feature Module Routes ────────────────────────────────────────────────────
 import projectsRoutes      from "./modules/projects/projects.routes.js";
@@ -200,7 +200,7 @@ apiRouter.use("/profiles",     protect, csrfGuard, profilesRoutes);
 apiRouter.use("/reviews",      protect, csrfGuard, reviewsRoutes);
 apiRouter.use("/roi",          protect, csrfGuard, roiRoutes);
 apiRouter.use("/carbon",       protect, csrfGuard, carbonRoutes);
-apiRouter.use("/uploads",      protect, csrfGuard, uploadsRoutes);
+apiRouter.use("/uploads",      uploadsRoutes);
 apiRouter.use("/budget",       protect, csrfGuard, budgetAnalysisRoutes);
 apiRouter.use("/messages",     protect, messagesRoutes);
 apiRouter.use("/notifications",protect, notificationsRoutes);

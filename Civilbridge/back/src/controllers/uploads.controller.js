@@ -1,296 +1,254 @@
-import multer from 'multer';
-import path from 'path';
-import { pool } from '../config/db.js';
-import { protect } from '../middlewares/auth.js';
+import multer from "multer";
+import path from "path";
+import prisma from "../config/prisma.js";
 
-// Configure multer for file uploads
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = 'uploads/';
-    cb(null, uploadPath);
-  },
+  destination: (req, file, cb) => cb(null, "uploads/"),
   filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
+    const suffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, file.fieldname + "-" + suffix + path.extname(file.originalname));
+  },
 });
 
 const fileFilter = (req, file, cb) => {
-  // Allowed file types
-  const allowedTypes = {
-    'image/jpeg': true,
-    'image/png': true,
-    'image/gif': true,
-    'application/pdf': true,
-    'application/msword': true,
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': true,
-    'application/vnd.ms-excel': true,
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': true,
-    'model/obj': true,
-    'model/stl': true,
-    'model/3mf': true
-  };
-
-  const allowedExtensions = {
-    '.jpg': true, '.jpeg': true, '.png': true, '.gif': true,
-    '.pdf': true, '.doc': true, '.docx': true, '.xls': true, '.xlsx': true,
-    '.obj': true, '.stl': true, '.3mf': true
-  };
-
+  const allowedTypes = new Set([
+    "image/jpeg", "image/png", "image/gif",
+    "application/pdf", "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "model/obj", "model/stl", "model/3mf",
+  ]);
+  const allowedExt = new Set([
+    ".jpg", ".jpeg", ".png", ".gif", ".pdf",
+    ".doc", ".docx", ".xls", ".xlsx", ".obj", ".stl", ".3mf",
+  ]);
   const ext = path.extname(file.originalname).toLowerCase();
-
-  if (allowedTypes[file.mimetype] && allowedExtensions[ext]) {
+  if (allowedTypes.has(file.mimetype) && allowedExt.has(ext)) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type or extension. Only images, PDFs, documents, and 3D models are allowed.'), false);
+    cb(new Error("Invalid file type. Only images, PDFs, documents, and 3D models are allowed."), false);
   }
 };
 
-const upload = multer({
-  storage,
-  fileFilter,
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit
-    files: 5 // Maximum 5 files per upload
-  }
-});
+const upload = multer({ storage, fileFilter, limits: { fileSize: 10 * 1024 * 1024, files: 5 } });
 
+export const uploadPlanFiles = upload.array("files", 5);
+export const uploadListingFiles = upload.array("files", 5);
+
+// ─── POST /uploads/plans ──────────────────────────────────────────────────────
 export async function uploadPlan(req, res) {
   try {
-    const { title, description, category, price = 0, specifications } = req.body;
-    const userId = req.user.id;
+    const { title, description, category, price } = req.body;
+    const userId = BigInt(req.user.id);
 
-    if (!title || !description || !category) {
-      return res.status(400).json({ error: 'Title, description, and category are required' });
+    if (!title || !category) {
+      return res.status(400).json({ error: "Title and category are required" });
     }
-
     if (!req.files || req.files.length === 0) {
-      return res.status(400).json({ error: 'At least one file is required' });
+      return res.status(400).json({ error: "At least one file is required" });
     }
 
-    // Insert into database
-    const [result] = await pool.query(
-      `INSERT INTO plans (title, description, category, price, specifications, uploaded_by, status) 
-       VALUES (?, ?, ?, ?, ?, ?, 'PENDING')`,
-      [title, description, category, price, JSON.stringify(specifications || {}), userId]
-    );
+    const CATEGORY_MAP = { RESIDENTIAL: "RESIDENTIAL", COMMERCIAL: "COMMERCIAL", INDUSTRIAL: "INDUSTRIAL", INFRA: "INFRA" };
+    const planCategory = CATEGORY_MAP[String(category).toUpperCase()] || "RESIDENTIAL";
 
-    const planId = result.insertId;
-
-    // Save file information
-    const filePromises = req.files.map(async (file) => {
-      await pool.query(
-        `INSERT INTO plan_files (plan_id, filename, original_name, file_path, file_size, file_type) 
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [planId, file.filename, file.originalname, file.path, file.size, file.mimetype]
-      );
+    const plan = await prisma.plan.create({
+      data: {
+        category: planCategory,
+        title,
+        description: description || null,
+        builtAreaM2: 0,
+        estimatedCostMin: price ? Number(price) : null,
+        createdByUserId: userId,
+      },
     });
 
-    await Promise.all(filePromises);
+    await Promise.all(
+      req.files.map(file =>
+        prisma.planAsset.create({
+          data: {
+            planId: plan.id,
+            assetType: file.mimetype.startsWith("image/") ? "image" : "document",
+            fileUrl: file.path,
+          },
+        })
+      )
+    );
 
     res.status(201).json({
       success: true,
-      message: 'Plan uploaded successfully. It will be reviewed before being published.',
-      plan_id: planId
+      message: "Plan uploaded successfully. It will be reviewed before being published.",
+      plan_id: plan.id.toString(),
     });
-
   } catch (error) {
-    console.error('Upload plan error:', error);
-    res.status(500).json({ error: 'Failed to upload plan', message: error.message });
+    console.error("Upload plan error:", error);
+    res.status(500).json({ error: "Failed to upload plan", message: error.message });
   }
 }
 
+// ─── POST /uploads/marketplace ────────────────────────────────────────────────
 export async function uploadMarketplaceListing(req, res) {
   try {
-    const { title, description, category, price, contact_info, location } = req.body;
-    const userId = req.user.id;
+    const { title, description, category, price, location } = req.body;
+    const userId = BigInt(req.user.id);
 
-    if (!title || !description || !category || !price || !contact_info) {
-      return res.status(400).json({ error: 'Title, description, category, price, and contact info are required' });
+    if (!title || !price) {
+      return res.status(400).json({ error: "Title and price are required" });
     }
-
     if (!req.files || req.files.length === 0) {
-      return res.status(400).json({ error: 'At least one image is required' });
+      return res.status(400).json({ error: "At least one image is required" });
     }
 
-    // Insert into database
-    const [result] = await pool.query(
-      `INSERT INTO marketplace_listings (title, description, category, price, contact_info, location, seller_id, status) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING')`,
-      [title, description, category, price, JSON.stringify(contact_info), location, userId]
-    );
+    const listingType = String(category).toUpperCase() === "LAND" ? "LAND" : "PROPERTY";
 
-    const listingId = result.insertId;
+    // Ensure a default region exists (region id 1)
+    let regionId;
+    const firstRegion = await prisma.region.findFirst({ orderBy: { id: "asc" }, select: { id: true } });
+    regionId = firstRegion?.id ?? BigInt(1);
 
-    // Save file information
-    const filePromises = req.files.map(async (file) => {
-      await pool.query(
-        `INSERT INTO listing_files (listing_id, filename, original_name, file_path, file_size, file_type) 
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [listingId, file.filename, file.originalname, file.path, file.size, file.mimetype]
-      );
+    const listing = await prisma.listing.create({
+      data: {
+        listingType,
+        title,
+        description: description || null,
+        regionId,
+        locationText: location || null,
+        price: Number(price),
+        ownerUserId: userId,
+        status: "PENDING",
+      },
     });
 
-    await Promise.all(filePromises);
+    await Promise.all(
+      req.files.map((file, i) =>
+        prisma.listingImage.create({
+          data: { listingId: listing.id, imageUrl: file.path, sortOrder: i },
+        })
+      )
+    );
 
     res.status(201).json({
       success: true,
-      message: 'Marketplace listing uploaded successfully. It will be reviewed before being published.',
-      listing_id: listingId
+      message: "Marketplace listing uploaded. It will be reviewed before being published.",
+      listing_id: listing.id.toString(),
     });
-
   } catch (error) {
-    console.error('Upload marketplace listing error:', error);
-    res.status(500).json({ error: 'Failed to upload marketplace listing', message: error.message });
+    console.error("Upload marketplace listing error:", error);
+    res.status(500).json({ error: "Failed to upload marketplace listing", message: error.message });
   }
 }
 
+// ─── GET /uploads/plans ───────────────────────────────────────────────────────
 export async function getPlans(req, res) {
   try {
     const { category, page = 1, limit = 12 } = req.query;
-    const offset = (page - 1) * limit;
+    const skip = (Number(page) - 1) * Number(limit);
 
-    let query = `
-      SELECT p.*, u.full_name as uploader_name, u.email as uploader_email,
-             COUNT(pf.id) as file_count,
-             COALESCE(
-               JSON_ARRAYAGG(
-                 IF(pf.id IS NOT NULL,
-                    JSON_OBJECT(
-                      'id', pf.id,
-                      'filename', pf.filename,
-                      'original_name', pf.original_name,
-                      'file_path', pf.file_path,
-                      'file_size', pf.file_size,
-                      'file_type', pf.file_type
-                    ), NULL)
-               ), JSON_ARRAY()
-             ) as files
-      FROM plans p 
-      LEFT JOIN users u ON p.uploaded_by = u.id
-      LEFT JOIN plan_files pf ON p.id = pf.plan_id
-      WHERE p.status = 'APPROVED'
-    `;
-    
-    const params = [];
-
+    const where = { isVerified: true };
     if (category) {
-      query += ' AND p.category = ?';
-      params.push(category);
+      const cat = String(category).toUpperCase();
+      if (["RESIDENTIAL", "COMMERCIAL", "INDUSTRIAL", "INFRA"].includes(cat)) where.category = cat;
     }
 
-    query += ' GROUP BY p.id ORDER BY p.created_at DESC LIMIT ? OFFSET ?';
-    params.push(parseInt(limit), offset);
-
-    const [rows] = await pool.query(query, params);
-
-    // Parse the JSON files array from MySQL
-    const plansWithFiles = rows.map(plan => {
-      let parsedFiles = [];
-      try {
-        parsedFiles = typeof plan.files === 'string' ? JSON.parse(plan.files) : plan.files;
-        // Filter out nulls inserted by JSON_ARRAYAGG
-        parsedFiles = parsedFiles.filter(f => f !== null);
-      } catch (e) {}
-      return { ...plan, files: parsedFiles };
+    const plans = await prisma.plan.findMany({
+      where,
+      include: { assets: true, creator: { select: { fullName: true, email: true } } },
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: Number(limit),
     });
 
-    res.json({ plans: plansWithFiles });
-
+    res.json({
+      plans: plans.map(p => ({
+        id: p.id.toString(),
+        title: p.title,
+        description: p.description,
+        category: p.category,
+        price: p.estimatedCostMin ? Number(p.estimatedCostMin) : 0,
+        uploader_name: p.creator?.fullName || null,
+        files: p.assets.map(a => ({ id: a.id.toString(), file_path: a.fileUrl, file_type: a.assetType })),
+        created_at: p.createdAt,
+      })),
+    });
   } catch (error) {
-    console.error('Get plans error:', error);
-    res.status(500).json({ error: 'Failed to get plans', message: error.message });
+    console.error("Get plans error:", error);
+    res.status(500).json({ error: "Failed to get plans", message: error.message });
   }
 }
 
+// ─── GET /uploads/marketplace ─────────────────────────────────────────────────
 export async function getMarketplaceListings(req, res) {
   try {
     const { category, page = 1, limit = 12 } = req.query;
-    const offset = (page - 1) * limit;
+    const skip = (Number(page) - 1) * Number(limit);
 
-    let query = `
-      SELECT l.*, u.full_name as seller_name, u.email as seller_email,
-             COUNT(lf.id) as image_count,
-             COALESCE(
-               JSON_ARRAYAGG(
-                 IF(lf.id IS NOT NULL,
-                    JSON_OBJECT(
-                      'id', lf.id,
-                      'filename', lf.filename,
-                      'original_name', lf.original_name,
-                      'file_path', lf.file_path,
-                      'file_size', lf.file_size,
-                      'file_type', lf.file_type
-                    ), NULL)
-               ), JSON_ARRAY()
-             ) as images
-      FROM marketplace_listings l 
-      LEFT JOIN users u ON l.seller_id = u.id
-      LEFT JOIN listing_files lf ON l.id = lf.listing_id
-      WHERE l.status = 'APPROVED'
-    `;
-    
-    const params = [];
-
+    const where = { status: "ACTIVE" };
     if (category) {
-      query += ' AND l.category = ?';
-      params.push(category);
+      const t = String(category).toUpperCase();
+      if (["PROPERTY", "LAND"].includes(t)) where.listingType = t;
     }
 
-    query += ' GROUP BY l.id ORDER BY l.created_at DESC LIMIT ? OFFSET ?';
-    params.push(parseInt(limit), offset);
-
-    const [rows] = await pool.query(query, params);
-
-    // Parse the JSON images array from MySQL
-    const listingsWithImages = rows.map(listing => {
-      let parsedImages = [];
-      try {
-        parsedImages = typeof listing.images === 'string' ? JSON.parse(listing.images) : listing.images;
-        parsedImages = parsedImages.filter(f => f !== null);
-      } catch (e) {}
-      return { ...listing, images: parsedImages };
+    const listings = await prisma.listing.findMany({
+      where,
+      include: { images: true, owner: { select: { fullName: true, email: true } } },
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: Number(limit),
     });
 
-    res.json({ listings: listingsWithImages });
-
+    res.json({
+      listings: listings.map(l => ({
+        id: l.id.toString(),
+        title: l.title,
+        description: l.description,
+        category: l.listingType,
+        price: l.price ? Number(l.price) : null,
+        location: l.locationText,
+        seller_name: l.owner?.fullName || null,
+        images: l.images.map(i => ({ id: i.id.toString(), file_path: i.imageUrl })),
+        created_at: l.createdAt,
+      })),
+    });
   } catch (error) {
-    console.error('Get marketplace listings error:', error);
-    res.status(500).json({ error: 'Failed to get marketplace listings', message: error.message });
+    console.error("Get marketplace listings error:", error);
+    res.status(500).json({ error: "Failed to get marketplace listings", message: error.message });
   }
 }
 
+// ─── GET /uploads/my-uploads ─────────────────────────────────────────────────
 export async function getUserUploads(req, res) {
   try {
-    const userId = req.user.id;
-    const { type = 'all' } = req.query;
+    const userId = BigInt(req.user.id);
+    const { type = "all" } = req.query;
+    const result = [];
 
-    let result = [];
-
-    if (type === 'plans' || type === 'all') {
-      const [plans] = await pool.query(
-        'SELECT * FROM plans WHERE uploaded_by = ? ORDER BY created_at DESC',
-        [userId]
-      );
-      result.push({ type: 'plans', data: plans });
+    if (type === "plans" || type === "all") {
+      const plans = await prisma.plan.findMany({
+        where: { createdByUserId: userId },
+        include: { assets: true },
+        orderBy: { createdAt: "desc" },
+      });
+      result.push({
+        type: "plans",
+        data: plans.map(p => ({ id: p.id.toString(), title: p.title, category: p.category, created_at: p.createdAt })),
+      });
     }
 
-    if (type === 'listings' || type === 'all') {
-      const [listings] = await pool.query(
-        'SELECT * FROM marketplace_listings WHERE seller_id = ? ORDER BY created_at DESC',
-        [userId]
-      );
-      result.push({ type: 'listings', data: listings });
+    if (type === "listings" || type === "all") {
+      const listings = await prisma.listing.findMany({
+        where: { ownerUserId: userId },
+        include: { images: true },
+        orderBy: { createdAt: "desc" },
+      });
+      result.push({
+        type: "listings",
+        data: listings.map(l => ({ id: l.id.toString(), title: l.title, status: l.status, created_at: l.createdAt })),
+      });
     }
 
     res.json({ uploads: result });
-
   } catch (error) {
-    console.error('Get user uploads error:', error);
-    res.status(500).json({ error: 'Failed to get user uploads', message: error.message });
+    console.error("Get user uploads error:", error);
+    res.status(500).json({ error: "Failed to get user uploads", message: error.message });
   }
 }
-
-// Middleware for handling file uploads
-export const uploadPlanFiles = upload.array('files', 5);
-export const uploadListingFiles = upload.array('files', 5);

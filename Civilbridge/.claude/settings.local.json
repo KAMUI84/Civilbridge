@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs grep *)",
+      "Bash(find \"E:/Projects/CivilBridge/Civilbridge/back/src/modules/plans\" -name \"*.js\" -exec grep -l \"PLAN_DOWNLOAD\\\\|payment\\\\|protect\" {} \\\\;)",
+      "Bash(npx prisma *)",
+      "Bash(node_modules\\\\.bin\\\\prisma --version)",
+      "Bash(node_modules\\\\.bin\\\\prisma db *)",
+      "Bash(node node_modules/prisma/build/index.js --version)",
+      "Bash(command -v prisma)",
+      "Bash(cmd /c \"cd E:\\\\Projects\\\\CivilBridge\\\\Civilbridge\\\\back && npm install 2>&1\")",
+      "Bash(cmd /c \"E:\\\\Projects\\\\CivilBridge\\\\Civilbridge\\\\back\\\\node_modules\\\\.bin\\\\prisma db push --accept-data-loss 2>&1\")",
+      "Bash(cmd /c \"cd E:\\\\Projects\\\\CivilBridge\\\\Civilbridge\\\\back && node_modules\\\\.bin\\\\prisma db push 2>&1\")",
+      "Bash(cmd /c \"cd /d E:\\\\Projects\\\\CivilBridge\\\\Civilbridge\\\\back && node_modules\\\\.bin\\\\prisma db push 2>&1\")",
+      "Bash(cmd /c \"E:\\\\Projects\\\\CivilBridge\\\\Civilbridge\\\\back\\\\node_modules\\\\.bin\\\\prisma.cmd db push --schema=E:\\\\Projects\\\\CivilBridge\\\\Civilbridge\\\\back\\\\prisma\\\\schema.prisma 2>&1\")",
+      "Bash(cmd /c \"E:\\\\Projects\\\\CivilBridge\\\\Civilbridge\\\\back\\\\node_modules\\\\.bin\\\\prisma.cmd --version 2>&1\")",
+      "Bash(node /e/Projects/CivilBridge/Civilbridge/back/node_modules/.bin/prisma --version)",
+      "PowerShell(Set-Location \"E:\\\\Projects\\\\CivilBridge\\\\Civilbridge\\\\back\"; node_modules\\\\.bin\\\\prisma db push 2>&1; Write-Output \"EXIT: $LASTEXITCODE\")",
+      "PowerShell(Set-Location \"E:\\\\Projects\\\\CivilBridge\\\\Civilbridge\\\\back\"; $env:DATABASE_URL = \"file:./dev.db\"; $env:DIRECT_DATABASE_URL = \"file:./dev.db\"; & \".\\\\node_modules\\\\.bin\\\\prisma.cmd\" generate 2>&1)",
+      "Bash(cmd /c \"mysql --version 2>&1\")",
+      "Bash(cmd /c \"E:\\\\xampp\\\\mysql\\\\bin\\\\mysql.exe --version 2>&1\")",
+      "Bash(xargs wc *)",
+      "Bash(xargs ls *)",
+      "PowerShell(gh auth status 2>&1)",
+      "Bash(mysql -u root -psamuel civilbridge)",
+      "Bash(mysql -u root -p\"samuel\" civilbridge)",
+      "Bash(mysql -u root --password=\"\" civilbridge)"
+    ]
+  }
+}

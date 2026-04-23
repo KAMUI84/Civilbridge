@@ -8,7 +8,6 @@ import {
   refreshAccessToken,
   getGoogleNonce,
   changePassword,
-  appleLogin,
   facebookLogin,
   xLogin,
 } from "./auth.controller.js";
@@ -52,7 +51,6 @@ router.get("/google/nonce", getGoogleNonce);
 router.post("/change-password", protect, changePassword);
 
 // Additional social login providers
-router.post("/apple", appleLogin);
 router.post("/facebook", facebookLogin);
 router.post("/x", xLogin);
 router.post("/twitter", xLogin); // alias
